@@ -126,7 +126,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text)}
 .mslot{border:1.5px dashed var(--border-strong);border-radius:var(--radius-sm);padding:11px 14px;font-size:14px;color:var(--text-hint);cursor:pointer;transition:all .2s;background:var(--cream);margin-bottom:10px}
 .mslot.filled{background:var(--green-pale);border-color:var(--green);border-style:solid;color:var(--green);font-weight:600;display:flex;align-items:center;justify-content:space-between}
 .mslot:hover{border-color:var(--green-light)}
-.fav-item{padding:13px 14px;border-bottom:0.5px solid var(--border);cursor:pointer}
+.ob-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .2s}
+.ob-dot.active{background:var(--green)}
+.ob-panel{}
+.diet-chip.selected{background:var(--green);color:#fff;border-color:var(--green)}
 .fav-item:last-child{border-bottom:none}
 .fav-title{font-size:14px;font-weight:600;margin-bottom:3px;font-family:'Playfair Display',serif}
 .fav-meta{font-size:12px;color:var(--text-muted)}
@@ -191,9 +194,98 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text)}
 </div>
 
 <div id="app" style="display:none">
+
+<!-- ONBOARDING OVERLAY -->
+<div id="onboarding" style="display:none;position:fixed;inset:0;background:#fff;z-index:1000;overflow-y:auto">
+  <div style="max-width:480px;margin:0 auto;padding:32px 24px 48px">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-size:48px;margin-bottom:12px">🥩❄️📦</div>
+      <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:#1e4d35;margin-bottom:8px">Welcome to Meal Builder Pro</div>
+      <div style="font-size:14px;color:#666;line-height:1.6">You don't have a food problem. You have a system problem. Let's fix that in the next 2 minutes.</div>
+    </div>
+
+    <!-- Step indicators -->
+    <div id="ob-steps" style="display:flex;gap:6px;justify-content:center;margin-bottom:28px">
+      <div class="ob-dot active" id="dot-0"></div>
+      <div class="ob-dot" id="dot-1"></div>
+      <div class="ob-dot" id="dot-2"></div>
+      <div class="ob-dot" id="dot-3"></div>
+    </div>
+
+    <!-- Step 0: How it works -->
+    <div id="ob-0" class="ob-panel">
+      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#1e4d35;margin-bottom:16px">How the system works</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px">
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f9f7f4;border-radius:10px">
+          <div style="font-size:24px;width:36px;flex-shrink:0">🥩</div>
+          <div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Layer 2 — Bases</div><div style="font-size:13px;color:#666">Cooked proteins frozen in quart bags. 1 bag = 1.5 lbs cooked. This is your foundation.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f9f7f4;border-radius:10px">
+          <div style="font-size:24px;width:36px;flex-shrink:0">❄️</div>
+          <div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Layer 3 — Supports</div><div style="font-size:13px;color:#666">Cooked grains, veg, beans in quart bags. 1 bag = 3 cups. Canned and dry goods too.</div></div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f9f7f4;border-radius:10px">
+          <div style="font-size:24px;width:36px;flex-shrink:0">🚨</div>
+          <div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Layer 4 — Emergency Meals</div><div style="font-size:13px;color:#666">Complete frozen meals in gallon bags. Pull, heat, eat. Magic number is 6. Always.</div></div>
+        </div>
+      </div>
+      <button class="btn bg bfull blg" onclick="obNext(1)">Got it — Next →</button>
+    </div>
+
+    <!-- Step 1: Household setup -->
+    <div id="ob-1" class="ob-panel" style="display:none">
+      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#1e4d35;margin-bottom:8px">Set up your household</div>
+      <div style="font-size:13px;color:#666;margin-bottom:20px">This helps the app calculate the right quantities for your family.</div>
+      <div class="fg" style="margin-bottom:20px">
+        <label class="lbl">How many people are you feeding?</label>
+        <select class="sel" id="ob-size">
+          <option value="1">Just me (1)</option>
+          <option value="2">2 people</option>
+          <option value="3">3 people</option>
+          <option value="4" selected>4 people</option>
+          <option value="5">5 people</option>
+          <option value="6">6 people</option>
+          <option value="7">7 people</option>
+          <option value="8">8+ people</option>
+        </select>
+      </div>
+      <button class="btn bg bfull blg" onclick="obNext(2)">Next →</button>
+    </div>
+
+    <!-- Step 2: Dietary preferences -->
+    <div id="ob-2" class="ob-panel" style="display:none">
+      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#1e4d35;margin-bottom:8px">Dietary preferences</div>
+      <div style="font-size:13px;color:#666;margin-bottom:20px">The AI will never suggest meals that conflict with these. Select all that apply.</div>
+      <div id="ob-dietary" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
+        ${['No Pork','No Beef','No Seafood','No Shellfish','Gluten Free','Dairy Free','No Nuts','Vegetarian','Halal','Kosher','Low Sodium','Diabetic Friendly'].map(d=>`
+        <div class="diet-chip" data-pref="${d}" onclick="toggleDietChip(this)" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;text-align:center;transition:all .2s">${d}</div>`).join('')}
+      </div>
+      <div class="fg" style="margin-bottom:20px">
+        <label class="lbl">Any other restrictions? (optional)</label>
+        <input class="inp" id="ob-other" placeholder="e.g. No cilantro, extra spicy, nut allergy">
+      </div>
+      <button class="btn bg bfull blg" onclick="obNext(3)">Next →</button>
+      <button class="btn bo bfull" style="margin-top:8px" onclick="obNext(3)">Skip — No restrictions</button>
+    </div>
+
+    <!-- Step 3: Ready -->
+    <div id="ob-3" class="ob-panel" style="display:none">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:56px;margin-bottom:12px">✅</div>
+        <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#1e4d35;margin-bottom:8px">You're all set</div>
+        <div style="font-size:14px;color:#666;line-height:1.6">Start by adding your inventory — tap Inventory and update your bag counts. The Meal Builder will build from exactly what you have.</div>
+      </div>
+      <div style="background:#e8f5e9;border-radius:10px;padding:16px;margin-bottom:24px">
+        <div style="font-size:13px;font-weight:700;color:#1e4d35;margin-bottom:8px">Your first 3 steps:</div>
+        <div style="font-size:13px;color:#1b5e20;line-height:2">1. Add your bases (frozen proteins)<br>2. Add your supports (grains, veg, pantry)<br>3. Hit Build and generate your first meal</div>
+      </div>
+      <button class="btn bg bfull blg" onclick="finishOnboarding()">Start Using Meal Builder Pro →</button>
+    </div>
+  </div>
+</div>
   <div class="app-hdr">
     <div><div class="hdr-brand">Prep & Purpose</div><div class="hdr-sub">Kitchen Operating System</div></div>
-    <button class="hdr-ico" onclick="signOut()">👤</button>
+    <button class="hdr-ico" onclick="openSettings()">👤</button>
   </div>
   <div class="main" id="main"></div>
   <nav class="bnav">
@@ -298,7 +390,10 @@ const A={
   page:'inventory',invTab:'bases',calSel:0,calTab:'plan',
   calSelDate:null,weekOffset:0,
   generating:false,recipe:null,pantryCheck:null,ppSpices:true,
-  householdSize:4,lastMealType:localStorage.getItem('pp_lastMealType')||'Dinner',
+  householdSize:JSON.parse(localStorage.getItem('pp_household')||'4'),
+  lastMealType:localStorage.getItem('pp_lastMealType')||'Dinner',
+  dietary:JSON.parse(localStorage.getItem('pp_dietary')||'[]'),
+  onboarded:localStorage.getItem('pp_onboarded')==='1',
   bases:JSON.parse(localStorage.getItem('pp_bases')||JSON.stringify(DEF_BASES)),
   supports:JSON.parse(localStorage.getItem('pp_supports')||JSON.stringify(DEF_SUPPORTS)),
   pantry:JSON.parse(localStorage.getItem('pp_pantry')||JSON.stringify(DEF_PANTRY)),
@@ -316,8 +411,11 @@ function save(){
   localStorage.setItem('pp_emergency',JSON.stringify(A.emergency));
   localStorage.setItem('pp_favs',JSON.stringify(A.favorites));
   localStorage.setItem('pp_lastMealType',A.lastMealType);
+  localStorage.setItem('pp_calByDate',JSON.stringify(A.calendarByDate));
   localStorage.setItem('pp_cal',JSON.stringify(A.calendar));
   localStorage.setItem('pp_groc',JSON.stringify(A.grocery));
+  localStorage.setItem('pp_dietary',JSON.stringify(A.dietary));
+  localStorage.setItem('pp_household',JSON.stringify(A.householdSize));
 }
 
 // helper: get best available storage for an item (frozen first)
@@ -348,10 +446,88 @@ function storagePrepNote(item, storage){
 }
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
-function showPaywall(){document.getElementById('paywall').classList.remove('hidden');document.getElementById('verify-screen').classList.add('hidden');document.getElementById('app').style.display='none';}
+function showOnboarding(){
+  document.getElementById('onboarding').style.display='block';
+  obGoTo(0);
+}
+function obGoTo(step){
+  [0,1,2,3].forEach(i=>{
+    document.getElementById('ob-'+i).style.display=i===step?'block':'none';
+    const dot=document.getElementById('dot-'+i);
+    if(dot)dot.className='ob-dot'+(i<=step?' active':'');
+  });
+}
+function obNext(step){
+  if(step===2){
+    A.householdSize=+document.getElementById('ob-size').value||4;
+  }
+  if(step===3){
+    const selected=[...document.querySelectorAll('.diet-chip.selected')].map(d=>d.dataset.pref);
+    const other=document.getElementById('ob-other')?.value.trim();
+    A.dietary=other?[...selected,other]:selected;
+    save();
+  }
+  obGoTo(step);
+}
+function toggleDietChip(el){el.classList.toggle('selected');}
+function finishOnboarding(){
+  A.onboarded=true;
+  localStorage.setItem('pp_onboarded','1');
+  save();
+  document.getElementById('onboarding').style.display='none';
+  showPage('inventory');
+}
+
+function openSettings(){
+  const dietary=A.dietary||[];
+  const allPrefs=['No Pork','No Beef','No Seafood','No Shellfish','Gluten Free','Dairy Free','No Nuts','Vegetarian','Halal','Kosher','Low Sodium','Diabetic Friendly'];
+  openDrawer(`<div class="dt">⚙️ Settings</div>
+    <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Household</div>
+    <div class="fg" style="margin-bottom:20px">
+      <label class="lbl">People you are feeding</label>
+      <select class="sel" id="st-size">
+        ${[1,2,3,4,5,6,7,8].map(n=>`<option value="${n}" ${A.householdSize==n?'selected':''}>${n===8?'8+ people':n===1?'Just me (1)':n+' people'}</option>`).join('')}
+      </select>
+    </div>
+    <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Dietary Preferences</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px" id="st-dietary">
+      ${allPrefs.map(p=>`<div class="diet-chip ${dietary.includes(p)?'selected':''}" data-pref="${p}" onclick="toggleDietChip(this)" style="padding:10px 12px;border:1.5px solid ${dietary.includes(p)?'var(--green)':'var(--border)'};border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;text-align:center;background:${dietary.includes(p)?'var(--green)':'#fff'};color:${dietary.includes(p)?'#fff':'inherit'}">${p}</div>`).join('')}
+    </div>
+    <div class="fg" style="margin-bottom:20px">
+      <label class="lbl">Other restrictions</label>
+      <input class="inp" id="st-other" placeholder="e.g. No cilantro, extra spicy" value="${dietary.filter(d=>!allPrefs.includes(d)).join(', ')}">
+    </div>
+    <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">P&P Spice Blends</div>
+    <div class="pantry-row" style="margin-bottom:20px">
+      <div style="flex:1"><div style="font-size:14px;font-weight:500">I own the P&P Spice Kit</div><div style="font-size:12px;color:var(--text-muted)">Uses blend names in recipes instead of individual spices</div></div>
+      <div class="tog ${A.ppSpices?'on':''}" id="st-spices" onclick="this.classList.toggle('on')"><div class="tog-th"></div></div>
+    </div>
+    <button class="btn bg bfull" style="margin-bottom:10px" onclick="saveSettings()">Save Settings</button>
+    <button class="btn bo bfull" style="color:#c62828" onclick="signOut()">Sign Out</button>`);
+}
+function saveSettings(){
+  A.householdSize=+document.getElementById('st-size').value||4;
+  const selected=[...document.querySelectorAll('#st-dietary .diet-chip.selected')].map(d=>d.dataset.pref);
+  const other=document.getElementById('st-other')?.value.trim();
+  A.dietary=other?[...selected,...other.split(',').map(s=>s.trim()).filter(Boolean)]:selected;
+  A.ppSpices=document.getElementById('st-spices').classList.contains('on');
+  save();
+  closeDrawer();
+  alert('✅ Settings saved.');
+}
 function showVerify(){document.getElementById('paywall').classList.add('hidden');document.getElementById('verify-screen').classList.remove('hidden');}
 function verifyAccess(){const e=document.getElementById('ver-email').value.trim();if(!e||!e.includes('@'))return;localStorage.setItem('pp_user',e);grantAccess();}
-function grantAccess(){document.getElementById('paywall').classList.add('hidden');document.getElementById('verify-screen').classList.add('hidden');const app=document.getElementById('app');app.style.display='flex';app.style.flexDirection='column';app.style.height='100%';showPage('inventory');}
+function grantAccess(){
+  document.getElementById('paywall').classList.add('hidden');
+  document.getElementById('verify-screen').classList.add('hidden');
+  const app=document.getElementById('app');
+  app.style.display='flex';app.style.flexDirection='column';app.style.height='100%';
+  if(!A.onboarded){
+    showOnboarding();
+  } else {
+    showPage('inventory');
+  }
+}
 function signOut(){if(confirm('Sign out?')){localStorage.removeItem('pp_user');showPaywall();}}
 window.addEventListener('load',()=>{if(localStorage.getItem('pp_user'))grantAccess();});
 
@@ -1276,6 +1452,7 @@ RESPONSE FORMAT — respond ONLY with valid JSON, no markdown, no explanation:
 Flavor direction: ${flavor}
 Servings: ${servings}
 P&P Spice Blends: ${ppSpices?'YES — I own the Prep & Purpose spice kit. Use blend names only, never reveal ingredients.':'No'}
+${A.dietary&&A.dietary.length>0?`\nDIETARY RESTRICTIONS — NEVER VIOLATE THESE: ${A.dietary.join(', ')}. Do not suggest any ingredient or dish that conflicts with these restrictions.`:''}
 
 IMPORTANT: This is a ${mealType.toUpperCase()} meal. ${isBreakfast?'Build something people actually eat for breakfast — eggs, pancakes, waffles, oatmeal, breakfast hash, breakfast burrito, shakshuka, breakfast fried rice, or a morning protein plate. Do NOT build lunch or dinner dishes for breakfast.':isSnack?'Build a small-portion snack — nachos, quesadilla, bean dip, lettuce wraps, or protein bites. Keep portions small.':'Build a satisfying '+mealType.toLowerCase()+' dish.'}
 
