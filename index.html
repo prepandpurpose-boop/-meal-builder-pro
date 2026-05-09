@@ -912,14 +912,29 @@ function printWeek(){
   const slotLabels={breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',snack:'Snack'};
   const weekOffset=A.weekOffset||0;
   const weekStart=getWeekStart(weekOffset);
+  const days=[];
+  for(let i=0;i<7;i++){const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);days.push(d);}
+
+  // Build calendar grid
+  const gridRows=slots.map(slot=>{
+    const cells=days.map(d=>{
+      const key=dateKey(d);
+      const meal=A.calendarByDate[key]?.[slot];
+      const title=meal?(typeof meal==='object'?meal.title:meal):'';
+      return '<td class="cal-cell">'+title+'</td>';
+    }).join('');
+    return '<tr><td class="slot-label">'+slotLabels[slot]+'</td>'+cells+'</tr>';
+  }).join('');
+
+  const dayHeaders=days.map(d=>'<th class="day-head">'+d.toLocaleDateString('en-US',{weekday:'short'})+'<br><span class="day-num">'+d.getDate()+'</span></th>').join('');
+
+  // Build recipe cards (only meals that exist)
   let cards='';
-  for(let i=0;i<7;i++){
-    const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
+  days.forEach(d=>{
     const key=dateKey(d);
-    const dayCal=A.calendarByDate[key]||{};
     slots.forEach(slot=>{
-      const meal=dayCal[slot];
-      if(!meal) return;
+      const meal=A.calendarByDate[key]?.[slot];
+      if(!meal)return;
       const title=typeof meal==='object'?meal.title:meal;
       const pull=typeof meal==='object'&&meal.pull?meal.pull:[];
       const steps=typeof meal==='object'&&meal.steps?meal.steps:[];
@@ -927,18 +942,47 @@ function printWeek(){
       cards+='<div class="recipe-card">'
         +'<div class="recipe-day">'+d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})+' · '+slotLabels[slot]+'</div>'
         +'<div class="recipe-title">'+title+'</div>'
-        +(pull.length>0?'<div class="section-head">❄️ What to Pull</div><ul class="pull-list">'+pull.map(p=>'<li><strong>'+p.item+'</strong> — '+p.qty+(p.prepNote?' <span class="prep-note">('+p.prepNote+')</span>':'')+'</li>').join('')+'</ul>':'')
+        +(pull.length>0?'<div class="section-head">❄️ From Your Stock</div><ul class="pull-list">'+pull.filter(p=>['quart bag','frozen bag','can —','cans','1 can','bag ='].some(k=>p.qty&&p.qty.toLowerCase().includes(k))).map(p=>'<li><strong>'+p.item+'</strong> — '+p.qty+'</li>').join('')+'</ul>':'')
+        +(pull.length>0?'<div class="section-head">🧂 From Your Kitchen</div><ul class="pull-list">'+pull.filter(p=>!['quart bag','frozen bag','can —','cans','1 can','bag ='].some(k=>p.qty&&p.qty.toLowerCase().includes(k))).map(p=>'<li><strong>'+p.item+'</strong> — '+p.qty+'</li>').join('')+'</ul>':'')
         +(steps.length>0?'<div class="section-head">🥄 Steps</div><ol class="step-list">'+steps.map(s=>'<li>'+s+'</li>').join('')+'</ol>':'')
         +(tip?'<div class="tip-box">💡 '+tip+'</div>':'')
         +'</div>';
     });
-  }
-  if(!cards)cards='<p style="color:#aaa;font-style:italic">No meals planned this week.</p>';
-  const html='<html><head><title>Prep & Purpose — Meal Plan</title>'
-    +'<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Georgia,serif;background:#fff;color:#1a1a1a;padding:32px 28px}.header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid #1e4d35;padding-bottom:10px;margin-bottom:28px}.header-brand{font-size:22px;font-weight:700;color:#1e4d35}.header-date{font-size:12px;color:#888}.recipe-card{border:1px solid #ddd;border-radius:10px;padding:20px 22px;margin-bottom:22px;page-break-inside:avoid}.recipe-day{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#b5850a;margin-bottom:6px}.recipe-title{font-size:22px;font-weight:700;color:#1e4d35;margin-bottom:16px;font-family:Georgia,serif}.section-head{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin:14px 0 8px;border-top:1px solid #eee;padding-top:10px}.pull-list{list-style:none;padding:0}.pull-list li{font-size:14px;padding:5px 0;border-bottom:1px solid #f5f5f5;color:#333}.pull-list li:last-child{border-bottom:none}.prep-note{color:#888;font-size:12px;font-style:italic}.step-list{padding-left:20px}.step-list li{font-size:14px;line-height:1.7;padding:3px 0;color:#333}.tip-box{margin-top:14px;background:#fff8e1;border-left:3px solid #b5850a;padding:10px 14px;font-size:13px;color:#6b5100;border-radius:0 6px 6px 0}.footer{margin-top:36px;border-top:1px solid #eee;padding-top:12px;font-size:11px;color:#bbb;text-align:center}@media print{body{padding:20px}.recipe-card{page-break-inside:avoid;border:1px solid #ccc}}'
+  });
+
+  const weekLabel=days[0].toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+days[6].toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+
+  const html='<html><head><title>Prep & Purpose — Week of '+weekLabel+'</title>'
+    +'<style>'
+    +'*{box-sizing:border-box;margin:0;padding:0}'
+    +'body{font-family:Georgia,serif;background:#fff;color:#1a1a1a;padding:28px}'
+    +'.header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid #1e4d35;padding-bottom:10px;margin-bottom:20px}'
+    +'.header-brand{font-size:20px;font-weight:700;color:#1e4d35}'
+    +'.header-date{font-size:12px;color:#888}'
+    +'.section-title{font-size:14px;font-weight:700;color:#1e4d35;text-transform:uppercase;letter-spacing:.06em;margin:24px 0 12px;padding-bottom:6px;border-bottom:2px solid #1e4d35}'
+    +'.cal-table{width:100%;border-collapse:collapse;margin-bottom:32px;table-layout:fixed}'
+    +'.cal-table th,.cal-table td{border:1px solid #ddd;padding:8px 6px;font-size:12px;vertical-align:top}'
+    +'.day-head{text-align:center;background:#1e4d35;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}'
+    +'.day-num{font-size:18px;font-weight:700;display:block;margin-top:2px}'
+    +'.slot-label{font-size:10px;font-weight:700;text-transform:uppercase;color:#888;width:70px;background:#f9f9f9}'
+    +'.cal-cell{font-size:12px;line-height:1.4;min-height:40px;color:#1a1a1a}'
+    +'.recipe-card{border:1px solid #ddd;border-radius:8px;padding:18px 20px;margin-bottom:20px;page-break-inside:avoid}'
+    +'.recipe-day{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#b5850a;margin-bottom:5px}'
+    +'.recipe-title{font-size:20px;font-weight:700;color:#1e4d35;margin-bottom:12px}'
+    +'.section-head{font-size:10px;font-weight:700;text-transform:uppercase;color:#888;margin:12px 0 6px;border-top:1px solid #eee;padding-top:8px}'
+    +'.pull-list{list-style:none;padding:0}'
+    +'.pull-list li{font-size:13px;padding:4px 0;border-bottom:1px solid #f5f5f5}'
+    +'.pull-list li:last-child{border-bottom:none}'
+    +'.step-list{padding-left:18px}'
+    +'.step-list li{font-size:13px;line-height:1.6;padding:3px 0}'
+    +'.tip-box{margin-top:12px;background:#fff8e1;border-left:3px solid #b5850a;padding:8px 12px;font-size:12px;color:#6b5100;border-radius:0 5px 5px 0}'
+    +'.footer{margin-top:32px;border-top:1px solid #eee;padding-top:10px;font-size:11px;color:#bbb;text-align:center}'
+    +'@media print{body{padding:16px}.recipe-card{page-break-inside:avoid}}'
     +'</style></head><body>'
-    +'<div class="header"><div class="header-brand">Prep &amp; Purpose</div><div class="header-date">Printed '+new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})+'</div></div>'
-    +cards
+    +'<div class="header"><div class="header-brand">Prep &amp; Purpose</div><div class="header-date">Week of '+weekLabel+'</div></div>'
+    +'<div class="section-title">📅 Weekly Overview</div>'
+    +'<table class="cal-table"><thead><tr><th class="slot-label"></th>'+dayHeaders+'</tr></thead><tbody>'+gridRows+'</tbody></table>'
+    +(cards?'<div class="section-title">🍽️ Recipes</div>'+cards:'')
     +'<div class="footer">Reduce decisions. Install structure. And as always — steward what you have, serve where you are.</div>'
     +'</body></html>';
   const win=window.open('','_blank');
