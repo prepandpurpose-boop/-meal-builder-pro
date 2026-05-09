@@ -761,7 +761,12 @@ function rRecipe(){
         <select class="sel" id="cal-day"><option value="0">Sunday</option><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option></select>
       </div>
       <div class="fg"><label class="lbl">Meal Slot</label>
-        <select class="sel" id="cal-slot"><option value="breakfast">Breakfast</option><option value="lunch">Lunch</option><option value="dinner" selected>Dinner</option><option value="snack">Snack</option></select>
+        <select class="sel" id="cal-slot">
+          <option value="breakfast" ${mealType==='Breakfast'?'selected':''}>Breakfast</option>
+          <option value="lunch" ${mealType==='Lunch'?'selected':''}>Lunch</option>
+          <option value="dinner" ${mealType==='Dinner'||mealType==='Snack'?'selected':''}>Dinner</option>
+          <option value="snack" ${mealType==='Snack'?'selected':''}>Snack</option>
+        </select>
       </div>
     </div>
     <button class="btn bg bfull blg" style="margin-bottom:10px" onclick="placeOnCal()">📅 Add to Calendar & Deduct Inventory</button>
@@ -1038,14 +1043,34 @@ function openMealDetail(dayIndex,slot){
     ${hasR?`
     <div style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:14px">${meal.description||''}</div>
     ${meal.macros?`<div class="mgrid"><div class="mbox"><div class="mval">${meal.macros.cal}</div><div class="mlbl">Calories</div></div><div class="mbox"><div class="mval">${meal.macros.protein}g</div><div class="mlbl">Protein</div></div></div>`:''}
-    ${meal.pull?`<div style="font-size:13px;font-weight:700;margin-bottom:10px">📦 What to Pull</div>${meal.pull.map(p=>`<div class="pull-row"><span style="font-size:20px;width:28px">${p.icon}</span><div style="flex:1"><div style="font-size:14px;font-weight:500">${p.item}</div><div style="font-size:12px;color:var(--text-muted)">${p.prepNote||''}</div></div><span class="pqty">${p.qty}</span></div>`).join('')}<div style="height:14px"></div>`:''}
+    ${meal.pull?`<div style="font-size:13px;font-weight:700;margin-bottom:10px">📦 What to Pull</div>${meal.pull.map(p=>`<div class="pull-row"><span style="font-size:20px;width:28px">${p.icon||'🍱'}</span><div style="flex:1"><div style="font-size:14px;font-weight:500">${p.item}</div><div style="font-size:12px;color:var(--text-muted)">${p.prepNote||''}</div></div><span class="pqty">${p.qty}</span></div>`).join('')}<div style="height:14px"></div>`:''}
     ${meal.steps?`<div style="font-size:13px;font-weight:700;margin-bottom:10px">🥄 Steps</div>${meal.steps.map((s,i)=>`<div class="step-row"><div class="snum">${i+1}</div><div style="font-size:14px;line-height:1.6">${s}</div></div>`).join('')}<div style="height:14px"></div>`:''}
     `:''}
     <div style="font-size:13px;font-weight:700;margin-bottom:10px">Rate this meal</div>
-    <div style="display:flex;gap:4px;margin-bottom:20px" id="rstar">
+    <div style="display:flex;gap:4px;margin-bottom:16px" id="rstar">
       ${[1,2,3,4,5].map(n=>`<span style="font-size:28px;cursor:pointer" onclick="rateMeal(${dayIndex},'${slot}',${n})">${n<=rating?'⭐':'☆'}</span>`).join('')}
     </div>
-    <button class="btn bo bfull" style="color:#c62828" onclick="removeMeal(${dayIndex},'${slot}')">Remove from Calendar</button>`);
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px">↕️ Move to a different slot</div>
+    <div class="r2" style="margin-bottom:10px">
+      <div class="fg"><label class="lbl">Day</label>
+        <select class="sel" id="move-day"><option value="0">Sunday</option><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option></select>
+      </div>
+      <div class="fg"><label class="lbl">Slot</label>
+        <select class="sel" id="move-slot"><option value="breakfast">Breakfast</option><option value="lunch">Lunch</option><option value="dinner">Dinner</option><option value="snack">Snack</option></select>
+      </div>
+    </div>
+    <button class="btn bg bfull" style="margin-bottom:10px" data-from-day="${dayIndex}" data-from-slot="${slot}" onclick="moveMeal(this.dataset.fromDay,this.dataset.fromSlot)">Move Meal</button>
+    <button class="btn bo bfull" style="color:#c62828" data-day="${dayIndex}" data-slot="${slot}" onclick="removeMeal(this.dataset.day,this.dataset.slot)">Remove from Calendar</button>`);
+}
+function moveMeal(fromDay,fromSlot){
+  const toDay=+document.getElementById('move-day').value;
+  const toSlot=document.getElementById('move-slot').value;
+  const meal=A.calendar[fromDay]?.[fromSlot];
+  if(!meal)return;
+  if(!A.calendar[toDay])A.calendar[toDay]={};
+  A.calendar[toDay][toSlot]=meal;
+  delete A.calendar[fromDay][fromSlot];
+  save();closeDrawer();render();
 }
 function rateMeal(dayIndex,slot,rating){
   const meal=A.calendar[dayIndex][slot];
@@ -1098,6 +1123,8 @@ function generateRecipe(){
   const flavors=['Savory','Smoky','Tex-Mex','Asian-Style','Italian','Southern','Mediterranean','Caribbean','Cajun','Teriyaki','BBQ','Lemon Herb','Garlic Butter'];
   const rawFlavor=document.getElementById('fl')?.value||'Smoky';
   const flavor=rawFlavor==='Surprise Me'?flavors[Math.floor(Math.random()*flavors.length)]:rawFlavor;
+  const isBreakfast=mealType==='Breakfast';
+  const isSnack=mealType==='Snack';
   const servings=document.getElementById('sv')?.value||'4';
 
   const availBases=A.bases.filter(b=>hasAny(b));
@@ -1136,7 +1163,7 @@ SYSTEM RULES — NEVER BREAK THESE:
 - Tips must connect back to the Five-Layer system — freezing leftovers, batch cooking, emergency meals.
 - If something small would make the dish significantly better (lime, cheese, sour cream, fresh vegetables) — flag it on the grocery list. Never sacrifice quality.
 
-DISH VARIETY — choose the most interesting dish possible from what is available. Do NOT default to bowls unless that is genuinely the best option. Consider: tacos, enchiladas, stir fry, pasta, chili, soup, casserole, quiche, hash, shepherd's pie, fried rice, shakshuka, quesadillas, street corn bowl, nachos, etc.
+DISH VARIETY — choose the most interesting dish possible from what is available. Do NOT default to bowls unless that is genuinely the best option. Be creative and vary your suggestions — if the inventory could support pasta, make pasta. If it could support chili, make chili. If it could support enchiladas, make enchiladas. Avoid repeating the same dish type. Consider: tacos, enchiladas, stir fry, pasta, chili, soup, casserole, quiche, hash, shepherd's pie, fried rice, shakshuka, quesadillas, street corn bowl, nachos, stuffed peppers, etc.
 
 RESPONSE FORMAT — respond ONLY with valid JSON, no markdown, no explanation:
 {
@@ -1162,6 +1189,8 @@ Flavor direction: ${flavor}
 Servings: ${servings}
 P&P Spice Blends: ${ppSpices?'YES — I own the Prep & Purpose spice kit. Use blend names only, never reveal ingredients.':'No'}
 
+IMPORTANT: This is a ${mealType.toUpperCase()} meal. ${isBreakfast?'Build something people actually eat for breakfast — eggs, pancakes, waffles, oatmeal, breakfast hash, breakfast burrito, shakshuka, breakfast fried rice, or a morning protein plate. Do NOT build lunch or dinner dishes for breakfast.':isSnack?'Build a small-portion snack — nachos, quesadilla, bean dip, lettuce wraps, or protein bites. Keep portions small.':'Build a satisfying '+mealType.toLowerCase()+' dish.'}
+
 MY BASES (cooked proteins, frozen in quart bags):
 ${baseList.length>0?baseList.join('\n'):'None stocked'}
 
@@ -1171,7 +1200,7 @@ ${supportList.length>0?supportList.join('\n'):'None stocked'}
 MY PANTRY STAPLES (on hand):
 ${pantryList.length>0?pantryList.join(', '):'None marked'}
 
-Build me the most interesting, delicious ${mealType.toLowerCase()} possible from what I have. Be creative — do not default to a bowl if something better fits the ingredients.`;
+Build me a creative, delicious ${mealType.toLowerCase()} using what I have. Be specific and make it sound amazing.`;
 
   A.generating=true;A.recipe=null;A.pantryCheck=null;
   showPage('meals');
