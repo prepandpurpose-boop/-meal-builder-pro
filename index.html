@@ -701,7 +701,6 @@ function rBuilderForm(){
       ${availSupports.length>0?`<div style="display:flex;flex-wrap:wrap;gap:6px">${availSupports.slice(0,6).map(s=>{const best=getBestStorage(s);return`<span style="background:#e3f2fd;color:#1565c0;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600">${s.icon} ${s.name}</span>`;}).join('')}${availSupports.length>6?`<span style="padding:5px 12px;border-radius:20px;font-size:12px;color:var(--text-muted)">+${availSupports.length-6} more</span>`:''}</div>`:''}
     </div>
     <button class="btn bg bfull blg" onclick="generateRecipe()" ${availBases.length===0?'disabled style="opacity:.5"':''}>🤖 Generate My Meal</button>
-    ${A.favorites.length>0?`<div style="margin-top:10px"><button class="btn bo bfull" onclick="openFavPicker()">⭐ Use a Favorite Instead</button></div>`:''}
   </div>`;
 }
 
@@ -823,14 +822,11 @@ function rCal(){
   const dayCal=A.calendarByDate[selKey]||{};
   const todayKey=dateKey(new Date());
   const weekLabel=weekOffset===0?'This Week':weekOffset===1?'Next Week':weekOffset===2?'In 2 Weeks':weekOffset===3?'In 3 Weeks':'In 4 Weeks';
-  const favCount=A.favorites.length;
   return `<div class="pg active">
     <div class="tbar">
-      <button class="tpill ${A.calTab==='plan'?'active':''}" onclick="A.calTab='plan';render()">📅 Plan</button>
-      <button class="tpill ${A.calTab==='favs'?'active':''}" onclick="A.calTab='favs';render()">⭐ Favorites${favCount>0?' ('+favCount+')':''}</button>
+      <button class="tpill active">📅 Plan</button>
       <button class="tpill" onclick="printWeek()" style="margin-left:auto">🖨️</button>
     </div>
-    ${A.calTab==='favs'?rFavs():`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <button class="btn bo bsm" onclick="A.weekOffset=Math.max(0,(A.weekOffset||0)-1);A.calSelDate=null;render()" ${weekOffset===0?'disabled style="opacity:.4"':''}>‹ Back</button>
       <span style="font-size:13px;font-weight:600;color:var(--green)">${weekLabel}</span>
@@ -862,17 +858,7 @@ function rCal(){
       return '<div><div class="slbl">'+slotIcons[slot]+' '+slot+'</div>'
         +'<div class="mslot" data-date="'+selKey+'" data-slot="'+slot+'" onclick="openAddToCal(this.dataset.date,this.dataset.slot)">Tap to plan '+slot+'</div></div>';
     }).join('')}
-    `}
   </div>`;
-}
-
-function rFavs(){
-  if(A.favorites.length===0) return`<div class="empty"><div style="font-size:48px;margin-bottom:10px">⭐</div><div style="font-size:15px;font-weight:600;margin-bottom:6px">No favorites yet</div><div style="font-size:14px">Build a meal, add it to the calendar, and rate it 4+ stars to save it here.</div></div>`;
-  return`<div class="card" style="padding:0">${A.favorites.map(f=>`<div class="fav-item" onclick="openFavDetail(${f.id})">
-    <div class="fav-title">${f.title}</div>
-    <div class="fav-meta">${f.macros?`${f.macros.cal} cal · ${f.macros.protein}g protein`:''}</div>
-    <div style="margin-top:5px">${[1,2,3,4,5].map(n=>`<span style="font-size:16px">${n<=f.rating?'⭐':'☆'}</span>`).join('')}</div>
-  </div>`).join('')}</div>`;
 }
 
 function printRecipe(){
@@ -1125,19 +1111,13 @@ function togglePantry(id){const item=A.pantry.find(i=>i.id==id);if(item){item.ha
 function openAddToCal(dateKey,slot){
   openDrawer(`<div class="dt">Plan ${slot.charAt(0).toUpperCase()+slot.slice(1)}</div>
     <div class="fg"><label class="lbl">Meal Name</label><input class="inp" id="cm-t" placeholder="What are you having?"></div>
-    ${A.favorites.length>0?`<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Or pick from favorites</div>
-    ${A.favorites.map(f=>`<div style="padding:11px 14px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);margin-bottom:8px;cursor:pointer" onclick="document.getElementById('cm-t').value='${f.title.replace(/'/g,'')}'">
-      <div style="font-size:14px;font-weight:600">${f.title}</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${[1,2,3,4,5].map(n=>n<=f.rating?'⭐':'☆').join('')}</div>
-    </div>`).join('')}`:''}
     <button class="btn bg bfull" style="margin-top:12px" data-date="${dateKey}" data-slot="${slot}" onclick="saveCalMeal(this.dataset.date,this.dataset.slot)">Add to Calendar</button>`);
 }
 function saveCalMeal(dateKey,slot){
   const title=document.getElementById('cm-t').value.trim();
   if(!title)return;
   if(!A.calendarByDate[dateKey])A.calendarByDate[dateKey]={};
-  const fav=A.favorites.find(f=>f.title===title);
-  A.calendarByDate[dateKey][slot]=fav?{...fav}:{title};
+  A.calendarByDate[dateKey][slot]={title};
   save();closeDrawer();render();
 }
 
@@ -1154,10 +1134,6 @@ function openMealDetail(dateKey,slot){
     ${meal.pull?`<div style="font-size:13px;font-weight:700;margin-bottom:10px">📦 What to Pull</div>${meal.pull.map(p=>`<div class="pull-row"><span style="font-size:20px;width:28px">${p.icon||'🍱'}</span><div style="flex:1"><div style="font-size:14px;font-weight:500">${p.item}</div><div style="font-size:12px;color:var(--text-muted)">${p.prepNote||''}</div></div><span class="pqty">${p.qty}</span></div>`).join('')}<div style="height:14px"></div>`:''}
     ${meal.steps?`<div style="font-size:13px;font-weight:700;margin-bottom:10px">🥄 Steps</div>${meal.steps.map((s,i)=>`<div class="step-row"><div class="snum">${i+1}</div><div style="font-size:14px;line-height:1.6">${s}</div></div>`).join('')}<div style="height:14px"></div>`:''}
     `:''}
-    <div style="font-size:13px;font-weight:700;margin-bottom:10px">Rate this meal</div>
-    <div style="display:flex;gap:4px;margin-bottom:16px" id="rstar">
-      ${[1,2,3,4,5].map(n=>`<span style="font-size:28px;cursor:pointer" data-date="${dateKey}" data-slot="${slot}" data-rating="${n}" onclick="rateMeal(this.dataset.date,this.dataset.slot,+this.dataset.rating)">${n<=rating?'⭐':'☆'}</span>`).join('')}
-    </div>
     <div style="font-size:13px;font-weight:700;margin-bottom:8px">↕️ Move to a different slot</div>
     <div class="r2" style="margin-bottom:10px">
       <div class="fg"><label class="lbl">Date</label>
@@ -1211,63 +1187,10 @@ function removeMeal(dateKey,slot){
   if(A.calendarByDate[dateKey])delete A.calendarByDate[dateKey][slot];
   save();closeDrawer();render();
 }
-function rateMeal(dateKey,slot,rating){
-  if(!A.calendarByDate[dateKey]?.[slot])return;
-  const meal=A.calendarByDate[dateKey][slot];
-  if(typeof meal==='object')meal.rating=rating;
-  else A.calendarByDate[dateKey][slot]={title:meal,rating};
-  const updated=A.calendarByDate[dateKey][slot];
-  if(rating>=4){const ex=A.favorites.find(f=>f.title===updated.title);if(!ex)A.favorites.push({id:Date.now(),...updated,rating});else ex.rating=rating;}
-  save();
-  const el=document.getElementById('rstar');
-  if(el)el.innerHTML=[1,2,3,4,5].map(n=>`<span style="font-size:28px;cursor:pointer" data-date="${dateKey}" data-slot="${slot}" data-rating="${n}" onclick="rateMeal(this.dataset.date,this.dataset.slot,+this.dataset.rating)">${n<=rating?'⭐':'☆'}</span>`).join('');
-  render();
-}
 function removeMeal(dateKey,slot){
   if(A.calendarByDate[dateKey])delete A.calendarByDate[dateKey][slot];
   save();closeDrawer();render();
 }
-
-function openFavDetail(id){
-  const fav=A.favorites.find(f=>f.id==id);if(!fav)return;
-  openDrawer(`<div class="dt">${fav.title}</div>
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px">${fav.description||''}</div>
-    <div style="font-size:13px;font-weight:700;margin-bottom:8px">Schedule this meal</div>
-    <div class="r2" style="margin-bottom:12px">
-      <div class="fg"><label class="lbl">Date</label><input class="inp" type="date" id="fd-date" style="cursor:pointer"></div>
-      <div class="fg"><label class="lbl">Slot</label><select class="sel" id="fd-s"><option value="breakfast">Breakfast</option><option value="lunch">Lunch</option><option value="dinner" selected>Dinner</option><option value="snack">Snack</option></select></div>
-    </div>
-    <button class="btn bg bfull" style="margin-bottom:10px" data-fav-id="${id}" onclick="placeFav(this.dataset.favId)">Add to Calendar</button>
-    <button class="btn bo bfull" style="color:#c62828" data-fav-id="${id}" onclick="removeFav(this.dataset.favId)">Remove from Favorites</button>`);
-}
-function placeFav(id){
-  const fav=A.favorites.find(f=>f.id==id);if(!fav)return;
-  const dateVal=document.getElementById('fd-date')?.value;
-  const slot=document.getElementById('fd-s')?.value;
-  if(!dateVal){alert('Please pick a date first.');return;}
-  const conflict=A.calendarByDate[dateVal]?.[slot];
-  if(conflict){const ct=typeof conflict==='object'?conflict.title:conflict;alert('⚠️ '+ct+' is already in that slot. Move or remove it first.');return;}
-  if(!A.calendarByDate[dateVal])A.calendarByDate[dateVal]={};
-  A.calendarByDate[dateVal][slot]={...fav};
-  const d=new Date(dateVal+'T12:00:00');
-  const today=new Date();today.setHours(0,0,0,0);
-  const todaySun=new Date(today);todaySun.setDate(today.getDate()-today.getDay());
-  const dateSun=new Date(d);dateSun.setDate(d.getDate()-d.getDay());
-  const weekDiff=Math.round((dateSun-todaySun)/(7*24*60*60*1000));
-  A.weekOffset=Math.max(0,Math.min(4,weekDiff));
-  A.calSelDate=dateVal;
-  save();closeDrawer();render();
-  alert('✅ Added to calendar!');
-}
-function removeFav(id){A.favorites=A.favorites.filter(f=>f.id!=id);save();closeDrawer();render();}
-function openFavPicker(){
-  openDrawer(`<div class="dt">Pick a Favorite</div>${A.favorites.map(f=>`<div style="padding:12px 14px;border:0.5px solid var(--border-strong);border-radius:var(--radius-sm);margin-bottom:10px;cursor:pointer" onclick="loadFav(${f.id})">
-    <div style="font-size:15px;font-weight:600;font-family:'Playfair Display',serif">${f.title}</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:3px">${[1,2,3,4,5].map(n=>n<=f.rating?'⭐':'☆').join('')}</div>
-  </div>`).join('')}`);
-}
-function loadFav(id){const fav=A.favorites.find(f=>f.id===id);if(!fav)return;A.recipe={...fav};A.pantryCheck=null;closeDrawer();showPage('meals');}
-
 function openAddGroc(){
   openDrawer(`<div class="dt">Add to List</div>
     <div class="fg"><label class="lbl">Item Name</label><input class="inp" id="gi-n" placeholder="What do you need?"></div>
