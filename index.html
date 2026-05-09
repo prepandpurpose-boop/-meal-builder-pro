@@ -298,7 +298,7 @@ const A={
   page:'inventory',invTab:'bases',calSel:0,calTab:'plan',
   calSelDate:null,weekOffset:0,
   generating:false,recipe:null,pantryCheck:null,ppSpices:true,
-  householdSize:4,lastMealType:'Dinner',
+  householdSize:4,lastMealType:localStorage.getItem('pp_lastMealType')||'Dinner',
   bases:JSON.parse(localStorage.getItem('pp_bases')||JSON.stringify(DEF_BASES)),
   supports:JSON.parse(localStorage.getItem('pp_supports')||JSON.stringify(DEF_SUPPORTS)),
   pantry:JSON.parse(localStorage.getItem('pp_pantry')||JSON.stringify(DEF_PANTRY)),
@@ -315,7 +315,7 @@ function save(){
   localStorage.setItem('pp_pantry',JSON.stringify(A.pantry));
   localStorage.setItem('pp_emergency',JSON.stringify(A.emergency));
   localStorage.setItem('pp_favs',JSON.stringify(A.favorites));
-  localStorage.setItem('pp_calByDate',JSON.stringify(A.calendarByDate));
+  localStorage.setItem('pp_lastMealType',A.lastMealType);
   localStorage.setItem('pp_cal',JSON.stringify(A.calendar));
   localStorage.setItem('pp_groc',JSON.stringify(A.grocery));
 }
@@ -1094,23 +1094,31 @@ function openMealDetail(dateKey,slot){
         </select>
       </div>
     </div>
-    <button class="btn bg bfull" style="margin-bottom:10px" data-from-date="${dateKey}" data-from-slot="${slot}" onclick="moveMeal(this.dataset.fromDate,this.dataset.fromSlot)">↕️ Move Meal</button>
-    <button class="btn bo bfull" style="color:#c62828" data-date="${dateKey}" data-slot="${slot}" onclick="removeMeal(this.dataset.date,this.dataset.slot)">Remove from Calendar</button>`);
+    <button class="btn bg bfull" style="margin-bottom:10px" onclick="moveMeal()">↕️ Move Meal</button>
+    <button class="btn bo bfull" style="color:#c62828" onclick="removeMeal('${dateKey}','${slot}')">Remove from Calendar</button>`);
+  // Store move source in state so it survives re-renders
+  A._moveFrom={date:dateKey,slot};
 }
-function moveMeal(fromDate,fromSlot){
+function moveMeal(){
+  const fromDate=A._moveFrom?.date;
+  const fromSlot=A._moveFrom?.slot;
   const toDate=document.getElementById('move-date')?.value;
   const toSlot=document.getElementById('move-slot')?.value;
-  if(!toDate||!toSlot)return;
+  if(!fromDate||!fromSlot){alert('Something went wrong. Please tap the meal again.');return;}
+  if(!toDate){alert('Please pick a date to move to.');return;}
+  if(!toSlot)return;
   const meal=A.calendarByDate[fromDate]?.[fromSlot];
-  if(!meal)return;
+  if(!meal){alert('Could not find that meal. Please try again.');return;}
+  if(toDate===fromDate&&toSlot===fromSlot){alert('That is already where this meal is.');return;}
   const conflict=A.calendarByDate[toDate]?.[toSlot];
-  if(conflict&&(toDate!==fromDate||toSlot!==fromSlot)){
+  if(conflict){
     const ct=typeof conflict==='object'?conflict.title:conflict;
     alert('⚠️ '+ct+' is already in that slot. Remove it first then try again.');return;
   }
   if(!A.calendarByDate[toDate])A.calendarByDate[toDate]={};
   A.calendarByDate[toDate][toSlot]=meal;
   delete A.calendarByDate[fromDate][fromSlot];
+  A._moveFrom=null;
   // Navigate to new date
   const d=new Date(toDate+'T12:00:00');
   const today=new Date();today.setHours(0,0,0,0);
