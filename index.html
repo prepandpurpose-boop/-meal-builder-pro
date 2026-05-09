@@ -1127,20 +1127,21 @@ function generateRecipe(){
 
 SYSTEM RULES — NEVER BREAK THESE:
 - Build from frozen first. Bases are cooked proteins in quart bags (1 quart bag = 1.5 lbs cooked). Supports are cooked grains/veg in quart bags (1 quart bag = 3 cups). Canned items = 1 can. Dry = measured in lbs.
+- NEVER use partial bags. Always pull whole bags only — never "½ bag" or "¼ bag". If a recipe needs less, the user uses what they need and saves the rest.
 - Cook proteins from frozen directly — no overnight thaw. If needed, warm water 15 minutes max.
 - Never say "to taste" or "a pinch" — use real US measurements (tsp, tbsp, cups, oz, lbs).
+- Frozen bell peppers, onions, and vegetables are ALWAYS diced/sliced supports used as ingredients in a dish — they are never whole vegetables used as vessels. If a recipe like stuffed peppers requires whole fresh bell peppers, flag them on the grocery list as a fresh purchase needed.
 - Every recipe must feel like a REAL dish people want to eat — not a bowl of random ingredients. Use the flavor direction to name it properly.
 - If tortillas are available and the dish calls for it — use them. If not, adapt (taco bowl, lettuce wrap).
 - Tips must connect back to the Five-Layer system — freezing leftovers, batch cooking, emergency meals.
-- If something small would make the dish significantly better (lime, cheese, sour cream) — flag it on the grocery list. Never sacrifice quality.
+- If something small would make the dish significantly better (lime, cheese, sour cream, fresh vegetables) — flag it on the grocery list. Never sacrifice quality.
 
-DISH VARIETY — choose the most interesting dish possible from what is available. Do NOT default to bowls unless that is genuinely the best option. Consider: tacos, enchiladas, stir fry, pasta, chili, soup, casserole, quiche, hash, shepherd's pie, stuffed peppers, fried rice, shakshuka, quesadillas, street corn bowl, nachos, etc.
+DISH VARIETY — choose the most interesting dish possible from what is available. Do NOT default to bowls unless that is genuinely the best option. Consider: tacos, enchiladas, stir fry, pasta, chili, soup, casserole, quiche, hash, shepherd's pie, fried rice, shakshuka, quesadillas, street corn bowl, nachos, etc.
 
 RESPONSE FORMAT — respond ONLY with valid JSON, no markdown, no explanation:
 {
   "title": "Dish name that sounds delicious",
   "description": "One sentence that makes them want to cook this right now",
-  "dishType": "pasta|tacos|chili|soup|casserole|stir_fry|fried_rice|hash|quiche|enchiladas|burrito_bowl|stuffed_peppers|shepherds_pie|nachos|quesadilla|shakshuka|bowl|pancakes|waffles|oatmeal|scrambled_eggs|breakfast_burrito|breakfast_hash|other",
   "macros": {"cal": 420, "protein": 38, "carbs": 32, "fat": 14},
   "pull": [
     {"icon": "🥩", "item": "Ground Beef", "qty": "1 quart bag = 1.5 lbs cooked", "prepNote": "Cook directly from frozen on medium-high 5-6 minutes."}
@@ -1152,7 +1153,7 @@ RESPONSE FORMAT — respond ONLY with valid JSON, no markdown, no explanation:
   "steps": ["Step 1 with real measurements", "Step 2", "Step 3"],
   "tip": "Specific actionable tip that connects to batch cooking or the Five-Layer system",
   "groceryFlags": [
-    {"name": "Lime", "qty": "2 limes", "urgency": "low", "reason": "Finishes this dish perfectly"}
+    {"name": "Fresh bell peppers", "qty": "4-6 whole peppers", "urgency": "out", "reason": "Needed as vessels for stuffed peppers — frozen peppers are diced and used as filling only"}
   ]
 }`;
 
