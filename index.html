@@ -768,7 +768,7 @@ function rRecipe(){
         <select class="sel" id="cal-slot" onchange="checkConflict()">
           <option value="breakfast" ${A.lastMealType==='Breakfast'?'selected':''}>Breakfast</option>
           <option value="lunch" ${A.lastMealType==='Lunch'?'selected':''}>Lunch</option>
-          <option value="dinner" ${!A.lastMealType||A.lastMealType==='Dinner'?'selected':''}>Dinner</option>
+          <option value="dinner" ${A.lastMealType==='Dinner'||!A.lastMealType?'selected':''}>Dinner</option>
           <option value="snack" ${A.lastMealType==='Snack'?'selected':''}>Snack</option>
         </select>
       </div>
@@ -856,14 +856,15 @@ function rFavs(){
 }
 
 function printWeek(){
-  const dow=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const slots=['breakfast','lunch','dinner','snack'];
   const slotLabels={breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',snack:'Snack'};
-  const today=new Date('2026-05-08');
+  const weekOffset=A.weekOffset||0;
+  const weekStart=getWeekStart(weekOffset);
   let cards='';
   for(let i=0;i<7;i++){
-    const dt=new Date(today);dt.setDate(today.getDate()-today.getDay()+i);
-    const dayCal=A.calendar[i]||{};
+    const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
+    const key=dateKey(d);
+    const dayCal=A.calendarByDate[key]||{};
     slots.forEach(slot=>{
       const meal=dayCal[slot];
       if(!meal) return;
@@ -872,7 +873,7 @@ function printWeek(){
       const steps=typeof meal==='object'&&meal.steps?meal.steps:[];
       const tip=typeof meal==='object'&&meal.tip?meal.tip:'';
       cards+='<div class="recipe-card">'
-        +'<div class="recipe-day">'+dow[i]+' · '+slotLabels[slot]+'</div>'
+        +'<div class="recipe-day">'+d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})+' · '+slotLabels[slot]+'</div>'
         +'<div class="recipe-title">'+title+'</div>'
         +(pull.length>0
           ?'<div class="section-head">❄️ What to Pull</div>'
@@ -1184,6 +1185,8 @@ function clearDone(){A.grocery=A.grocery.filter(g=>!g.done);save();render();}
 // ─── MEAL GENERATION ──────────────────────────────────────────────────────────
 function generateRecipe(){
   const mealType=document.getElementById('mt')?.value||'Dinner';
+  A.lastMealType=mealType;
+  save();
   const flavors=['Savory','Smoky','Tex-Mex','Asian-Style','Italian','Southern','Mediterranean','Caribbean','Cajun','Teriyaki','BBQ','Lemon Herb','Garlic Butter'];
   const rawFlavor=document.getElementById('fl')?.value||'Smoky';
   const flavor=rawFlavor==='Surprise Me'?flavors[Math.floor(Math.random()*flavors.length)]:rawFlavor;
@@ -1355,16 +1358,19 @@ function placeOnCal(){
   }
   if(!A.calendarByDate[dateVal])A.calendarByDate[dateVal]={};
   A.calendarByDate[dateVal][slot]={...A.recipe};
-  // Deduct inventory — frozen first
+  // Deduct inventory — parse actual quantity from pull list
   if(A.recipe.pull){
     A.recipe.pull.forEach(p=>{
       const base=A.bases.find(b=>b.name===p.item);
       const support=A.supports.find(s=>s.name===p.item);
       const item=base||support;
       if(item){
-        if(item.frozen>0)item.frozen--;
-        else if(item.canned>0)item.canned--;
-        else if(item.dry>0)item.dry=Math.max(0,item.dry-1);
+        // Parse leading number from qty string e.g. "2 quart bags" → 2, "1 can" → 1
+        const num=parseInt(p.qty)||1;
+        const deduct=Math.max(1,num);
+        if(item.frozen>0){item.frozen=Math.max(0,item.frozen-deduct);}
+        else if(item.canned>0){item.canned=Math.max(0,item.canned-deduct);}
+        else if(item.dry>0){item.dry=Math.max(0,item.dry-deduct);}
       }
     });
   }
