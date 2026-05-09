@@ -296,13 +296,15 @@ const DEF_EMERGENCY=[];
 
 const A={
   page:'inventory',invTab:'bases',calSel:0,calTab:'plan',
+  calSelDate:null,weekOffset:0,
   generating:false,recipe:null,pantryCheck:null,ppSpices:true,
-  householdSize:4,
+  householdSize:4,lastMealType:'Dinner',
   bases:JSON.parse(localStorage.getItem('pp_bases')||JSON.stringify(DEF_BASES)),
   supports:JSON.parse(localStorage.getItem('pp_supports')||JSON.stringify(DEF_SUPPORTS)),
   pantry:JSON.parse(localStorage.getItem('pp_pantry')||JSON.stringify(DEF_PANTRY)),
   emergency:JSON.parse(localStorage.getItem('pp_emergency')||JSON.stringify(DEF_EMERGENCY)),
   favorites:JSON.parse(localStorage.getItem('pp_favs')||'[]'),
+  calendarByDate:JSON.parse(localStorage.getItem('pp_calByDate')||'{}'),
   calendar:JSON.parse(localStorage.getItem('pp_cal')||JSON.stringify({0:{},1:{},2:{},3:{},4:{},5:{},6:{}})),
   grocery:JSON.parse(localStorage.getItem('pp_groc')||'[]'),
 };
@@ -313,6 +315,7 @@ function save(){
   localStorage.setItem('pp_pantry',JSON.stringify(A.pantry));
   localStorage.setItem('pp_emergency',JSON.stringify(A.emergency));
   localStorage.setItem('pp_favs',JSON.stringify(A.favorites));
+  localStorage.setItem('pp_calByDate',JSON.stringify(A.calendarByDate));
   localStorage.setItem('pp_cal',JSON.stringify(A.calendar));
   localStorage.setItem('pp_groc',JSON.stringify(A.grocery));
 }
@@ -755,64 +758,89 @@ function rRecipe(){
       ${r.steps.map((s,i)=>`<div class="step-row"><div class="snum">${i+1}</div><div style="font-size:14px;line-height:1.6">${s}</div></div>`).join('')}
     </div>
     <div class="gtip" style="margin-bottom:16px"><div class="gtip-l">💡 Tip</div><div class="gtip-b">${r.tip}</div></div>
-    <div style="font-size:15px;font-weight:600;margin-bottom:10px">Schedule this meal</div>
-    <div class="r2" style="margin-bottom:12px">
-      <div class="fg"><label class="lbl">Day</label>
-        <select class="sel" id="cal-day"><option value="0">Sunday</option><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option></select>
+    <div style="font-size:15px;font-weight:600;margin-bottom:6px">Schedule this meal</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Pick a date and slot. If that slot is already taken we will let you know before saving.</div>
+    <div class="r2" style="margin-bottom:8px">
+      <div class="fg"><label class="lbl">Date</label>
+        <input class="inp" type="date" id="cal-date" onchange="checkConflict()" style="cursor:pointer">
       </div>
       <div class="fg"><label class="lbl">Meal Slot</label>
-        <select class="sel" id="cal-slot">
-          <option value="breakfast" ${mealType==='Breakfast'?'selected':''}>Breakfast</option>
-          <option value="lunch" ${mealType==='Lunch'?'selected':''}>Lunch</option>
-          <option value="dinner" ${mealType==='Dinner'||mealType==='Snack'?'selected':''}>Dinner</option>
-          <option value="snack" ${mealType==='Snack'?'selected':''}>Snack</option>
+        <select class="sel" id="cal-slot" onchange="checkConflict()">
+          <option value="breakfast" ${A.lastMealType==='Breakfast'?'selected':''}>Breakfast</option>
+          <option value="lunch" ${A.lastMealType==='Lunch'?'selected':''}>Lunch</option>
+          <option value="dinner" ${!A.lastMealType||A.lastMealType==='Dinner'?'selected':''}>Dinner</option>
+          <option value="snack" ${A.lastMealType==='Snack'?'selected':''}>Snack</option>
         </select>
       </div>
     </div>
+    <div id="conflict-msg" style="display:none;background:#fdecea;border:0.5px solid #f5c6c6;border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px;font-size:13px;color:#c62828"></div>
     <button class="btn bg bfull blg" style="margin-bottom:10px" onclick="placeOnCal()">📅 Add to Calendar & Deduct Inventory</button>
     <button class="btn bo bfull" onclick="A.recipe=null;A.pantryCheck=null;render()">↩ Generate a Different Meal</button>
   </div>`;
 }
 
 // ─── CALENDAR ─────────────────────────────────────────────────────────────────
+function getWeekStart(offset){
+  const today=new Date();
+  today.setHours(0,0,0,0);
+  const dow=today.getDay();
+  const sun=new Date(today);
+  sun.setDate(today.getDate()-dow+(offset*7));
+  return sun;
+}
+function dateKey(d){return d.toISOString().slice(0,10);}
+
 function rCal(){
   const dow=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const today=new Date('2026-05-08');
   const slots=['breakfast','lunch','dinner','snack'];
   const slotIcons={breakfast:'🌅',lunch:'☀️',dinner:'🌙',snack:'🍎'};
-  const dayCal=A.calendar[A.calSel]||{};
-  const selDate=new Date(today);selDate.setDate(today.getDate()-today.getDay()+A.calSel);
+  const weekOffset=A.weekOffset||0;
+  const weekStart=getWeekStart(weekOffset);
+  const days=[];
+  for(let i=0;i<7;i++){const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);days.push(d);}
+  const selKey=A.calSelDate||(A.calSel!==undefined?dateKey(days[A.calSel]):null);
+  const selDay=days.find(d=>dateKey(d)===selKey)||days[0];
+  const dayCal=A.calendarByDate[selKey]||{};
+  const todayKey=dateKey(new Date());
+  const weekLabel=weekOffset===0?'This Week':weekOffset===1?'Next Week':weekOffset===2?'In 2 Weeks':weekOffset===3?'In 3 Weeks':'In 4 Weeks';
   const favCount=A.favorites.length;
   return `<div class="pg active">
     <div class="tbar">
-      <button class="tpill ${A.calTab==='plan'?'active':''}" onclick="A.calTab='plan';render()">📅 This Week</button>
+      <button class="tpill ${A.calTab==='plan'?'active':''}" onclick="A.calTab='plan';render()">📅 Plan</button>
       <button class="tpill ${A.calTab==='favs'?'active':''}" onclick="A.calTab='favs';render()">⭐ Favorites${favCount>0?' ('+favCount+')':''}</button>
-      <button class="tpill" onclick="printWeek()" style="margin-left:auto">🖨️ Print</button>
+      <button class="tpill" onclick="printWeek()" style="margin-left:auto">🖨️</button>
     </div>
     ${A.calTab==='favs'?rFavs():`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <button class="btn bo bsm" onclick="A.weekOffset=Math.max(0,(A.weekOffset||0)-1);A.calSelDate=null;render()" ${weekOffset===0?'disabled style="opacity:.4"':''}>‹ Back</button>
+      <span style="font-size:13px;font-weight:600;color:var(--green)">${weekLabel}</span>
+      <button class="btn bo bsm" onclick="A.weekOffset=Math.min(4,(A.weekOffset||0)+1);A.calSelDate=null;render()" ${weekOffset===4?'disabled style="opacity:.4"':''}>Next ›</button>
+    </div>
     <div class="cwk">
-      ${dow.map((d,i)=>{
-        const has=A.calendar[i]&&Object.values(A.calendar[i]).some(v=>v);
-        const dt=new Date(today);dt.setDate(today.getDate()-today.getDay()+i);
-        return '<div class="cday" onclick="A.calSel='+i+';render()">'
-          +'<div class="cdow">'+d+'</div>'
-          +'<div class="cdate '+(i===0?'today ':'')+( i===A.calSel?'sel':'')+'">'+dt.getDate()+'</div>'
+      ${days.map((d,i)=>{
+        const key=dateKey(d);
+        const has=A.calendarByDate[key]&&Object.values(A.calendarByDate[key]).some(v=>v);
+        const isToday=key===todayKey;
+        const isSel=key===selKey;
+        return '<div class="cday" onclick="A.calSelDate=\''+key+'\';render()">'
+          +'<div class="cdow">'+dow[d.getDay()]+'</div>'
+          +'<div class="cdate '+(isToday?'today ':'')+( isSel?'sel':'')+'">'+d.getDate()+'</div>'
           +(has?'<div style="width:5px;height:5px;border-radius:50%;background:var(--gold);margin:3px auto 0"></div>':'<div style="height:8px"></div>')
           +'</div>';
       }).join('')}
     </div>
-    <div style="font-size:15px;font-weight:700;margin-bottom:14px;font-family:\'Playfair Display\',serif">${selDate.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})}</div>
+    <div style="font-size:15px;font-weight:700;margin-bottom:14px;font-family:\'Playfair Display\',serif">${selDay.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
     ${slots.map(slot=>{
       const meal=dayCal[slot];
       const title=meal?(typeof meal==='object'?meal.title:meal):null;
       if(meal){
         return '<div><div class="slbl">'+slotIcons[slot]+' '+slot+'</div>'
-          +'<div class="mslot filled" data-day="'+A.calSel+'" data-slot="'+slot+'" onclick="openMealDetail(this.dataset.day,this.dataset.slot)">'
+          +'<div class="mslot filled" data-date="'+selKey+'" data-slot="'+slot+'" onclick="openMealDetail(this.dataset.date,this.dataset.slot)">'
           +'<span>'+title+'</span><span style="font-size:18px">›</span>'
           +'</div></div>';
       }
       return '<div><div class="slbl">'+slotIcons[slot]+' '+slot+'</div>'
-        +'<div class="mslot" data-day="'+A.calSel+'" data-slot="'+slot+'" onclick="openAddToCal(this.dataset.day,this.dataset.slot)">Tap to plan '+slot+'</div></div>';
+        +'<div class="mslot" data-date="'+selKey+'" data-slot="'+slot+'" onclick="openAddToCal(this.dataset.date,this.dataset.slot)">Tap to plan '+slot+'</div></div>';
     }).join('')}
     `}
   </div>`;
@@ -1015,7 +1043,7 @@ function saveCustom(type){
 
 function togglePantry(id){const item=A.pantry.find(i=>i.id==id);if(item){item.have=!item.have;save();render();}}
 
-function openAddToCal(dayIndex,slot){
+function openAddToCal(dateKey,slot){
   openDrawer(`<div class="dt">Plan ${slot.charAt(0).toUpperCase()+slot.slice(1)}</div>
     <div class="fg"><label class="lbl">Meal Name</label><input class="inp" id="cm-t" placeholder="What are you having?"></div>
     ${A.favorites.length>0?`<div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Or pick from favorites</div>
@@ -1023,19 +1051,20 @@ function openAddToCal(dayIndex,slot){
       <div style="font-size:14px;font-weight:600">${f.title}</div>
       <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${[1,2,3,4,5].map(n=>n<=f.rating?'⭐':'☆').join('')}</div>
     </div>`).join('')}`:''}
-    <button class="btn bg bfull" style="margin-top:12px" onclick="saveCalMeal(${dayIndex},'${slot}')">Add to Calendar</button>`);
+    <button class="btn bg bfull" style="margin-top:12px" data-date="${dateKey}" data-slot="${slot}" onclick="saveCalMeal(this.dataset.date,this.dataset.slot)">Add to Calendar</button>`);
 }
-function saveCalMeal(dayIndex,slot){
+function saveCalMeal(dateKey,slot){
   const title=document.getElementById('cm-t').value.trim();
   if(!title)return;
-  if(!A.calendar[dayIndex])A.calendar[dayIndex]={};
+  if(!A.calendarByDate[dateKey])A.calendarByDate[dateKey]={};
   const fav=A.favorites.find(f=>f.title===title);
-  A.calendar[dayIndex][slot]=fav?{...fav}:{title};
+  A.calendarByDate[dateKey][slot]=fav?{...fav}:{title};
   save();closeDrawer();render();
 }
 
-function openMealDetail(dayIndex,slot){
-  const meal=A.calendar[dayIndex][slot];if(!meal)return;
+function openMealDetail(dateKey,slot){
+  const meal=A.calendarByDate[dateKey]?.[slot]||A.calendarByDate[dateKey]?.[slot];
+  if(!meal)return;
   const title=typeof meal==='string'?meal:meal.title;
   const rating=typeof meal==='object'?meal.rating||0:0;
   const hasR=typeof meal==='object'&&meal.steps;
@@ -1048,29 +1077,64 @@ function openMealDetail(dayIndex,slot){
     `:''}
     <div style="font-size:13px;font-weight:700;margin-bottom:10px">Rate this meal</div>
     <div style="display:flex;gap:4px;margin-bottom:16px" id="rstar">
-      ${[1,2,3,4,5].map(n=>`<span style="font-size:28px;cursor:pointer" onclick="rateMeal(${dayIndex},'${slot}',${n})">${n<=rating?'⭐':'☆'}</span>`).join('')}
+      ${[1,2,3,4,5].map(n=>`<span style="font-size:28px;cursor:pointer" data-date="${dateKey}" data-slot="${slot}" data-rating="${n}" onclick="rateMeal(this.dataset.date,this.dataset.slot,+this.dataset.rating)">${n<=rating?'⭐':'☆'}</span>`).join('')}
     </div>
     <div style="font-size:13px;font-weight:700;margin-bottom:8px">↕️ Move to a different slot</div>
     <div class="r2" style="margin-bottom:10px">
-      <div class="fg"><label class="lbl">Day</label>
-        <select class="sel" id="move-day"><option value="0">Sunday</option><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option></select>
+      <div class="fg"><label class="lbl">Date</label>
+        <input class="inp" type="date" id="move-date" value="${dateKey}" style="cursor:pointer">
       </div>
       <div class="fg"><label class="lbl">Slot</label>
-        <select class="sel" id="move-slot"><option value="breakfast">Breakfast</option><option value="lunch">Lunch</option><option value="dinner">Dinner</option><option value="snack">Snack</option></select>
+        <select class="sel" id="move-slot">
+          <option value="breakfast" ${slot==='breakfast'?'selected':''}>Breakfast</option>
+          <option value="lunch" ${slot==='lunch'?'selected':''}>Lunch</option>
+          <option value="dinner" ${slot==='dinner'?'selected':''}>Dinner</option>
+          <option value="snack" ${slot==='snack'?'selected':''}>Snack</option>
+        </select>
       </div>
     </div>
-    <button class="btn bg bfull" style="margin-bottom:10px" data-from-day="${dayIndex}" data-from-slot="${slot}" onclick="moveMeal(this.dataset.fromDay,this.dataset.fromSlot)">Move Meal</button>
-    <button class="btn bo bfull" style="color:#c62828" data-day="${dayIndex}" data-slot="${slot}" onclick="removeMeal(this.dataset.day,this.dataset.slot)">Remove from Calendar</button>`);
+    <button class="btn bg bfull" style="margin-bottom:10px" data-from-date="${dateKey}" data-from-slot="${slot}" onclick="moveMeal(this.dataset.fromDate,this.dataset.fromSlot)">↕️ Move Meal</button>
+    <button class="btn bo bfull" style="color:#c62828" data-date="${dateKey}" data-slot="${slot}" onclick="removeMeal(this.dataset.date,this.dataset.slot)">Remove from Calendar</button>`);
 }
-function moveMeal(fromDay,fromSlot){
-  const toDay=+document.getElementById('move-day').value;
-  const toSlot=document.getElementById('move-slot').value;
-  const meal=A.calendar[fromDay]?.[fromSlot];
+function moveMeal(fromDate,fromSlot){
+  const toDate=document.getElementById('move-date')?.value;
+  const toSlot=document.getElementById('move-slot')?.value;
+  if(!toDate||!toSlot)return;
+  const meal=A.calendarByDate[fromDate]?.[fromSlot];
   if(!meal)return;
-  if(!A.calendar[toDay])A.calendar[toDay]={};
-  A.calendar[toDay][toSlot]=meal;
-  delete A.calendar[fromDay][fromSlot];
+  const conflict=A.calendarByDate[toDate]?.[toSlot];
+  if(conflict&&(toDate!==fromDate||toSlot!==fromSlot)){
+    const ct=typeof conflict==='object'?conflict.title:conflict;
+    alert('⚠️ '+ct+' is already in that slot. Remove it first then try again.');return;
+  }
+  if(!A.calendarByDate[toDate])A.calendarByDate[toDate]={};
+  A.calendarByDate[toDate][toSlot]=meal;
+  delete A.calendarByDate[fromDate][fromSlot];
+  // Navigate to new date
+  const d=new Date(toDate+'T12:00:00');
+  const today=new Date();today.setHours(0,0,0,0);
+  const todaySun=new Date(today);todaySun.setDate(today.getDate()-today.getDay());
+  const dateSun=new Date(d);dateSun.setDate(d.getDate()-d.getDay());
+  const weekDiff=Math.round((dateSun-todaySun)/(7*24*60*60*1000));
+  A.weekOffset=Math.max(0,Math.min(4,weekDiff));
+  A.calSelDate=toDate;
   save();closeDrawer();render();
+}
+function removeMeal(dateKey,slot){
+  if(A.calendarByDate[dateKey])delete A.calendarByDate[dateKey][slot];
+  save();closeDrawer();render();
+}
+function rateMeal(dateKey,slot,rating){
+  if(!A.calendarByDate[dateKey]?.[slot])return;
+  const meal=A.calendarByDate[dateKey][slot];
+  if(typeof meal==='object')meal.rating=rating;
+  else A.calendarByDate[dateKey][slot]={title:meal,rating};
+  const updated=A.calendarByDate[dateKey][slot];
+  if(rating>=4){const ex=A.favorites.find(f=>f.title===updated.title);if(!ex)A.favorites.push({id:Date.now(),...updated,rating});else ex.rating=rating;}
+  save();
+  const el=document.getElementById('rstar');
+  if(el)el.innerHTML=[1,2,3,4,5].map(n=>`<span style="font-size:28px;cursor:pointer" data-date="${dateKey}" data-slot="${slot}" data-rating="${n}" onclick="rateMeal(this.dataset.date,this.dataset.slot,+this.dataset.rating)">${n<=rating?'⭐':'☆'}</span>`).join('');
+  render();
 }
 function rateMeal(dayIndex,slot,rating){
   const meal=A.calendar[dayIndex][slot];
@@ -1269,11 +1333,35 @@ function confirmPantry(){
   if(missing.length>0&&!confirm(`You are missing: ${missing.map(m=>m.name).join(', ')}. Continue anyway?`))return;
   A.pantryCheck=null;render();
 }
+function checkConflict(){
+  const dateVal=document.getElementById('cal-date')?.value;
+  const slot=document.getElementById('cal-slot')?.value;
+  const msg=document.getElementById('conflict-msg');
+  if(!msg)return;
+  if(!dateVal||!slot){msg.style.display='none';return;}
+  const existing=A.calendarByDate[dateVal]?.[slot];
+  if(existing){
+    const title=typeof existing==='object'?existing.title:existing;
+    msg.style.display='block';
+    msg.innerHTML='⚠️ <strong>'+title+'</strong> is already scheduled here. Tap that meal on the calendar to move or remove it first.';
+  } else {
+    msg.style.display='none';
+  }
+}
+
 function placeOnCal(){
-  const day=+document.getElementById('cal-day').value;
-  const slot=document.getElementById('cal-slot').value;
-  if(!A.calendar[day])A.calendar[day]={};
-  A.calendar[day][slot]={...A.recipe};
+  const dateVal=document.getElementById('cal-date')?.value;
+  const slot=document.getElementById('cal-slot')?.value;
+  if(!dateVal){alert('Please pick a date first.');return;}
+  if(!slot){alert('Please pick a meal slot.');return;}
+  const existing=A.calendarByDate[dateVal]?.[slot];
+  if(existing){
+    const title=typeof existing==='object'?existing.title:existing;
+    alert('⚠️ '+title+' is already in this slot. Move or remove it from the calendar first.');
+    return;
+  }
+  if(!A.calendarByDate[dateVal])A.calendarByDate[dateVal]={};
+  A.calendarByDate[dateVal][slot]={...A.recipe};
   // Deduct inventory — frozen first
   if(A.recipe.pull){
     A.recipe.pull.forEach(p=>{
@@ -1281,16 +1369,23 @@ function placeOnCal(){
       const support=A.supports.find(s=>s.name===p.item);
       const item=base||support;
       if(item){
-        if(item.frozen>0) item.frozen--;
-        else if(item.canned>0) item.canned--;
-        else if(item.dry>0) item.dry=Math.max(0,item.dry-1);
+        if(item.frozen>0)item.frozen--;
+        else if(item.canned>0)item.canned--;
+        else if(item.dry>0)item.dry=Math.max(0,item.dry-1);
       }
     });
   }
   save();
   A.recipe=null;A.pantryCheck=null;
-  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  alert(`✅ Added to ${days[day]} ${slot}!\n\nInventory updated — frozen stock deducted first.`);
+  // Navigate calendar to that date
+  const d=new Date(dateVal+'T12:00:00');
+  const today=new Date();today.setHours(0,0,0,0);
+  const todaySun=new Date(today);todaySun.setDate(today.getDate()-today.getDay());
+  const dateSun=new Date(d);dateSun.setDate(d.getDate()-d.getDay());
+  const weekDiff=Math.round((dateSun-todaySun)/(7*24*60*60*1000));
+  A.weekOffset=Math.max(0,Math.min(4,weekDiff));
+  A.calSelDate=dateVal;
+  alert('✅ Scheduled for '+d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'})+' '+slot+'!\nInventory updated.');
   showPage('calendar');
 }
 </script>
