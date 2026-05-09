@@ -654,7 +654,7 @@ function deleteEmergency(id){
 
 // ─── MEALS ────────────────────────────────────────────────────────────────────
 function rMeals(){
-  if(A.generating) return`<div class="pg active"><div style="padding:60px 20px;text-align:center"><div class="spinner" style="margin-bottom:20px"></div><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;margin-bottom:8px">Building your meal…</div><div style="font-size:14px;color:var(--text-muted)">Checking your inventory and crafting your plan</div></div></div>`;
+  if(A.generating) return`<div class="pg active"><div style="padding:60px 20px;text-align:center"><div class="spinner" style="margin-bottom:20px"></div><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;margin-bottom:8px">Building your meal…</div><div style="font-size:14px;color:var(--text-muted)" id="gen-msg">Reading your inventory</div></div></div><script>const msgs=["Reading your inventory","Picking the best dish for what you have","Writing your recipe","Almost ready…"];let mi=0;const iv=setInterval(()=>{mi=(mi+1)%msgs.length;const el=document.getElementById("gen-msg");if(el)el.textContent=msgs[mi];else clearInterval(iv);},2000);<\/script>`;
   if(A.pantryCheck) return rPantryCheck();
   if(A.recipe) return rRecipe();
   return rBuilderForm();
@@ -1298,11 +1298,8 @@ Build me a creative, delicious ${mealType.toLowerCase()} using what I have. Be s
       tip:recipe.tip||'',
       rating:0,
     };
-    // Build pantry check from AI response
-    A.pantryCheck={
-      pantryItems:(recipe.pantryCheck||[]).map(p=>({name:p.name,amount:p.amount})),
-      pantryHave:(recipe.pantryCheck||[]).map(p=>p.have===true||p.have==='true'),
-    };
+    // Skip pantry check — go straight to recipe
+    A.pantryCheck=null;
     // Auto-add grocery flags
     if(recipe.groceryFlags&&recipe.groceryFlags.length>0){
       recipe.groceryFlags.forEach(flag=>{
@@ -1328,11 +1325,7 @@ function addMissingToGroc(){
   });
   save();A.pantryCheck=null;render();alert('Missing items added to your grocery list.');
 }
-function confirmPantry(){
-  const missing=A.pantryCheck.pantryItems.filter((_,i)=>!A.pantryCheck.pantryHave[i]);
-  if(missing.length>0&&!confirm(`You are missing: ${missing.map(m=>m.name).join(', ')}. Continue anyway?`))return;
-  A.pantryCheck=null;render();
-}
+function confirmPantry(){A.pantryCheck=null;render();}
 function checkConflict(){
   const dateVal=document.getElementById('cal-date')?.value;
   const slot=document.getElementById('cal-slot')?.value;
