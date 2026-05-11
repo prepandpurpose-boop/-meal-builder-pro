@@ -189,7 +189,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text)}
   <div class="vt">Welcome back</div>
   <div class="vs">Enter the email you subscribed with.</div>
   <input class="vi" id="ver-email" type="email" placeholder="your@email.com">
-  <button class="vb" onclick="verifyAccess()">Access My Account →</button>
+  <button class="vb" id="ver-btn" onclick="verifyAccess()">Access My Account →</button>
   <div class="vback" onclick="showPaywall()">← Back</div>
 </div>
 
@@ -516,7 +516,34 @@ function saveSettings(){
   alert('✅ Settings saved.');
 }
 function showVerify(){document.getElementById('paywall').classList.add('hidden');document.getElementById('verify-screen').classList.remove('hidden');}
-function verifyAccess(){const e=document.getElementById('ver-email').value.trim();if(!e||!e.includes('@'))return;localStorage.setItem('pp_user',e);grantAccess();}
+function verifyAccess(){
+  const e=document.getElementById('ver-email').value.trim().toLowerCase();
+  if(!e||!e.includes('@')){alert('Please enter a valid email address.');return;}
+  const btn=document.getElementById('ver-btn');
+  btn.textContent='Checking...';btn.disabled=true;
+  fetch('/api/verify',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email:e})
+  })
+  .then(r=>r.json())
+  .then(data=>{
+    if(data.access){
+      localStorage.setItem('pp_user',e);
+      grantAccess();
+    } else if(data.reason==='cancelled'){
+      btn.textContent='Check Access';btn.disabled=false;
+      alert('Your subscription is no longer active. Visit meal-builder-pro.vercel.app to resubscribe.');
+    } else {
+      btn.textContent='Check Access';btn.disabled=false;
+      alert('No active subscription found for that email. Please check your email or subscribe at meal-builder-pro.vercel.app');
+    }
+  })
+  .catch(()=>{
+    btn.textContent='Check Access';btn.disabled=false;
+    alert('Could not verify access. Please check your connection and try again.');
+  });
+}
 function grantAccess(){
   document.getElementById('paywall').classList.add('hidden');
   document.getElementById('verify-screen').classList.add('hidden');
