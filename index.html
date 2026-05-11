@@ -556,7 +556,35 @@ function grantAccess(){
   }
 }
 function signOut(){if(confirm('Sign out?')){localStorage.removeItem('pp_user');showPaywall();}}
-window.addEventListener('load',()=>{if(localStorage.getItem('pp_user'))grantAccess();});
+window.addEventListener('load',()=>{
+  const email=localStorage.getItem('pp_user');
+  if(email){
+    // Verify subscription is still active on every load
+    fetch('/api/verify',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email})
+    })
+    .then(r=>r.json())
+    .then(data=>{
+      if(data.access){
+        grantAccess();
+      } else {
+        // Subscription cancelled or not found — kick them out
+        localStorage.removeItem('pp_user');
+        showPaywall();
+        if(data.reason==='cancelled'){
+          alert('Your subscription is no longer active. Please resubscribe to continue using Meal Builder Pro.');
+        }
+      }
+    })
+    .catch(()=>{
+      // If verification fails due to network error, let them in
+      // We don't want to block paying customers due to connectivity issues
+      grantAccess();
+    });
+  }
+});
 
 // ─── NAV ──────────────────────────────────────────────────────────────────────
 function showPage(p){A.page=p;document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));const nb=document.getElementById('nav-'+p);if(nb)nb.classList.add('active');render();}
