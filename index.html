@@ -256,10 +256,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text)}
     <div id="ob-2" class="ob-panel" style="display:none">
       <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#1e4d35;margin-bottom:8px">Dietary preferences</div>
       <div style="font-size:13px;color:#666;margin-bottom:20px">The AI will never suggest meals that conflict with these. Select all that apply.</div>
-      <div id="ob-dietary" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
-        ${['No Pork','No Beef','No Seafood','No Shellfish','Gluten Free','Dairy Free','No Nuts','Vegetarian','Halal','Kosher','Low Sodium','Diabetic Friendly'].map(d=>`
-        <div class="diet-chip" data-pref="${d}" onclick="toggleDietChip(this)" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;text-align:center;transition:all .2s">${d}</div>`).join('')}
-      </div>
+      <div id="ob-dietary" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px"></div>
       <div class="fg" style="margin-bottom:20px">
         <label class="lbl">Any other restrictions? (optional)</label>
         <input class="inp" id="ob-other" placeholder="e.g. No cilantro, extra spicy, nut allergy">
@@ -448,6 +445,12 @@ function storagePrepNote(item, storage){
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 function showOnboarding(){
   document.getElementById('onboarding').style.display='block';
+  // Populate dietary chips
+  const container=document.getElementById('ob-dietary');
+  if(container){
+    const prefs=['No Pork','No Beef','No Seafood','No Shellfish','Gluten Free','Dairy Free','No Nuts','Vegetarian','Halal','Kosher','Low Sodium','Diabetic Friendly'];
+    container.innerHTML=prefs.map(d=>`<div class="diet-chip" data-pref="${d}" onclick="toggleDietChip(this)" style="padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;text-align:center">${d}</div>`).join('');
+  }
   obGoTo(0);
 }
 function obGoTo(step){
@@ -469,7 +472,18 @@ function obNext(step){
   }
   obGoTo(step);
 }
-function toggleDietChip(el){el.classList.toggle('selected');}
+function toggleDietChip(el){
+  el.classList.toggle('selected');
+  if(el.classList.contains('selected')){
+    el.style.background='var(--green)';
+    el.style.color='#fff';
+    el.style.borderColor='var(--green)';
+  } else {
+    el.style.background='#fff';
+    el.style.color='inherit';
+    el.style.borderColor='var(--border)';
+  }
+}
 function finishOnboarding(){
   A.onboarded=true;
   localStorage.setItem('pp_onboarded','1');
