@@ -329,7 +329,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     <div id="ob-0">
       <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:16px">How the system works</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
-        <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f9f7f4;border-radius:10px"><div style="font-size:22px;width:34px;flex-shrink:0">🥩</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Layer 2 — Bases</div><div style="font-size:13px;color:#666">Cooked proteins stored in quart bags. 1 bag = 1.5 lbs cooked. Your protein foundation.</div></div></div>
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f9f7f4;border-radius:10px"><div style="font-size:22px;width:34px;flex-shrink:0">🥩</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Layer 2 — Bases</div><div style="font-size:13px;color:#666">Cooked proteins stored in quart bags. 1 bag = 1.5 lbs cooked. On maintenance day pull what you need for the week to thaw. Replenish what you used.</div></div></div>
         <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f9f7f4;border-radius:10px"><div style="font-size:22px;width:34px;flex-shrink:0">📦</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Layer 3 — Supports</div><div style="font-size:13px;color:#666">Cooked grains, vegetables, and beans stored in quart bags (1 bag = 3 cups), plus canned, dry, and fresh pantry items.</div></div></div>
         <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f9f7f4;border-radius:10px"><div style="font-size:22px;width:34px;flex-shrink:0">🚨</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Layer 4 — Emergency Meals</div><div style="font-size:13px;color:#666">Complete cooked meals stored in gallon bags. Pull, heat, eat. Magic number is 6. Always.</div></div></div>
       </div>
@@ -859,16 +859,16 @@ function rInventory(){
 
 function rBases(){
   const stocked=A.bases.filter(b=>hasAny(b)).length;
-  let html=`<div class="alert alert-green" style="margin-bottom:16px"><span>📏</span><div><strong>System Standard:</strong> 1 quart bag = 1.5 lbs cooked meat · 1 pint jar = home-canned · Bases are cooked and lightly seasoned — stored frozen or thawed</div></div>`;
+  let html=`<div class="alert alert-green" style="margin-bottom:16px"><span>📏</span><div><strong>System Standard:</strong> 1 quart bag = 1.5 lbs cooked meat · Count all bags regardless of whether they are in the freezer or thawed in the fridge · On maintenance day pull what you need for the week and move to fridge to thaw · Anything you cook during the week replenishes what you used</div></div>`;
   html+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
     <div><div class="page-title" style="font-size:18px">Protein Bases</div><div style="font-size:13px;color:var(--text-muted)">${stocked} of ${A.bases.length} stocked — cooked, lightly seasoned, ready to heat</div></div>
     <button class="btn btn-outline btn-sm" onclick="openAddBase()">+ Add Custom</button>
   </div>
-  <div class="card"><table class="inv-table"><thead><tr><th>Protein</th><th>Bags on Hand</th><th>Canned / Jarred</th><th></th></tr></thead><tbody>`;
+  <div class="card"><table class="inv-table"><thead><tr><th>Protein</th><th>Quart Bags</th><th>Canned / Jarred</th><th></th></tr></thead><tbody>`;
   A.bases.forEach(item=>{
     html+=`<tr>
       <td><span style="font-size:18px;margin-right:8px">${item.icon}</span><strong>${item.name}</strong></td>
-      <td>${item.storageTypes.includes('frozen')?`<span class="${item.frozen>0?'qty-badge':'stag stag-zero'}">${item.frozen} bags</span><div class="conv-hint">= ${(item.frozen*1.5).toFixed(1)} lbs cooked</div>`:'—'}</td>
+      <td>${item.storageTypes.includes('frozen')?`<span class="${item.frozen>0?'qty-badge':'stag stag-zero'}">${item.frozen} quart bags</span><div class="conv-hint">= ${(item.frozen*1.5).toFixed(1)} lbs cooked</div>`:'—'}</td>
       <td>${item.storageTypes.includes('canned')?`<span class="${item.canned>0?'qty-badge':'stag stag-zero'}">${item.canned} cans/jars</span>`:'—'}</td>
       <td style="text-align:right;white-space:nowrap">
         <button class="btn btn-sm btn-outline" data-id="${item.id}" onclick="openEditItem(this.dataset.id,'bases')">Update</button>
@@ -888,11 +888,11 @@ function rFrozenSupports(){
     <div><div class="page-title" style="font-size:18px">Vegetable & Grain Supports</div><div style="font-size:13px;color:var(--text-muted)">${stocked} of ${items.length} stocked — track state so the AI times them correctly</div></div>
     <button class="btn btn-outline btn-sm" onclick="openAddFrozenSupport()">+ Add Custom</button>
   </div>
-  <div class="card"><table class="inv-table"><thead><tr><th>Item</th><th>Bags on Hand</th><th>State</th><th></th></tr></thead><tbody>`;
+  <div class="card"><table class="inv-table"><thead><tr><th>Item</th><th>Quart Bags</th><th>State</th><th></th></tr></thead><tbody>`;
   items.forEach(item=>{
     html+=`<tr>
       <td><span style="font-size:18px;margin-right:8px">${item.icon}</span><strong>${item.name}</strong></td>
-      <td><span class="${item.frozen>0?'qty-badge':'stag stag-zero'}">${item.frozen} bags</span><div class="conv-hint">= ${item.frozen*3} cups cooked</div></td>
+      <td><span class="${item.frozen>0?'qty-badge':'stag stag-zero'}">${item.frozen} quart bags</span><div class="conv-hint">= ${item.frozen*3} cups cooked</div></td>
       <td><select style="font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--radius-xs)" data-id="${item.id}" onchange="setSupportState(this.dataset.id,this.value)">
         <option value="frozen" ${!item.state||item.state==='frozen'?'selected':''}>Frozen</option>
         <option value="fresh" ${item.state==='fresh'?'selected':''}>Fresh</option>
@@ -1303,7 +1303,7 @@ async function generateRecipe(){
   A.generating=true;A.recipe=null;
   showPage('builder');
 
-  const basesList=A.bases.filter(b=>hasAny(b)).map(b=>{const s=getBestStorage(b);return`${b.name}: ${s?s.qty+' frozen bags ('+s.qty*1.5+' lbs cooked)':'none'}`;});
+  const basesList=A.bases.filter(b=>hasAny(b)).map(b=>{const s=getBestStorage(b);return`${b.name}: ${s?s.qty+' quart bags ('+s.qty*1.5+' lbs cooked)':'none'}`;});
   const frozenList=A.supports.filter(s=>s.storageTypes.includes('frozen')&&(s.frozen||0)>0).map(s=>`${s.name}: ${s.frozen} bags (${s.frozen*3} cups cooked) [${s.state==='fresh'?'FRESH — add first, short cook time':'FROZEN — add mid-cook, 3-4 min'}]`);
   const cannedList=A.supports.filter(s=>s.storageTypes.includes('canned')&&(s.canned||0)>0).map(s=>`${s.name}: ${s.canned} cans [CANNED — already cooked, add at end]`);
   const dryList=A.supports.filter(s=>s.storageTypes.includes('dry')&&(s.dry||0)>0).map(s=>`${s.name}: ${s.dry} ${s.dryUnit||'lbs'} [DRY — needs full cook time]`);
@@ -1702,7 +1702,7 @@ function promptAddToGroc(id,list){
 function openAddBase(){
   openModal(`<div class="modal-header"><div class="modal-title">Add Custom Base</div><button class="modal-close" onclick="closeModal()">×</button></div>
     <div class="fg"><label class="lbl">Protein Name</label><input class="inp" id="ab-name" placeholder="e.g. Chicken Thighs, Venison"></div>
-    <div class="fg"><label class="lbl">Frozen Bags on Hand</label><input class="inp" type="number" id="ab-frozen" value="0" min="0"></div>
+    <div class="fg"><label class="lbl">Quart Bags on Hand</label><input class="inp" type="number" id="ab-frozen" value="0" min="0"></div>
     <div class="alert alert-green"><span>📏</span><div>1 quart bag = 1.5 lbs cooked meat</div></div>
     <button class="btn btn-primary btn-full btn-lg" style="margin-top:12px" onclick="saveAddBase()">Add to Inventory</button>`);
 }
@@ -1714,7 +1714,7 @@ function saveAddBase(){
 function openAddFrozenSupport(){
   openModal(`<div class="modal-header"><div class="modal-title">Add Frozen Support</div><button class="modal-close" onclick="closeModal()">×</button></div>
     <div class="fg"><label class="lbl">Item Name</label><input class="inp" id="afs-name" placeholder="e.g. Cauliflower Rice, Sweet Potato"></div>
-    <div class="fg"><label class="lbl">Frozen Bags on Hand</label><input class="inp" type="number" id="afs-frozen" value="0" min="0"></div>
+    <div class="fg"><label class="lbl">Quart Bags on Hand</label><input class="inp" type="number" id="afs-frozen" value="0" min="0"></div>
     <div class="alert alert-green"><span>📏</span><div>1 quart bag = 3 cups cooked</div></div>
     <button class="btn btn-primary btn-full btn-lg" style="margin-top:12px" onclick="saveAddFrozenSupport()">Add</button>`);
 }
