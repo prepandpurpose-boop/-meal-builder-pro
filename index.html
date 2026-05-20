@@ -842,11 +842,10 @@ function getBestStorage(item){
 function storageLabel(st){return st==='frozen'?'❄️ Frozen bags':st==='canned'?'🥫 Canned/pint jars':st==='dry'?'🌾 Dry':st==='each'?'🥚 Count (each)':'🌿 Fresh';}
 
 function rInventory(){
-  const tabs=['bases','frozen','canned-dry'];
   const activeTab=A.invTab||'bases';
   let html=`<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
     <button class="btn ${activeTab==='bases'?'btn-primary':'btn-outline'} btn-sm" onclick="A.invTab='bases';render()">🥩 Bases</button>
-    <button class="btn ${activeTab==='frozen'?'btn-primary':'btn-outline'} btn-sm" onclick="A.invTab='frozen';render()">❄️ Frozen Supports</button>
+    <button class="btn ${activeTab==='frozen'?'btn-primary':'btn-outline'} btn-sm" onclick="A.invTab='frozen';render()">📦 Supports — Grains & Veg</button>
     <button class="btn ${activeTab==='canned-dry'?'btn-primary':'btn-outline'} btn-sm" onclick="A.invTab='canned-dry';render()">🥫 Canned & Dry</button>
     <button class="btn ${activeTab==='emergency'?'btn-primary':'btn-outline'} btn-sm" onclick="A.invTab='emergency';render()">🚨 Emergency</button>
   </div>`;
@@ -1315,32 +1314,39 @@ async function generateRecipe(){
   const fridgeQty=pantryFlat.filter(p=>!p.fresh&&(p.qty||0)>0&&p.unit).map(p=>`${p.name}: ${p.qty} ${p.unit}`);
   const toggles=pantryFlat.filter(p=>!(p.qty||0)&&p.have).map(p=>p.name);
 
-  const systemPrompt=`You are the Meal Builder for Prep & Purpose. Build real, delicious, creative meals from what the user actually has.
+  const systemPrompt=`You are the Meal Builder for Prep & Purpose. Your job is to ALWAYS build a meal — never refuse. Build the best possible meal from what the user has. If ingredients are missing, flag them for the grocery list with exact quantities needed.
 
 PROTEIN RULES — CRITICAL:
-- ALL protein bases are ALREADY COOKED. They are cooked, lightly seasoned, and stored in quart bags. 1 quart bag = 1.5 lbs cooked protein.
+- ALL protein bases are ALREADY COOKED. Stored in quart bags. 1 quart bag = 1.5 lbs cooked protein.
 - NEVER write instructions as if protein needs to be cooked from raw. It needs to be HEATED through, not cooked.
-- Use phrases like "heat through", "warm over medium heat 3-4 minutes", "add to pan and stir until heated", NOT "cook until done" or "brown the meat".
-- This is the most important rule. Overcooked reheated protein is rubbery and dry. Gentle heat is everything.
-- NEVER partial bags. Always whole bags.
+- Use "heat through", "warm over medium heat 3-4 minutes", NOT "cook until done" or "brown the meat".
+- Gentle heat only. Overcooked reheated protein is rubbery and dry.
+- NEVER use partial bags. Always whole bags.
+- If protein is at zero — build from eggs, beans, canned tuna, lentils, or pantry proteins. Flag protein as needed on grocery list.
 
-VEGETABLE RULES:
-- Each vegetable support is tagged with its state: FROZEN, FRESH, or CANNED.
-- FRESH veg: add early, needs actual cook time. Use first to avoid waste.
-- FROZEN veg: add mid-cook, 3-4 minutes to heat through.
+VEGETABLE TIMING RULES:
+- FRESH veg: add early, needs cook time. Use first to avoid waste.
+- FROZEN veg (in quart bags): add mid-cook, 3-4 minutes to heat through.
 - CANNED veg: already fully cooked, add at the very end — just heat through.
-- Build cooking steps around these states so texture is right.
 
-PANTRY AND SCRATCH COOKING:
-- If the user has flour, eggs, butter, milk, baking powder — build from scratch. Make biscuits, cornbread, pancakes, pasta.
-- Fresh pantry items flagged USE FIRST must be prioritized over frozen equivalents.
-- Every ingredient used MUST appear in the pull list with exact quantity and prep note.
+SCRATCH COOKING:
+- If flour, eggs, butter, milk, baking powder are present — build from scratch. Biscuits, cornbread, pancakes, pasta.
+- Fresh pantry items flagged USE FIRST must be prioritized.
 
-PRIORITY: ${buildFromStock?'BUILD FROM STOCK ONLY — no store suggestions unless safety requires it.':'STORE PURCHASES ALLOWED — suggest 1-2 items if they significantly improve the meal.'}
-${A.dietary.length>0?`DIETARY RESTRICTIONS — NEVER VIOLATE: ${A.dietary.join(', ')}. Auto-substitute when possible and note what you swapped.`:''}
-${ppSpices?'P&P SPICE BLENDS: Use blend names only — never list individual spices.':''}
+MISSING INGREDIENTS — CRITICAL:
+- ALWAYS build the meal even if ingredients are missing.
+- For every missing ingredient include it in groceryFlags with the EXACT quantity needed for this specific meal.
+- If an ingredient appears in multiple meals the user may be planning, note that in the reason field so quantities can be consolidated.
+- Be specific: "2 lbs ground beef" not just "ground beef". "1 can diced tomatoes" not just "tomatoes".
+- Note in the tip if the user should check long term storage before purchasing.
 
-DISH VARIETY: Be creative. Rotate dish types. Consider tacos, enchiladas, stir fry, pasta, chili, soup, casserole, quiche, hash, shepherd\'s pie, fried rice, shakshuka, quesadillas, nachos, biscuits and gravy, frittata, curry, gumbo, pot pie. Never repeat the same dish type twice in a row.
+PRIORITY: ${buildFromStock?'Prefer stock-first but flag any gaps — do not let missing items stop the build.':'Suggest store items freely when they improve the meal significantly.'}
+${A.dietary.length>0?`DIETARY RESTRICTIONS — NEVER VIOLATE: ${A.dietary.join(', ')}. Auto-substitute when possible and note the swap.`:''}
+${ppSpices?'P&P SPICE BLENDS: Use blend names only.':''}
+
+DISH VARIETY: Rotate dish types every generation. Tacos, enchiladas, stir fry, pasta, chili, soup, casserole, quiche, hash, shepherd\'s pie, fried rice, shakshuka, quesadillas, biscuits and gravy, frittata, curry, gumbo, pot pie, stuffed peppers, fried rice, lo mein, burrito bowls.
+
+HOUSEHOLD SIZE: ${A.householdSize} people. For ${A.householdSize} people with normal appetites use ${A.householdSize<=4?'1-2':'2-3'} quart bags of protein per meal.
 
 RESPONSE FORMAT — valid JSON only, no markdown:
 {
@@ -1349,12 +1355,11 @@ RESPONSE FORMAT — valid JSON only, no markdown:
   "macros": {"cal": 450, "protein": 38, "carbs": 35, "fat": 16},
   "pull": [
     {"icon": "🥩", "item": "Ground Beef", "qty": "1 bag = 1.5 lbs cooked", "prepNote": "Already cooked — heat over medium 3-4 min until warmed through."},
-    {"icon": "🥚", "item": "Eggs", "qty": "3 eggs", "prepNote": "Scramble directly in pan."},
     {"icon": "🧈", "item": "Butter", "qty": "2 tablespoons", "prepNote": "For the pan."}
   ],
   "steps": ["Step 1 with real measurements and timing", "Step 2"],
-  "tip": "Specific tip connecting to batch cooking or the Five-Layer system",
-  "groceryFlags": [{"name": "Item", "qty": "amount", "urgency": "out", "reason": "why needed"}]
+  "tip": "Specific tip — mention checking long term storage if relevant",
+  "groceryFlags": [{"name": "Ground Beef", "qty": "2 lbs raw (= 1 quart bag cooked)", "urgency": "out", "reason": "Needed for this meal — check long term storage first"}]
 }`;
 
   const userPrompt=`Meal type: ${mealType}
@@ -1377,9 +1382,25 @@ PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}`;
     const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemPrompt,userPrompt})});
     const data=await r.json();
     A.generating=false;
+    if(!r.ok){
+      console.error('API error:',data);
+      alert('Generation failed: '+(data.error||'Unknown error — check Vercel logs'));
+      showPage('builder');return;
+    }
     let raw=data.content?.[0]?.text||'';
+    if(!raw){
+      console.error('Empty response:',data);
+      alert('The AI returned an empty response. Try again.');
+      showPage('builder');return;
+    }
     raw=raw.replace(/```json|```/g,'').trim();
-    const recipe=JSON.parse(raw);
+    let recipe;
+    try{recipe=JSON.parse(raw);}
+    catch(parseErr){
+      console.error('JSON parse failed. Raw:',raw);
+      alert('Could not parse recipe. Raw response logged to console.');
+      showPage('builder');return;
+    }
     A.recipe={id:Date.now(),title:recipe.title||'Your Meal',description:recipe.description||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:recipe.pull||[],steps:recipe.steps||[],tip:recipe.tip||'',rating:0};
     // Auto-add grocery flags
     if(recipe.groceryFlags?.length>0){
@@ -1393,7 +1414,8 @@ PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}`;
     showPage('builder');
   }catch(e){
     A.generating=false;
-    alert('Recipe generation failed — please try again.');
+    console.error('Generate error:',e);
+    alert('Generation failed: '+e.message+'\n\nCheck your internet connection and try again.');
     showPage('builder');
   }
 }
@@ -1580,32 +1602,44 @@ function placeOnCal(){
 
 // ─── GROCERY ───────────────────────────────────────────────────────────────────
 function rGrocery(){
-  const out=A.grocery.filter(g=>g.urgency==='out'&&!g.done);
-  const low=A.grocery.filter(g=>g.urgency!=='out'&&!g.done);
-  const done=A.grocery.filter(g=>g.done);
+  // Consolidate duplicate items by name
+  const consolidated=[];
+  A.grocery.forEach(g=>{
+    const existing=consolidated.find(c=>c.name.toLowerCase()===g.name.toLowerCase()&&!c.done===!g.done);
+    if(existing){
+      // Merge — keep highest urgency, append reasons
+      if(g.urgency==='out')existing.urgency='out';
+      if(g.reason&&!existing.reason?.includes(g.reason))existing.reason=(existing.reason||'')+(existing.reason?', ':'')+g.reason;
+      existing._ids=existing._ids||[existing.id];
+      existing._ids.push(g.id);
+    } else {
+      consolidated.push({...g,_ids:[g.id]});
+    }
+  });
+  const out=consolidated.filter(g=>g.urgency==='out'&&!g.done);
+  const low=consolidated.filter(g=>g.urgency!=='out'&&!g.done);
+  const done=consolidated.filter(g=>g.done);
   let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
     <div><div class="page-title" style="font-size:18px">Shopping List</div><div style="font-size:13px;color:var(--text-muted)">${out.length+low.length} items needed</div></div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-outline btn-sm" onclick="printGroc()">🖨️ Print</button>
       <button class="btn btn-primary btn-sm" onclick="openAddGroc()">+ Add Item</button>
     </div>
-  </div>`;
+  </div>
+  <div class="alert alert-gold" style="margin-bottom:16px"><span>🏠</span><div><strong>Check long term storage first</strong> — chest freezer, pantry overflow, bulk storage — before purchasing anything on this list.</div></div>`;
 
   if(out.length===0&&low.length===0&&done.length===0){
-    html+=`<div class="empty"><div style="font-size:48px;margin-bottom:10px">✅</div><div style="font-size:15px;font-weight:600;margin-bottom:6px">Your list is empty</div><div>Items are added automatically when you build meals and deduct inventory.</div></div>`;
+    html+=`<div class="empty"><div style="font-size:48px;margin-bottom:10px">✅</div><div style="font-size:15px;font-weight:600;margin-bottom:6px">Your list is empty</div><div>Items are added automatically when the Meal Builder flags missing ingredients.</div></div>`;
   }
-
   if(out.length>0){
     html+=`<div style="font-size:11px;font-weight:700;color:#c62828;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">🚨 Out — Need Now</div>
     <div class="card" style="margin-bottom:16px;padding:0">${out.map(g=>grocRow(g)).join('')}</div>`;
   }
   if(low.length>0){
-    html+=`<div style="font-size:11px;font-weight:700;color:#f57f17;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">⚠️ Needed / Running Low</div>
+    html+=`<div style="font-size:11px;font-weight:700;color:#f57f17;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">🛒 Needed</div>
     <div class="card" style="margin-bottom:16px;padding:0">${low.map(g=>grocRow(g)).join('')}</div>`;
   }
-
   html+=`<div class="alert alert-gold"><span>📏</span><div><strong>Protein Shrinkage Rule:</strong> Always buy 30% more raw than you think you need. 1 quart bag = 1.5 lbs cooked. For ${A.householdSize} people: 5 lbs raw ≈ 2–3 full quart bags.</div></div>`;
-
   if(done.length>0){
     html+=`<div style="font-size:11px;font-weight:700;color:var(--text-hint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;margin-top:16px">✓ Purchased</div>
     <div class="card" style="padding:0;opacity:.6;margin-bottom:10px">${done.map(g=>grocRow(g)).join('')}</div>
@@ -1618,7 +1652,8 @@ function grocRow(g){
     <div class="groc-chk ${g.done?'done':''}" data-id="${g.id}" onclick="toggleGroc(this.dataset.id)">${g.done?'✓':''}</div>
     <div style="flex:1">
       <div style="font-size:14px;font-weight:600;${g.done?'text-decoration:line-through;color:var(--text-hint)':''}">${g.name}${g.autoAdded?`<span style="font-size:10px;color:var(--text-hint);margin-left:6px">auto</span>`:''}</div>
-      ${g.qty?`<div style="font-size:12px;color:var(--text-muted)">${g.qty}</div>`:''}
+      ${g.qty?`<div style="font-size:12px;color:var(--green);font-weight:600">${g.qty}</div>`:''}
+      ${g.reason?`<div style="font-size:11px;color:var(--text-muted);margin-top:2px">${g.reason}</div>`:''}
     </div>
     <span class="utag ${g.urgency==='out'?'uout':'ulow'}" style="margin-right:8px">${g.urgency==='out'?'Out':'Needed'}</span>
     <button style="background:none;border:none;font-size:18px;color:var(--text-muted);cursor:pointer;padding:4px" data-id="${g.id}" onclick="dismissGroc(this.dataset.id)">×</button>
