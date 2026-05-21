@@ -892,27 +892,24 @@ function rBases(){
 function rFrozenSupports(){
   const items=A.supports.filter(s=>s.storageTypes.includes('frozen'));
   const stocked=items.filter(s=>s.frozen>0).length;
-  let html=`<div class="alert alert-green" style="margin-bottom:16px"><span>📏</span><div><strong>System Standard:</strong> 1 quart bag = 3 cups cooked veg or grains · 1 pint jar = home-canned</div></div>`;
+  let html=`<div class="alert alert-green" style="margin-bottom:16px"><span>📏</span><div><strong>System Standard:</strong> 1 quart bag = 3 cups cooked veg or grains · 1 pint jar = home-canned · Fresh vegetables go in Kitchen Staples → Fresh Produce</div></div>`;
   html+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-    <div><div class="page-title" style="font-size:18px">Vegetable & Grain Supports</div><div style="font-size:13px;color:var(--text-muted)">${stocked} of ${items.length} stocked</div></div>
+    <div><div class="page-title" style="font-size:18px">Frozen Vegetable & Grain Supports</div><div style="font-size:13px;color:var(--text-muted)">${stocked} of ${items.length} stocked — cooked and frozen, ready to pull</div></div>
     <button class="btn btn-outline btn-sm" onclick="openAddFrozenSupport()">+ Add Custom</button>
   </div>
-  <div class="card"><table class="inv-table"><thead><tr><th>Item</th><th>Quart Bags</th><th>State</th><th></th></tr></thead><tbody>`;
+  <div class="card"><table class="inv-table"><thead><tr><th>Item</th><th>Quart Bags</th><th></th></tr></thead><tbody>`;
   items.forEach(item=>{
     html+=`<tr>
       <td><span style="font-size:18px;margin-right:8px">${item.icon}</span><strong>${item.name}</strong></td>
       <td><span class="${item.frozen>0?'qty-badge':'stag stag-zero'}">${item.frozen} quart bags</span><div class="conv-hint">= ${item.frozen*3} cups cooked</div></td>
-      <td><select style="font-size:12px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--radius-xs)" data-id="${item.id}" onchange="setSupportState(this.dataset.id,this.value)">
-        <option value="frozen" ${!item.state||item.state==='frozen'?'selected':''}>Frozen</option>
-        <option value="fresh" ${item.state==='fresh'?'selected':''}>Fresh</option>
-      </select></td>
       <td style="text-align:right">
         <button class="btn btn-sm btn-outline" data-id="${item.id}" onclick="openEditItem(this.dataset.id,'supports')">Update</button>
         <button class="btn btn-sm btn-ghost" data-id="${item.id}" onclick="deleteItem(this.dataset.id,'supports')" style="color:#c62828;margin-left:4px">×</button>
       </td>
     </tr>`;
   });
-  html+=`</tbody></table></div>`;
+  html+=`</tbody></table></div>
+  <div class="alert alert-blue" style="margin-top:16px"><span>🌿</span><div>Have fresh vegetables on hand? Add them in <button onclick="showPage('pantry')" style="background:none;border:none;color:#1565c0;font-weight:700;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;font-size:13px;padding:0">Kitchen Staples → Fresh Produce</button> so the AI uses them first.</div></div>`;
   return html;
 }
 
@@ -1210,7 +1207,7 @@ async function generateRecipe(){
   const allProteins=[...frozenList,...cookList];
 
   // All other inventory
-  const frozenSupList=A.supports.filter(s=>s.storageTypes.includes('frozen')&&(s.frozen||0)>0).map(s=>`${s.name}: ${s.frozen} bags (${s.frozen*3} cups) [${s.state==='fresh'?'FRESH — add first':'FROZEN — add mid-cook'}]`);
+  const frozenSupList=A.supports.filter(s=>s.storageTypes.includes('frozen')&&(s.frozen||0)>0).map(s=>`${s.name}: ${s.frozen} bags (${s.frozen*3} cups) [FROZEN — add mid-cook, 3-4 min to heat through]`);
   const cannedList=A.supports.filter(s=>s.storageTypes.includes('canned')&&(s.canned||0)>0).map(s=>`${s.name}: ${s.canned} cans [add at end]`);
   const dryList=A.supports.filter(s=>s.storageTypes.includes('dry')&&(s.dry||0)>0).map(s=>`${s.name}: ${s.dry} ${s.dryUnit||'lbs'} [needs full cook time]`);
 
