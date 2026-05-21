@@ -1358,15 +1358,13 @@ Lunch: Wraps, bowls, quesadillas, roll-ups, pinwheels, cold chicken salad, tuna 
 Breakfast: Pancake stacks, stuffed french toast, waffle boards, breakfast burritos, egg scrambles, shakshuka, biscuits and gravy, breakfast hash, omelettes, breakfast quesadillas, overnight oats
 
 ${buildEmergency?`EMERGENCY MEAL MODE — ON:
-- This meal is going into GALLON bags for the emergency layer. Build for double batch automatically.
-- Must be a complete meal — protein + starch + vegetable all in one
-- Must reheat perfectly from frozen with zero prep — pull, heat, eat
-- No ingredients that get soggy or degrade when frozen (no fresh lettuce, no crispy toppings)
-- Soups, stews, chilis, casseroles, rice bowls, pasta bakes, curry — all excellent emergency meal formats
-- Scale the recipe to make exactly 2 gallon bags (always build 2 of the same)
-- Include a "FREEZE IN GALLON BAGS" note in the tip field with instructions for portioning and reheating
-- Add the meal to groceryFlags for anything needed to complete the double batch
-- After user schedules this meal, prompt them to log it in Emergency Meals inventory`:''}
+- Complete meal — protein + starch + vegetable all in one. Freezer-ready.
+- Double batch automatically — makes exactly 2 portions for the emergency layer.
+- Best formats: casseroles, thick stews, rice bowls, pasta bakes, stuffed peppers, thick chili. All freeze and reheat perfectly.
+- LIQUID MEALS (soups, broths, thin stews): use FREEZER-SAFE CONTAINERS not gallon bags — bags leak. Flag "freezer-safe quart or gallon containers" in groceryFlags if meal is liquid.
+- NO soggy ingredients: no fresh lettuce, no crispy toppings, no pasta already cooked in liquid (add dry pasta instructions instead).
+- In the tip field: include "FREEZE IN [GALLON BAGS or FREEZER-SAFE CONTAINERS]: [reheating instructions]". Always include how long it keeps (3-6 months) and reheat method.
+- Scale recipe to feed ${A.householdSize*2} people total (double batch).`:''}
 
 MISSING INGREDIENTS: Always build anyway. Flag missing items in groceryFlags with exact quantities.
 
@@ -1469,17 +1467,17 @@ PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}`;
   }
 }
 
-// ─── RECIPE DISPLAY ────────────────────────────────────────────────────────────
 function rRecipe(){
   const r=A.recipe;
   const stockKeywords=['quart bag','frozen bag','cans','1 can','2 cans','3 cans','lbs cooked','bag ='];
   const fromStock=r.pull.filter(p=>stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
   const fromKitchen=r.pull.filter(p=>!stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
+  const isEmergency=A.buildEmergency;
 
   return`<div style="max-width:720px">
     <div class="card" style="margin-bottom:16px;overflow:hidden">
       <div class="recipe-header">
-        <span style="background:rgba(255,255,255,.2);color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block;margin-bottom:10px">✅ Your Meal</span>
+        <span style="background:rgba(255,255,255,.2);color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block;margin-bottom:10px">${isEmergency?'🚨 Emergency Meal':'✅ Your Meal'}</span>
         <div class="recipe-title-text">${r.title}</div>
         <div class="recipe-desc">${r.description}</div>
       </div>
@@ -1505,7 +1503,16 @@ function rRecipe(){
     </div>
 
     <div class="card card-pad">
-      <div class="section-head">📅 Schedule This Meal</div>
+      ${isEmergency?`
+      <div class="section-head">🚨 Log This Emergency Meal</div>
+      <div class="alert alert-green" style="margin-bottom:14px"><span>✅</span><div>This goes straight to your Emergency supply — not on the dinner calendar. Deducts inventory for 2 full batches.</div></div>
+      <div class="fg"><label class="lbl">Date Made</label><input class="inp" type="date" id="em-made-date" value="${new Date().toISOString().slice(0,10)}" style="cursor:pointer"></div>
+      <div class="fg"><label class="lbl">Gallon Bags</label><input class="inp" type="number" id="em-made-qty" value="2" min="1" max="10"></div>
+      <button class="btn btn-primary btn-full btn-lg" style="margin-bottom:8px" onclick="logEmergencyMeal()">🚨 Log Emergency Meals & Deduct Inventory</button>
+      <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="printRecipe()">🖨️ Print This Recipe</button>
+      <button class="btn btn-ghost btn-full" onclick="A.recipe=null;A.buildEmergency=false;render()">↩ Generate a Different Meal</button>
+      `:`
+      <div class="section-head">📅 Add to Calendar</div>
       <div class="r2" style="margin-bottom:8px">
         <div class="fg"><label class="lbl">Date</label><input class="inp" type="date" id="cal-date" onchange="checkConflict()" style="cursor:pointer"></div>
         <div class="fg"><label class="lbl">Meal Slot</label>
@@ -1521,6 +1528,7 @@ function rRecipe(){
       <button class="btn btn-primary btn-full btn-lg" style="margin-bottom:8px" onclick="placeOnCal()">📅 Add to Calendar & Deduct Inventory</button>
       <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="printRecipe()">🖨️ Print This Recipe</button>
       <button class="btn btn-ghost btn-full" onclick="A.recipe=null;render()">↩ Generate a Different Meal</button>
+      `}
     </div>
   </div>`;
 }
@@ -1794,6 +1802,23 @@ function deductInventory(pull){
   });
 }
 
+function logEmergencyMeal(){
+  const dateVal=document.getElementById('em-made-date')?.value||new Date().toISOString().slice(0,10);
+  const qty=+document.getElementById('em-made-qty')?.value||2;
+  // Deduct inventory for double batch
+  deductInventory(A.recipe.pull);
+  deductInventory(A.recipe.pull);
+  // Log to emergency meals
+  A.emergency.push({id:Date.now(),name:A.recipe.title,dateMade:dateVal,qty});
+  save();
+  A.recipe=null;
+  A.buildEmergency=false;
+  // Go to emergency inventory to show the logged meal
+  A.invTab='emergency';
+  showPage('inventory');
+  alert('✅ Emergency meals logged! Inventory deducted for 2 batches.');
+}
+
 function placeOnCal(){
   const dateVal=document.getElementById('cal-date')?.value;
   const slot=document.getElementById('cal-slot')?.value;
@@ -1801,49 +1826,18 @@ function placeOnCal(){
   const existing=A.calendarByDate[dateVal]?.[slot];
   if(existing){alert('⚠️ That slot is already taken. Move or remove it first.');return;}
   if(!A.calendarByDate[dateVal])A.calendarByDate[dateVal]={};
-  const wasEmergency=A.buildEmergency;
-  const recipeToSave={...A.recipe,isEmergencyMeal:wasEmergency};
-  A.calendarByDate[dateVal][slot]=recipeToSave;
-  // Deduct inventory — double for emergency meals (2 gallon bags = 2x ingredients)
-  if(wasEmergency){
-    deductInventory(A.recipe.pull);
-    deductInventory(A.recipe.pull);// second batch
-  } else {
-    deductInventory(A.recipe.pull);
-  }
+  A.calendarByDate[dateVal][slot]={...A.recipe};
+  deductInventory(A.recipe.pull);
   save();
   A.recipe=null;
-  A.buildEmergency=false;
   const d=new Date(dateVal+'T12:00:00');
   const today=new Date();today.setHours(0,0,0,0);
   const todaySun=new Date(today);todaySun.setDate(today.getDate()-today.getDay());
   const dateSun=new Date(d);dateSun.setDate(d.getDate()-d.getDay());
   A.weekOffset=Math.max(0,Math.min(4,Math.round((dateSun-todaySun)/(7*24*60*60*1000))));
   A.calSelDate=dateVal;
-  if(wasEmergency){
-    // Auto-open emergency log modal so they log the 2 bags immediately
-    A.invTab='emergency';
-    showPage('inventory');
-    setTimeout(()=>{
-      openAddEmergencyFromRecipe(recipeToSave.title);
-    },300);
-  } else {
-    alert('✅ Scheduled! Inventory updated.');
-    showPage('calendar');
-  }
-}
-
-function openAddEmergencyFromRecipe(mealName){
-  const today=new Date().toISOString().slice(0,10);
-  openModal(`<div class="modal-header"><div class="modal-title">🚨 Log Emergency Meal</div><button class="modal-close" onclick="closeModal()">×</button></div>
-    <div class="alert alert-green" style="margin-bottom:14px"><span>✅</span><div>Meal scheduled. Now log it in your Emergency supply — it counts toward your magic number of 6.</div></div>
-    <div class="fg"><label class="lbl">Meal Name</label><input class="inp" id="em-name" value="${mealName}"></div>
-    <div class="r2">
-      <div class="fg"><label class="lbl">Date Made</label><input class="inp" type="date" id="em-date" value="${today}"></div>
-      <div class="fg"><label class="lbl">Gallon Bags</label><input class="inp" type="number" id="em-qty" value="2" min="1" max="10"></div>
-    </div>
-    <div class="alert alert-gold"><span>📏</span><div>Always build 2 of the same meal per batch. Magic number = 6 total gallon bags.</div></div>
-    <button class="btn btn-primary btn-full btn-lg" style="margin-top:12px" onclick="saveEmergency()">Log Emergency Meals ✅</button>`);
+  alert('✅ Scheduled! Inventory updated.');
+  showPage('calendar');
 }
 
 // ─── MAINTENANCE DAY ──────────────────────────────────────────────────────────
