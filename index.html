@@ -429,6 +429,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
       <button class="nav-item" id="nav-builder" onclick="showPage('builder')"><span class="nav-icon">🤖</span>Meal Builder</button>
       <button class="nav-item" id="nav-calendar" onclick="showPage('calendar')"><span class="nav-icon">📅</span>Calendar</button>
       <div class="nav-section">Shopping</div>
+      <button class="nav-item" id="nav-maintenance" onclick="showPage('maintenance')"><span class="nav-icon">🍳</span>Maintenance Day</button>
       <button class="nav-item" id="nav-grocery" onclick="showPage('grocery')"><span class="nav-icon">🛒</span>Grocery List <span class="nav-badge gold" id="groc-badge" style="display:none">0</span></button>
     </div>
     <div class="sidebar-footer">
@@ -744,7 +745,7 @@ window.addEventListener('load',async()=>{
 });
 
 // ─── NAV ───────────────────────────────────────────────────────────────────────
-const PAGE_TITLES={dashboard:'Dashboard',inventory:'Inventory — Bases & Supports',pantry:'Kitchen Staples',builder:'Meal Builder',calendar:'Calendar',grocery:'Grocery List'};
+const PAGE_TITLES={dashboard:'Dashboard',inventory:'Inventory — Bases & Supports',pantry:'Kitchen Staples',builder:'Meal Builder',calendar:'Calendar',grocery:'Grocery List',maintenance:'Maintenance Day'};
 function showPage(p){
   A.page=p;
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
@@ -763,6 +764,7 @@ function render(){
   else if(A.page==='builder')m.innerHTML=rBuilder();
   else if(A.page==='calendar')m.innerHTML=rCalendar();
   else if(A.page==='grocery')m.innerHTML=rGrocery();
+  else if(A.page==='maintenance')m.innerHTML=rMaintenance();
   updateBadges();
 }
 function updateBadges(){
@@ -802,20 +804,9 @@ function rDashboard(){
     <div class="stat-card"><div class="stat-label">Grocery Items</div><div class="stat-value">${grocNeeded}</div><div class="stat-sub">items on your list</div></div>
   </div>`;
 
-  // Cook list summary if exists
+  // Cook list nudge — just a button, details live on Maintenance Day page
   if(A.cookList&&A.cookList.length>0){
-    html+=`<div class="cook-list-card" style="margin-bottom:20px">
-      <div class="cook-list-title">🍳 This Week's Cook List</div>
-      <div class="cook-list-sub">From your last Meal Builder session. Cook these on maintenance day.</div>
-      ${A.cookList.map(c=>`<div class="cook-item">
-        <div><div class="cook-item-name">${c.protein}</div><div class="cook-item-detail">Heat through 3-4 min · lightly season</div></div>
-        <div class="cook-item-qty"><div class="cook-item-bags">${c.bags} bags</div><div class="cook-item-raw">Buy ${c.rawLbs} lbs raw</div></div>
-      </div>`).join('')}
-      <div style="margin-top:12px;display:flex;gap:8px">
-        <button class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:none" onclick="showPage('builder')">Build More Meals</button>
-        <button class="btn btn-sm" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.6);border:none" onclick="A.cookList=null;save();render()">Clear Cook List</button>
-      </div>
-    </div>`;
+    html+=`<div class="alert alert-green" style="margin-bottom:16px"><span>🍳</span><div><strong>You have a cook list ready.</strong> <button onclick="showPage('maintenance')" style="background:none;border:none;color:var(--green);font-weight:700;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;font-size:13px;padding:0">Go to Maintenance Day →</button></div></div>`;
   }
 
   html+=`<div class="grid-2">
@@ -1350,63 +1341,51 @@ function rRecipe(){
   const fromStock=r.pull.filter(p=>stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
   const fromKitchen=r.pull.filter(p=>!stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
 
-  // Cook list for this meal
-  const mealCookList=A.cookList||[];
-
-  return`<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:1100px;align-items:start">
-    <div>
-      ${mealCookList.length>0?`<div class="cook-list-card">
-        <div class="cook-list-title">🍳 Maintenance Day Cook List</div>
-        <div class="cook-list-sub">Cook these before the week starts. Check long term storage first.</div>
-        ${mealCookList.map(c=>`<div class="cook-item">
-          <div><div class="cook-item-name">${c.protein}</div><div class="cook-item-detail">${c.note||'Cook, cool, bag in quart bags'}</div></div>
-          <div class="cook-item-qty"><div class="cook-item-bags">${c.bags} bags</div><div class="cook-item-raw">Buy ${c.rawLbs} raw</div></div>
-        </div>`).join('')}
-      </div>`:''}
-      <div class="card" style="margin-bottom:16px;overflow:hidden">
-        <div class="recipe-header">
-          <span style="background:rgba(255,255,255,.2);color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block;margin-bottom:10px">✅ Your Meal</span>
-          <div class="recipe-title-text">${r.title}</div>
-          <div class="recipe-desc">${r.description}</div>
-        </div>
-        <div class="card-pad">
-          <div class="macro-grid">
-            <div class="macro-box"><div class="macro-val">${r.macros.cal}</div><div class="macro-lbl">Calories</div></div>
-            <div class="macro-box"><div class="macro-val">${r.macros.protein}g</div><div class="macro-lbl">Protein</div></div>
-            <div class="macro-box"><div class="macro-val">${r.macros.carbs}g</div><div class="macro-lbl">Carbs</div></div>
-            <div class="macro-box"><div class="macro-val">${r.macros.fat}g</div><div class="macro-lbl">Fat</div></div>
-          </div>
-        </div>
+  return`<div style="max-width:720px">
+    <div class="card" style="margin-bottom:16px;overflow:hidden">
+      <div class="recipe-header">
+        <span style="background:rgba(255,255,255,.2);color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block;margin-bottom:10px">✅ Your Meal</span>
+        <div class="recipe-title-text">${r.title}</div>
+        <div class="recipe-desc">${r.description}</div>
       </div>
-      <div class="card card-pad" style="margin-bottom:16px">
-        ${fromStock.length>0?`<div class="pull-section"><div class="pull-section-title">❄️ From Your Stock — Pull These First</div>${fromStock.map(p=>`<div class="pull-row"><div class="pull-icon">${p.icon||'🍱'}</div><div style="flex:1"><div class="pull-name">${p.item}</div><div class="pull-note">${p.prepNote||''}</div></div><span class="pull-qty">${p.qty}</span></div>`).join('')}</div>`:''}
-        ${fromKitchen.length>0?`<div class="pull-section"><div class="pull-section-title">🧂 From Your Kitchen</div>${fromKitchen.map(p=>`<div class="pull-row"><div class="pull-icon">${p.icon||'🧂'}</div><div style="flex:1"><div class="pull-name">${p.item}</div><div class="pull-note">${p.prepNote||''}</div></div><span class="pull-qty">${p.qty}</span></div>`).join('')}</div>`:''}
+      <div class="card-pad">
+        <div class="macro-grid">
+          <div class="macro-box"><div class="macro-val">${r.macros.cal}</div><div class="macro-lbl">Calories</div></div>
+          <div class="macro-box"><div class="macro-val">${r.macros.protein}g</div><div class="macro-lbl">Protein</div></div>
+          <div class="macro-box"><div class="macro-val">${r.macros.carbs}g</div><div class="macro-lbl">Carbs</div></div>
+          <div class="macro-box"><div class="macro-val">${r.macros.fat}g</div><div class="macro-lbl">Fat</div></div>
+        </div>
       </div>
     </div>
-    <div>
-      <div class="card card-pad" style="margin-bottom:16px">
-        <div class="section-head">🥄 Assembly Steps</div>
-        ${r.steps.map((s,i)=>`<div class="step-row"><div class="step-num">${i+1}</div><div style="font-size:14px;line-height:1.6">${s}</div></div>`).join('')}
-        ${r.tip?`<div class="tip-box">${r.tip}</div>`:''}
-      </div>
-      <div class="card card-pad">
-        <div class="section-head">📅 Schedule This Meal</div>
-        <div class="r2" style="margin-bottom:8px">
-          <div class="fg"><label class="lbl">Date</label><input class="inp" type="date" id="cal-date" onchange="checkConflict()" style="cursor:pointer"></div>
-          <div class="fg"><label class="lbl">Meal Slot</label>
-            <select class="sel" id="cal-slot" onchange="checkConflict()">
-              <option value="breakfast" ${A.lastMealType==='Breakfast'?'selected':''}>Breakfast</option>
-              <option value="lunch" ${A.lastMealType==='Lunch'?'selected':''}>Lunch</option>
-              <option value="dinner" ${A.lastMealType==='Dinner'||!A.lastMealType?'selected':''}>Dinner</option>
-              <option value="snack" ${A.lastMealType==='Snack'?'selected':''}>Snack</option>
-            </select>
-          </div>
+
+    <div class="card card-pad" style="margin-bottom:16px">
+      ${fromStock.length>0?`<div class="pull-section"><div class="pull-section-title">❄️ From Your Stock — Pull These First</div>${fromStock.map(p=>`<div class="pull-row"><div class="pull-icon">${p.icon||'🍱'}</div><div style="flex:1"><div class="pull-name">${p.item}</div><div class="pull-note">${p.prepNote||''}</div></div><span class="pull-qty">${p.qty}</span></div>`).join('')}</div>`:''}
+      ${fromKitchen.length>0?`<div class="pull-section"><div class="pull-section-title">🧂 From Your Kitchen</div>${fromKitchen.map(p=>`<div class="pull-row"><div class="pull-icon">${p.icon||'🧂'}</div><div style="flex:1"><div class="pull-name">${p.item}</div><div class="pull-note">${p.prepNote||''}</div></div><span class="pull-qty">${p.qty}</span></div>`).join('')}</div>`:''}
+    </div>
+
+    <div class="card card-pad" style="margin-bottom:16px">
+      <div class="section-head">🥄 Assembly Steps</div>
+      ${r.steps.map((s,i)=>`<div class="step-row"><div class="step-num">${i+1}</div><div style="font-size:14px;line-height:1.6">${s}</div></div>`).join('')}
+      ${r.tip?`<div class="tip-box">${r.tip}</div>`:''}
+    </div>
+
+    <div class="card card-pad">
+      <div class="section-head">📅 Schedule This Meal</div>
+      <div class="r2" style="margin-bottom:8px">
+        <div class="fg"><label class="lbl">Date</label><input class="inp" type="date" id="cal-date" onchange="checkConflict()" style="cursor:pointer"></div>
+        <div class="fg"><label class="lbl">Meal Slot</label>
+          <select class="sel" id="cal-slot" onchange="checkConflict()">
+            <option value="breakfast" ${A.lastMealType==='Breakfast'?'selected':''}>Breakfast</option>
+            <option value="lunch" ${A.lastMealType==='Lunch'?'selected':''}>Lunch</option>
+            <option value="dinner" ${A.lastMealType==='Dinner'||!A.lastMealType?'selected':''}>Dinner</option>
+            <option value="snack" ${A.lastMealType==='Snack'?'selected':''}>Snack</option>
+          </select>
         </div>
-        <div class="conflict-msg" id="conflict-msg"></div>
-        <button class="btn btn-primary btn-full btn-lg" style="margin-bottom:8px" onclick="placeOnCal()">📅 Add to Calendar & Deduct Inventory</button>
-        <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="printRecipe()">🖨️ Print This Recipe</button>
-        <button class="btn btn-ghost btn-full" onclick="A.recipe=null;render()">↩ Generate a Different Meal</button>
       </div>
+      <div class="conflict-msg" id="conflict-msg"></div>
+      <button class="btn btn-primary btn-full btn-lg" style="margin-bottom:8px" onclick="placeOnCal()">📅 Add to Calendar & Deduct Inventory</button>
+      <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="printRecipe()">🖨️ Print This Recipe</button>
+      <button class="btn btn-ghost btn-full" onclick="A.recipe=null;render()">↩ Generate a Different Meal</button>
     </div>
   </div>`;
 }
@@ -1699,6 +1678,105 @@ function placeOnCal(){
   showPage('calendar');
 }
 
+// ─── MAINTENANCE DAY ──────────────────────────────────────────────────────────
+function rMaintenance(){
+  const weekStart=getWeekStart(A.weekOffset||0);
+  const weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+6);
+  const weekLabel=weekStart.toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+weekEnd.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const cookList=A.cookList||[];
+
+  let html=`<div class="page-title">Maintenance Day</div>
+  <div class="page-sub">Everything you need to cook, bag, and stock your kitchen for the week.</div>`;
+
+  html+=`<div class="alert alert-gold" style="margin-bottom:20px"><span>🏠</span><div><strong>Before you buy anything</strong> — check your chest freezer, long term storage, and pantry overflow first. You may already have what you need.</div></div>`;
+
+  // Week selector
+  html+=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+    <button class="btn btn-outline btn-sm" onclick="A.weekOffset=Math.max(0,(A.weekOffset||0)-1);render()" ${(A.weekOffset||0)===0?'disabled':''}>‹ Prev</button>
+    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:var(--green)">${weekLabel}</div>
+    <button class="btn btn-outline btn-sm" onclick="A.weekOffset=Math.min(4,(A.weekOffset||0)+1);render()" ${(A.weekOffset||0)===4?'disabled':''}>Next ›</button>
+  </div>`;
+
+  // Cook list
+  if(cookList.length===0){
+    html+=`<div class="card card-pad" style="margin-bottom:16px">
+      <div style="text-align:center;padding:24px 0">
+        <div style="font-size:40px;margin-bottom:10px">🍳</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:6px">No cook list yet</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Go to Meal Builder, select your proteins for the week, and build your meals. The cook list will appear here.</div>
+        <button class="btn btn-primary" onclick="showPage('builder')">Go to Meal Builder →</button>
+      </div>
+    </div>`;
+  } else {
+    html+=`<div class="cook-list-card" style="margin-bottom:20px">
+      <div class="cook-list-title">🍳 What to Cook This Week</div>
+      <div class="cook-list-sub">Cook on maintenance day · Cool completely · Bag in quart bags · Label and freeze</div>
+      ${cookList.map(c=>`<div class="cook-item">
+        <div>
+          <div class="cook-item-name">${c.protein}</div>
+          <div class="cook-item-detail">${c.note||'Season lightly so it can go any flavor direction · Heat through 3-4 min on weeknights'}</div>
+        </div>
+        <div class="cook-item-qty">
+          <div class="cook-item-bags">${c.bags} bags</div>
+          <div class="cook-item-raw">Buy ${c.rawLbs} raw</div>
+        </div>
+      </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:20px">
+      <button class="btn btn-outline btn-sm" onclick="A.cookList=null;save();render()">Clear Cook List</button>
+      <button class="btn btn-outline btn-sm" onclick="showPage('builder')">Add More Meals</button>
+    </div>`;
+
+    // Shrinkage rule reminder
+    html+=`<div class="card card-pad" style="margin-bottom:20px">
+      <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:12px">📏 Raw Buy Amounts — Shrinkage Rule</div>
+      ${cookList.map(c=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:14px;font-weight:600">${c.protein}</div>
+          <div style="font-size:12px;color:var(--text-muted)">Yields ${c.bags} quart bags = ${(c.bags*1.5).toFixed(1)} lbs cooked</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:16px;font-weight:700;color:var(--green)">${c.rawLbs}</div>
+          <div style="font-size:11px;color:var(--text-muted)">raw to buy</div>
+        </div>
+      </div>`).join('')}
+      <div style="font-size:12px;color:var(--text-hint);margin-top:10px">30% shrinkage factored in · Always round up at the store</div>
+    </div>`;
+  }
+
+  // This week's planned meals
+  const weekStart2=getWeekStart(A.weekOffset||0);
+  const days=[];
+  for(let i=0;i<7;i++){const d=new Date(weekStart2);d.setDate(weekStart2.getDate()+i);days.push(d);}
+  const weekMeals=[];
+  days.forEach(d=>{
+    const key=dateKey(d);
+    const dayCal=A.calendarByDate[key]||{};
+    ['breakfast','lunch','dinner','snack'].forEach(slot=>{
+      const meal=dayCal[slot];
+      if(meal){
+        const title=typeof meal==='object'?meal.title:meal;
+        weekMeals.push({day:d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}),slot,title});
+      }
+    });
+  });
+
+  if(weekMeals.length>0){
+    html+=`<div class="card" style="margin-bottom:16px">
+      <div class="card-header"><div class="card-title">📅 Meals Planned This Week</div></div>
+      <table class="inv-table"><tbody>
+        ${weekMeals.map(m=>`<tr>
+          <td style="font-size:13px;color:var(--text-muted);width:140px">${m.day}</td>
+          <td style="font-size:12px;color:var(--text-hint);width:80px;text-transform:capitalize">${m.slot}</td>
+          <td style="font-size:14px;font-weight:600">${m.title}</td>
+        </tr>`).join('')}
+      </tbody></table>
+    </div>`;
+  }
+
+  return html;
+}
+
 // ─── GROCERY ───────────────────────────────────────────────────────────────────
 function rGrocery(){
   const consolidated=[];
@@ -1715,29 +1793,21 @@ function rGrocery(){
   const low=consolidated.filter(g=>g.urgency!=='out'&&!g.done);
   const done=consolidated.filter(g=>g.done);
 
-  // Cook list in grocery view
-  let html='';
-  if(A.cookList&&A.cookList.length>0){
-    html+=`<div class="cook-list-card" style="margin-bottom:20px">
-      <div class="cook-list-title">🍳 Maintenance Day Cook List</div>
-      <div class="cook-list-sub">Check long term storage and chest freezer before buying.</div>
-      ${A.cookList.map(c=>`<div class="cook-item">
-        <div><div class="cook-item-name">${c.protein}</div><div class="cook-item-detail">Cook, cool, bag in quart bags on maintenance day</div></div>
-        <div class="cook-item-qty"><div class="cook-item-bags">${c.bags} bags</div><div class="cook-item-raw">Buy ${c.rawLbs} raw</div></div>
-      </div>`).join('')}
-    </div>`;
-  }
+  // Week label for grocery list
+  const weekStart=getWeekStart(A.weekOffset||0);
+  const weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+6);
+  const weekLabel=weekStart.toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+weekEnd.toLocaleDateString('en-US',{month:'short',day:'numeric'});
 
-  html+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-    <div><div class="page-title" style="font-size:18px">Shopping List</div><div style="font-size:13px;color:var(--text-muted)">${out.length+low.length} items needed</div></div>
+  let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div><div class="page-title" style="font-size:18px">Shopping List</div><div style="font-size:13px;color:var(--text-muted)">Week of ${weekLabel} · ${out.length+low.length} items needed</div></div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-outline btn-sm" onclick="printGroc()">🖨️ Print</button>
       <button class="btn btn-primary btn-sm" onclick="openAddGroc()">+ Add Item</button>
     </div>
   </div>
-  <div class="alert alert-gold" style="margin-bottom:16px"><span>🏠</span><div><strong>Check long term storage first</strong> — chest freezer, pantry overflow, bulk storage — before purchasing anything on this list.</div></div>`;
+  <div class="alert alert-gold" style="margin-bottom:16px"><span>🏠</span><div><strong>Check long term storage first</strong> — chest freezer, pantry overflow, bulk storage — before purchasing anything. <button onclick="showPage('maintenance')" style="background:none;border:none;color:#6b5100;font-weight:700;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;font-size:13px;padding:0">View Cook List →</button></div></div>`;
 
-  if(out.length===0&&low.length===0&&done.length===0&&(!A.cookList||A.cookList.length===0)){
+  if(out.length===0&&low.length===0&&done.length===0){
     html+=`<div class="empty"><div style="font-size:48px;margin-bottom:10px">✅</div><div style="font-size:15px;font-weight:600;margin-bottom:6px">Your list is empty</div><div>Items are added automatically when the Meal Builder flags missing ingredients.</div></div>`;
   }
   if(out.length>0){
