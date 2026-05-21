@@ -1160,12 +1160,13 @@ function rBuilderForm(){
         <div style="border-top:1px solid var(--border);margin:14px 0"></div>
 
         <div class="fg"><label class="lbl">Meal Type</label>
-          <select class="sel" id="mt">
-            <option ${A.lastMealType==='Dinner'?'selected':''}>Dinner</option>
-            <option ${A.lastMealType==='Lunch'?'selected':''}>Lunch</option>
-            <option ${A.lastMealType==='Breakfast'?'selected':''}>Breakfast</option>
-            <option ${A.lastMealType==='Snack'?'selected':''}>Snack</option>
+          <select class="sel" id="mt" ${A.buildEmergency?'disabled':''}>
+            <option ${A.lastMealType==='Dinner'||A.buildEmergency?'selected':''}>Dinner</option>
+            <option ${A.lastMealType==='Lunch'&&!A.buildEmergency?'selected':''}>Lunch</option>
+            <option ${A.lastMealType==='Breakfast'&&!A.buildEmergency?'selected':''}>Breakfast</option>
+            <option ${A.lastMealType==='Snack'&&!A.buildEmergency?'selected':''}>Snack</option>
           </select>
+          ${A.buildEmergency?`<div class="helper">Emergency meals are always dinner — complete, hearty, freezer-ready</div>`:''}
         </div>
         <div class="r2">
           <div class="fg"><label class="lbl">Servings</label>
@@ -1362,7 +1363,13 @@ PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}`;
     }
     let raw=data.content?.[0]?.text||'';
     if(!raw){alert('The AI returned an empty response. Try again.');showPage('builder');return;}
+    // Clean up any markdown fences
     raw=raw.replace(/```json|```/g,'').trim();
+    // Ensure it starts with {
+    if(!raw.startsWith('{'))raw=raw.substring(raw.indexOf('{'));
+    // Ensure it ends with }
+    const lastBrace=raw.lastIndexOf('}');
+    if(lastBrace>=0)raw=raw.substring(0,lastBrace+1);
     let recipe;
     try{recipe=JSON.parse(raw);}
     catch(e){
@@ -1513,6 +1520,9 @@ Dietary: ${A.dietary.length>0?A.dietary.join(', '):'none'}`;
     A.stretchingIt=false;
     let raw=data.content?.[0]?.text||'';
     raw=raw.replace(/```json|```/g,'').trim();
+    if(!raw.startsWith('{'))raw=raw.substring(raw.indexOf('{'));
+    const lastBrace=raw.lastIndexOf('}');
+    if(lastBrace>=0)raw=raw.substring(0,lastBrace+1);
     A.stretchResult=JSON.parse(raw);
     showPage('builder');
   }catch(e){
