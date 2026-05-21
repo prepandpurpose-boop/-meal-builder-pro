@@ -538,6 +538,10 @@ const DEF_SUPPORTS=[
   {id:35,name:'Strawberries (frozen)',icon:'🍓',frozen:0,storageTypes:['frozen']},
   {id:46,name:'Blueberries (frozen)',icon:'🫐',frozen:0,storageTypes:['frozen']},
   {id:36,name:'Hash Browns (frozen)',icon:'🥔',frozen:0,storageTypes:['frozen']},
+  {id:37,name:'Breakfast Sausage (frozen)',icon:'🌭',frozen:0,storageTypes:['frozen']},
+  {id:38,name:'Pancakes (frozen/homemade)',icon:'🥞',each:0,storageTypes:['each'],eachUnit:'each'},
+  {id:39,name:'Waffles (frozen/homemade)',icon:'🧇',each:0,storageTypes:['each'],eachUnit:'each'},
+  {id:72,name:'French Toast (frozen/homemade)',icon:'🍞',each:0,storageTypes:['each'],eachUnit:'each'},
   {id:40,name:'Eggs',icon:'🥚',each:0,storageTypes:['each'],eachUnit:'eggs'},
 ];
 
@@ -623,7 +627,7 @@ let A={
   page:'dashboard',invTab:'bases',
   calSelDate:null,weekOffset:0,
   generating:false,stretchingIt:false,recipe:null,stretchResult:null,
-  ppSpices:true,buildFromStock:true,
+  ppSpices:true,buildFromStock:true,kidFriendly:false,
   householdSize:4,lastMealType:'Dinner',
   dietary:[],onboarded:false,
   email:'',
@@ -647,7 +651,7 @@ function save(){
     const data={
       bases:A.bases,supports:A.supports,pantry:A.pantry,emergency:A.emergency,
       calendar_by_date:A.calendarByDate,grocery:A.grocery,dietary:A.dietary,
-      household_size:A.householdSize,pp_spices:A.ppSpices,
+      household_size:A.householdSize,pp_spices:A.ppSpices,kid_friendly:A.kidFriendly,
       last_meal_type:A.lastMealType,onboarded:A.onboarded,
       week_proteins:A.weekProteins,cook_list:A.cookList,
     };
@@ -668,6 +672,7 @@ async function loadUserData(email){
     A.dietary=remote.dietary||[];
     A.householdSize=remote.household_size||4;
     A.ppSpices=remote.pp_spices!==false;
+    A.kidFriendly=remote.kid_friendly||false;
     A.lastMealType=remote.last_meal_type||'Dinner';
     A.onboarded=remote.onboarded||false;
     A.weekProteins=remote.week_proteins||[];
@@ -687,6 +692,7 @@ async function loadUserData(email){
       A.dietary=d.dietary||[];
       A.householdSize=d.household_size||4;
       A.ppSpices=d.pp_spices!==false;
+      A.kidFriendly=d.kid_friendly||false;
       A.lastMealType=d.last_meal_type||'Dinner';
       A.onboarded=d.onboarded||false;
       A.weekProteins=d.week_proteins||[];
@@ -1153,6 +1159,10 @@ function rBuilderForm(){
           <div><div style="font-size:14px;font-weight:600">P&P Spice Blends</div><div style="font-size:12px;color:var(--text-muted)">I have the Prep & Purpose spice kit</div></div>
           <div class="tog ${A.ppSpices?'on':''}" onclick="A.ppSpices=!A.ppSpices;render()"><div class="tog-th"></div></div>
         </div>
+        <div class="mode-row">
+          <div><div style="font-size:14px;font-weight:600">👶 Kid Friendly</div><div style="font-size:12px;color:var(--text-muted)">${A.kidFriendly?'Mild flavors · lunchbox formats · nut-free':'Adult flavors — toggle on for school lunches'}</div></div>
+          <div class="tog ${A.kidFriendly?'on':''}" onclick="A.kidFriendly=!A.kidFriendly;save();render()"><div class="tog-th"></div></div>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
           <button class="btn btn-primary btn-lg btn-full" onclick="generateRecipe()">🤖 Build My Meal</button>
           <button class="btn btn-outline btn-lg btn-full" onclick="openStretchIt()">💪 Stretch It</button>
@@ -1192,6 +1202,7 @@ async function generateRecipe(){
   const servings=document.getElementById('sv')?.value||'4';
   const anchor=document.getElementById('anchor')?.value?.trim()||'';
   const ppSpices=A.ppSpices;
+  const kidFriendly=A.kidFriendly||false;
   A.lastMealType=mealType;save();
   A.generating=true;A.recipe=null;
   showPage('builder');
@@ -1210,6 +1221,7 @@ async function generateRecipe(){
   const frozenSupList=A.supports.filter(s=>s.storageTypes.includes('frozen')&&(s.frozen||0)>0).map(s=>`${s.name}: ${s.frozen} bags (${s.frozen*3} cups) [FROZEN — add mid-cook, 3-4 min to heat through]`);
   const cannedList=A.supports.filter(s=>s.storageTypes.includes('canned')&&(s.canned||0)>0).map(s=>`${s.name}: ${s.canned} cans [add at end]`);
   const dryList=A.supports.filter(s=>s.storageTypes.includes('dry')&&(s.dry||0)>0).map(s=>`${s.name}: ${s.dry} ${s.dryUnit||'lbs'} [needs full cook time]`);
+  const eachList=A.supports.filter(s=>s.storageTypes.includes('each')&&(s.each||0)>0).map(s=>`${s.name}: ${s.each} ${s.eachUnit||'each'} [ready to use — heat through or serve as is]`);
 
   const pantryFlat=getPantryFlat().filter(p=>p.have);
   const freshList=pantryFlat.filter(p=>p.fresh&&(p.qty||0)>0).map(p=>`${p.name}: ${p.qty} ${p.unit} [FRESH — USE FIRST]`);
@@ -1229,17 +1241,29 @@ CRITICAL PROTEIN RULES:
 
 MEAL TYPE RULES — CRITICAL:
 - Dinner = a real dinner. NOT breakfast food. NOT egg-forward dishes. Proteins, grains, vegetables.
-- Lunch = lighter but still a real meal
-- Breakfast = eggs, grains, fruit are appropriate
+- Lunch = GRAB AND GO. 3 assembly steps max. No cooking from scratch. Pull already-cooked protein, assemble, pack. Formats: wraps, bowls, quesadillas, roll-ups, pinwheels, cold protein on bread or crackers, rice bowls, pasta salad. Always include a PACK IT note in the tip field — what container, hot or cold, how long it stays good, whether it travels well.
+- Breakfast = EXCITING. Rotate: stuffed french toast, pancake stacks, waffle boards, breakfast burritos, egg scrambles, biscuits and gravy, breakfast hash, omelettes, breakfast quesadillas, overnight oats, yogurt parfait. Build from scratch if flour/butter/eggs on hand. Suggest optional upgrades (fresh fruit, fancy syrup, whipped cream) in groceryFlags as urgency "low".
+- Snack = small, satisfying. Energy balls, yogurt parfait, cheese and crackers, fruit and nut butter.
 - NEVER serve shakshuka, frittata, or egg-based dishes for Dinner unless eggs are the ONLY protein available
+
+${A.kidFriendly?`KID FRIENDLY MODE — ON:
+- Mild flavors only — no spicy, no strong heat
+- Nut-free always — never suggest peanuts, tree nuts, or nut butters
+- Lunchbox formats: roll-ups, pinwheels, mini quesadillas, pasta salad, rice bowls with mild sauce, chicken wraps
+- Portions sized for kids (half adult portion) — note in description
+- Things that eat well COLD — no dishes that require reheating at school
+- Simple presentation — kids won't eat complicated
+- Flag fun toppings as optional: shredded cheese, mild salsa, sour cream, ranch`:''}
 
 VEGETABLE TIMING:
 - FRESH veg: add early, needs cook time, use first
 - FROZEN (quart bags): add mid-cook, 3-4 min to heat
 - CANNED: already cooked, add at very end — just heat
 
-DISH VARIETY — rotate every time:
-Tacos, enchiladas, stir fry, pasta, chili, soup, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, curry, gumbo, pot pie, lo mein, quesadillas, hash, skillet meals, rice bowls, noodle dishes
+DISH VARIETY — rotate every time. Never repeat the same dish type twice in a row:
+Dinner: Tacos, enchiladas, stir fry, pasta, chili, soup, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, curry, gumbo, pot pie, lo mein, quesadillas, hash, skillet meals, rice bowls, noodle dishes
+Lunch: Wraps, bowls, quesadillas, roll-ups, pinwheels, cold chicken salad, tuna salad, rice bowls, pasta salad, lunchbox plates
+Breakfast: Pancake stacks, stuffed french toast, waffle boards, breakfast burritos, egg scrambles, shakshuka, biscuits and gravy, breakfast hash, omelettes, breakfast quesadillas, overnight oats
 
 MISSING INGREDIENTS: Always build anyway. Flag missing items in groceryFlags with exact quantities.
 
@@ -1263,6 +1287,8 @@ RESPOND WITH VALID JSON ONLY — no markdown, no explanation:
 }`;
 
   const userPrompt=`MEAL TYPE: ${mealType} — build an appropriate ${mealType.toLowerCase()} dish. NOT breakfast food for dinner.
+${kidFriendly?'KID FRIENDLY MODE: ON — mild flavors, nut-free, lunchbox format, eats well cold, kid portions':''}
+${mealType==='Lunch'?'LUNCH = GRAB AND GO — 3 steps max, no cooking from scratch, always include PACK IT note in tip':''}
 Flavor: ${flavor}
 Servings: ${servings}
 ${anchor?`ANCHOR — build around this: ${anchor}`:''}
@@ -1275,6 +1301,7 @@ SUPPORTS:
 Frozen: ${frozenSupList.length>0?frozenSupList.join(' | '):'None'}
 Canned: ${cannedList.length>0?cannedList.join(' | '):'None'}
 Dry: ${dryList.length>0?dryList.join(' | '):'None'}
+Ready to use (each): ${eachList.length>0?eachList.join(' | '):'None'}
 
 FRESH ITEMS (USE FIRST): ${freshList.length>0?freshList.join(' | '):'None'}
 FRIDGE: ${fridgeQty.length>0?fridgeQty.join(' | '):'None'}
