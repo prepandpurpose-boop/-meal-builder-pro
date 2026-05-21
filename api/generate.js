@@ -20,15 +20,24 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5',
+        model: 'claude-sonnet-4-5',
         max_tokens: 4000,
         system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }],
+        messages: [
+          { role: 'user', content: userPrompt },
+          { role: 'assistant', content: '{' }
+        ],
       }),
     });
 
     const data = await response.json();
     if (!response.ok) return res.status(response.status).json({ error: data.error?.message || 'API error' });
+    
+    // Prepend the { we used to force JSON mode
+    if (data.content?.[0]?.text) {
+      data.content[0].text = '{' + data.content[0].text;
+    }
+    
     res.status(200).json(data);
   } catch (err) {
     res.status(500).json({ error: 'Server error: ' + err.message });
