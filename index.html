@@ -484,7 +484,13 @@ async function sbSave(email,data){
     const payload={email:email.toLowerCase().trim(),...data,updated_at:new Date().toISOString()};
     const r=await fetch(`${SUPA_URL}/rest/v1/user_data`,{
       method:'POST',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
+      headers:{
+        'apikey':SUPA_KEY,
+        'Authorization':'Bearer '+SUPA_KEY,
+        'Content-Type':'application/json',
+        'Prefer':'resolution=merge-duplicates,return=minimal',
+        'on-conflict':'email'
+      },
       body:JSON.stringify(payload)
     });
     if(!r.ok){
