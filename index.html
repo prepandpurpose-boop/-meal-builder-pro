@@ -467,13 +467,14 @@ const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 // ─── SUPABASE ──────────────────────────────────────────────────────────────────
 async function sbGet(email){
   try{
-    const r=await fetch(`${SUPA_URL}/rest/v1/user_data?email=eq.${encodeURIComponent(email)}&select=*`,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    const e=email.toLowerCase().trim();
+    const r=await fetch(`${SUPA_URL}/rest/v1/user_data?email=ilike.${encodeURIComponent(e)}&select=*`,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
     const d=await r.json();return d[0]||null;
   }catch(e){return null;}
 }
 async function sbSave(email,data){
   try{
-    const payload={email,...data,updated_at:new Date().toISOString()};
+    const payload={email:email.toLowerCase().trim(),...data,updated_at:new Date().toISOString()};
     await fetch(`${SUPA_URL}/rest/v1/user_data`,{
       method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
       body:JSON.stringify(payload)
@@ -740,9 +741,10 @@ function verifyAccess(){
   .then(r=>r.json())
   .then(async data=>{
     if(data.access){
-      localStorage.setItem('pp_user',e);
-      A.email=e;
-      await loadUserData(e);
+      const normalEmail=e.toLowerCase().trim();
+      localStorage.setItem('pp_user',normalEmail);
+      A.email=normalEmail;
+      await loadUserData(normalEmail);
       grantAccess();
     } else if(data.reason==='cancelled'){
       btn.textContent='Check Access';btn.disabled=false;
@@ -766,8 +768,9 @@ function signOut(){if(confirm('Sign out?')){localStorage.removeItem('pp_user');s
 window.addEventListener('load',async()=>{
   const email=localStorage.getItem('pp_user');
   if(email){
-    A.email=email;
-    fetch('/api/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})})
+    const normalEmail=email.toLowerCase().trim();
+    A.email=normalEmail;
+    fetch('/api/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:normalEmail})})
     .then(r=>r.json())
     .then(async data=>{
       if(data.access){await loadUserData(email);grantAccess();}
