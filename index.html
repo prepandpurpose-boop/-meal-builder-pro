@@ -662,12 +662,37 @@ function save(){
   },800);
 }
 
+// Merge saved data with defaults — keeps user quantities, adds any new default items
+function mergeWithDefaults(saved,defaults){
+  if(!saved||!saved.length)return JSON.parse(JSON.stringify(defaults));
+  const merged=JSON.parse(JSON.stringify(saved));
+  defaults.forEach(def=>{
+    if(!merged.find(s=>s.id==def.id)){
+      merged.push(JSON.parse(JSON.stringify(def)));
+    }
+  });
+  return merged;
+}
+function mergePantryWithDefaults(saved,defaults){
+  if(!saved)return JSON.parse(JSON.stringify(defaults));
+  const merged={};
+  Object.keys(defaults).forEach(cat=>{
+    merged[cat]=saved[cat]?JSON.parse(JSON.stringify(saved[cat])):[];
+    defaults[cat].forEach(def=>{
+      if(!merged[cat].find(i=>i.id===def.id)){
+        merged[cat].push(JSON.parse(JSON.stringify(def)));
+      }
+    });
+  });
+  return merged;
+}
+
 async function loadUserData(email){
   const remote=await sbGet(email);
   if(remote){
-    A.bases=remote.bases||JSON.parse(JSON.stringify(DEF_BASES));
-    A.supports=remote.supports||JSON.parse(JSON.stringify(DEF_SUPPORTS));
-    A.pantry=remote.pantry||JSON.parse(JSON.stringify(DEF_PANTRY));
+    A.bases=mergeWithDefaults(remote.bases,DEF_BASES);
+    A.supports=mergeWithDefaults(remote.supports,DEF_SUPPORTS);
+    A.pantry=mergePantryWithDefaults(remote.pantry,DEF_PANTRY);
     A.emergency=remote.emergency||[];
     A.calendarByDate=remote.calendar_by_date||{};
     A.grocery=remote.grocery||[];
@@ -685,9 +710,9 @@ async function loadUserData(email){
   if(local){
     try{
       const d=JSON.parse(local);
-      A.bases=d.bases||JSON.parse(JSON.stringify(DEF_BASES));
-      A.supports=d.supports||JSON.parse(JSON.stringify(DEF_SUPPORTS));
-      A.pantry=d.pantry||JSON.parse(JSON.stringify(DEF_PANTRY));
+      A.bases=mergeWithDefaults(d.bases,DEF_BASES);
+      A.supports=mergeWithDefaults(d.supports,DEF_SUPPORTS);
+      A.pantry=mergePantryWithDefaults(d.pantry,DEF_PANTRY);
       A.emergency=d.emergency||[];
       A.calendarByDate=d.calendar_by_date||{};
       A.grocery=d.grocery||[];
@@ -1128,6 +1153,7 @@ function rBuilderForm(){
       <div class="card card-pad" style="margin-bottom:16px">
         <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:600;margin-bottom:14px">Build Your Meal</div>
         ${emergencyCount<6?`<div class="alert alert-red" style="margin-bottom:12px"><span>🚨</span><div>${emergencyCount} emergency meals — rebuild to 6 on maintenance day</div></div>`:''}
+        ${A.buildEmergency?`<div class="alert alert-red" style="margin-bottom:12px"><span>🚨</span><div><strong>Emergency Meal Mode ON</strong> — AI will build a complete double-batch meal for 2 gallon bags. Inventory deducts for both batches. You will be prompted to log it when scheduled.</div></div>`:''}
 
         ${proteinSection}
 
@@ -1707,11 +1733,17 @@ function placeOnCal(){
   const existing=A.calendarByDate[dateVal]?.[slot];
   if(existing){alert('⚠️ That slot is already taken. Move or remove it first.');return;}
   if(!A.calendarByDate[dateVal])A.calendarByDate[dateVal]={};
-  A.calendarByDate[dateVal][slot]={...A.recipe};
-  // Deduct inventory
-  deductInventory(A.recipe.pull);
-  save();
   const wasEmergency=A.buildEmergency;
+  const recipeToSave={...A.recipe,isEmergencyMeal:wasEmergency};
+  A.calendarByDate[dateVal][slot]=recipeToSave;
+  // Deduct inventory — double for emergency meals (2 gallon bags = 2x ingredients)
+  if(wasEmergency){
+    deductInventory(A.recipe.pull);
+    deductInventory(A.recipe.pull);// second batch
+  } else {
+    deductInventory(A.recipe.pull);
+  }
+  save();
   A.recipe=null;
   A.buildEmergency=false;
   const d=new Date(dateVal+'T12:00:00');
@@ -1721,16 +1753,29 @@ function placeOnCal(){
   A.weekOffset=Math.max(0,Math.min(4,Math.round((dateSun-todaySun)/(7*24*60*60*1000))));
   A.calSelDate=dateVal;
   if(wasEmergency){
-    if(confirm('✅ Scheduled!\n\nDon\'t forget to log this in your Emergency Meals inventory.\n\nGo to Emergency Meals now?')){
-      A.invTab='emergency';
-      showPage('inventory');
-    } else {
-      showPage('calendar');
-    }
+    // Auto-open emergency log modal so they log the 2 bags immediately
+    A.invTab='emergency';
+    showPage('inventory');
+    setTimeout(()=>{
+      openAddEmergencyFromRecipe(recipeToSave.title);
+    },300);
   } else {
     alert('✅ Scheduled! Inventory updated.');
     showPage('calendar');
   }
+}
+
+function openAddEmergencyFromRecipe(mealName){
+  const today=new Date().toISOString().slice(0,10);
+  openModal(`<div class="modal-header"><div class="modal-title">🚨 Log Emergency Meal</div><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="alert alert-green" style="margin-bottom:14px"><span>✅</span><div>Meal scheduled. Now log it in your Emergency supply — it counts toward your magic number of 6.</div></div>
+    <div class="fg"><label class="lbl">Meal Name</label><input class="inp" id="em-name" value="${mealName}"></div>
+    <div class="r2">
+      <div class="fg"><label class="lbl">Date Made</label><input class="inp" type="date" id="em-date" value="${today}"></div>
+      <div class="fg"><label class="lbl">Gallon Bags</label><input class="inp" type="number" id="em-qty" value="2" min="1" max="10"></div>
+    </div>
+    <div class="alert alert-gold"><span>📏</span><div>Always build 2 of the same meal per batch. Magic number = 6 total gallon bags.</div></div>
+    <button class="btn btn-primary btn-full btn-lg" style="margin-top:12px" onclick="saveEmergency()">Log Emergency Meals ✅</button>`);
 }
 
 // ─── MAINTENANCE DAY ──────────────────────────────────────────────────────────
@@ -1924,13 +1969,14 @@ function openEditItem(id,list){
     const unit=st==='frozen'?'bags':st==='canned'?'cans/pint jars':st==='each'?item.eachUnit||'each':item.dryUnit||'lbs';
     const conv=st==='frozen'?(isBase?` = ${(_editItem[st]||0)*1.5} lbs cooked`:` = ${(_editItem[st]||0)*3} cups cooked`):'';
     return`<div class="qty-row">
-      <div class="qty-label">${storageLabel(st)}<div class="qty-sub">${unit}${conv}</div></div>
+      <div class="qty-label">${storageLabel(st)}<div class="qty-sub" id="conv-${st}">${unit}${conv}</div></div>
       <div class="qty-controls">
-        <button class="qty-btn" onclick="adjItem('${st}',-1)">−</button>
         <input type="number" min="0" value="${_editItem[st]||0}" id="qv-${st}"
-          onchange="setItem('${st}',+this.value)"
-          style="width:52px;text-align:center;font-size:17px;font-weight:700;color:var(--green);border:1px solid var(--border-strong);border-radius:var(--radius-xs);padding:4px 6px;font-family:'Playfair Display',serif">
-        <button class="qty-btn" onclick="adjItem('${st}',1)">+</button>
+          oninput="setItem('${st}',+this.value,'${isBase}','${unit}')"
+          style="width:100px;text-align:center;font-size:22px;font-weight:700;color:var(--green);border:2px solid var(--border-strong);border-radius:var(--radius-sm);padding:8px 12px;font-family:'Playfair Display',serif;outline:none"
+          onfocus="this.style.borderColor='var(--green)'"
+          onblur="this.style.borderColor='var(--border-strong)'">
+        <span style="font-size:12px;color:var(--text-muted);min-width:40px">${unit}</span>
       </div>
     </div>`;
   }).join('');
@@ -1942,15 +1988,15 @@ function openEditItem(id,list){
       <button class="btn btn-outline" onclick="promptAddToGroc(${id},'${list}')">Add to Grocery</button>
     </div>`);
 }
-function adjItem(st,delta){
-  if(!_editItem)return;
-  _editItem[st]=Math.max(0,(_editItem[st]||0)+delta);
-  const el=document.getElementById('qv-'+st);
-  if(el)el.value=_editItem[st];
-}
-function setItem(st,val){
+function setItem(st,val,isBase,unit){
   if(!_editItem)return;
   _editItem[st]=Math.max(0,val||0);
+  const convEl=document.getElementById('conv-'+st);
+  if(convEl&&st==='frozen'){
+    const v=_editItem[st];
+    const conv=isBase==='true'?` = ${(v*1.5).toFixed(1)} lbs cooked`:` = ${v*3} cups cooked`;
+    convEl.textContent=unit+conv;
+  }
 }
 function saveEditItem(){
   if(!_editItem||!_editList)return;
