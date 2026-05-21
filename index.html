@@ -14,7 +14,7 @@
   --text:#1a1a1a;--text-muted:#5a5a5a;--text-hint:#aaa;
   --border:rgba(0,0,0,0.07);--border-strong:rgba(0,0,0,0.13);
   --radius:12px;--radius-sm:8px;--radius-xs:6px;
-  --sidebar:240px;--shadow:0 1px 4px rgba(0,0,0,0.06);--shadow-md:0 4px 16px rgba(0,0,0,0.08);
+  --sidebar:200px;--shadow:0 1px 4px rgba(0,0,0,0.06);--shadow-md:0 4px 16px rgba(0,0,0,0.08);
 }
 html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text)}
 
@@ -55,7 +55,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .sidebar{width:var(--sidebar);background:var(--green);display:flex;flex-direction:column;flex-shrink:0;height:100%;overflow-y:auto}
 .sidebar-brand{padding:22px 20px 18px;border-bottom:1px solid rgba(255,255,255,.1)}
 .sidebar-logo{font-size:22px;margin-bottom:2px}
-.sidebar-title{font-family:'Playfair Display',serif;font-size:16px;color:#fff;font-weight:600}
+.sidebar-title{font-family:'Playfair Display',serif;font-size:14px;color:#fff;font-weight:600}
 .sidebar-sub{font-size:10px;color:rgba(255,255,255,.45);margin-top:1px;letter-spacing:.04em;text-transform:uppercase}
 .sidebar-nav{padding:14px 10px;flex:1}
 .nav-section{font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em;padding:0 10px;margin:14px 0 6px}
@@ -91,8 +91,8 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
 .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-@media(max-width:900px){.grid-3{grid-template-columns:1fr 1fr}.grid-4{grid-template-columns:1fr 1fr}}
-@media(max-width:600px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
+@media(max-width:700px){.grid-3{grid-template-columns:1fr 1fr}.grid-4{grid-template-columns:1fr 1fr}}
+@media(max-width:500px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr}}
 
 /* ── CARDS ── */
 .card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
@@ -182,8 +182,8 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .pantry-fresh-badge{font-size:10px;font-weight:700;color:#2e7d32;background:#e8f5e9;padding:2px 6px;border-radius:10px;margin-left:6px}
 
 /* ── MEAL BUILDER ── */
-.builder-panel{display:grid;grid-template-columns:360px 1fr;gap:20px;align-items:start}
-@media(max-width:900px){.builder-panel{grid-template-columns:1fr}}
+.builder-panel{display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start}
+@media(max-width:700px){.builder-panel{grid-template-columns:1fr}}
 .mode-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border)}
 .mode-row:first-child{border-top:none}
 .stock-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;margin:3px}
@@ -216,7 +216,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 
 /* ── CALENDAR ── */
 .cal-layout{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start}
-@media(max-width:900px){.cal-layout{grid-template-columns:1fr}}
+@media(max-width:700px){.cal-layout{grid-template-columns:1fr}}
 .cal-week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:16px}
 .cal-day{text-align:center;cursor:pointer;padding:4px 2px;border-radius:var(--radius-sm);transition:background .15s}
 .cal-day:hover{background:var(--cream)}
@@ -1353,7 +1353,7 @@ function rRecipe(){
   // Cook list for this meal
   const mealCookList=A.cookList||[];
 
-  return`<div class="grid-2" style="max-width:1000px">
+  return`<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:1100px;align-items:start">
     <div>
       ${mealCookList.length>0?`<div class="cook-list-card">
         <div class="cook-list-title">🍳 Maintenance Day Cook List</div>
@@ -1558,22 +1558,55 @@ function rCalendar(){
   return html;
 }
 
-function openMealDetail(dateKey,slot){
-  const meal=A.calendarByDate[dateKey]?.[slot];
+function openMealDetail(dk,sl){
+  const meal=A.calendarByDate[dk]?.[sl];
   if(!meal)return;
   const title=typeof meal==='object'?meal.title:meal;
+  const desc=typeof meal==='object'?meal.description||'':'';
   const pull=typeof meal==='object'&&meal.pull?meal.pull:[];
-  A._moveFrom={date:dateKey,slot};
+  const steps=typeof meal==='object'&&meal.steps?meal.steps:[];
+  const tip=typeof meal==='object'?meal.tip||'':'';
+  const macros=typeof meal==='object'?meal.macros||null:null;
+  A._moveFrom={date:dk,slot:sl};
   openModal(`<div class="modal-header"><div class="modal-title">${title}</div><button class="modal-close" onclick="closeModal()">×</button></div>
-    ${pull.length>0?`<div style="margin-bottom:14px"><div class="section-head">📦 What to Pull</div>${pull.slice(0,4).map(p=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px"><span>${p.icon||'🍱'}</span><span style="flex:1;font-weight:500">${p.item}</span><span style="color:var(--text-muted)">${p.qty}</span></div>`).join('')}${pull.length>4?`<div style="font-size:12px;color:var(--text-muted);padding-top:6px">+${pull.length-4} more items</div>`:''}</div>`:''}
-    <div style="font-size:13px;font-weight:700;margin-bottom:8px">Move to different slot</div>
-    <div class="r2" style="margin-bottom:12px">
-      <div class="fg"><label class="lbl">Date</label><input class="inp" type="date" id="move-date" value="${dateKey}" style="cursor:pointer"></div>
-      <div class="fg"><label class="lbl">Slot</label><select class="sel" id="move-slot"><option value="breakfast" ${slot==='breakfast'?'selected':''}>Breakfast</option><option value="lunch" ${slot==='lunch'?'selected':''}>Lunch</option><option value="dinner" ${slot==='dinner'?'selected':''}>Dinner</option><option value="snack" ${slot==='snack'?'selected':''}>Snack</option></select></div>
-    </div>
-    <button class="btn btn-primary btn-full" style="margin-bottom:8px" onclick="moveMeal()">↕️ Move Meal</button>
-    <button class="btn btn-outline btn-full" style="margin-bottom:8px" data-date="${dateKey}" data-slot="${slot}" onclick="printCalMeal(this.dataset.date,this.dataset.slot)">🖨️ Print Recipe</button>
-    <button class="btn btn-danger btn-full" onclick="removeMeal('${dateKey}','${slot}')">Remove from Calendar</button>`);
+    ${desc?`<div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.5">${desc}</div>`:''}
+    ${macros?`<div style="display:flex;gap:12px;margin-bottom:14px;padding:10px;background:var(--cream);border-radius:var(--radius-sm)">
+      <span style="font-size:12px;font-weight:600;color:var(--green)">${macros.cal} cal</span>
+      <span style="font-size:12px;font-weight:600;color:var(--green)">${macros.protein}g protein</span>
+      <span style="font-size:12px;color:var(--text-muted)">${macros.carbs}g carbs</span>
+      <span style="font-size:12px;color:var(--text-muted)">${macros.fat}g fat</span>
+    </div>`:''}
+    ${pull.length>0?`<div style="margin-bottom:14px">
+      <div class="section-head">📦 What to Pull</div>
+      ${pull.map(p=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <span>${p.icon||'🍱'}</span>
+        <div style="flex:1"><div style="font-weight:600">${p.item}</div>${p.prepNote?`<div style="font-size:11px;color:var(--text-muted)">${p.prepNote}</div>`:''}</div>
+        <span style="color:var(--text-muted);font-size:12px">${p.qty}</span>
+      </div>`).join('')}
+    </div>`:''}
+    ${steps.length>0?`<div style="margin-bottom:14px">
+      <div class="section-head">🥄 Steps</div>
+      ${steps.map((s,i)=>`<div style="display:flex;gap:10px;margin-bottom:8px;font-size:13px;line-height:1.5">
+        <div style="width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px">${i+1}</div>
+        <div>${s}</div>
+      </div>`).join('')}
+      ${tip?`<div style="background:var(--gold-pale);border-left:3px solid var(--gold);padding:10px 14px;border-radius:0 6px 6px 0;font-size:12px;color:#6b5100;margin-top:8px">💡 ${tip}</div>`:''}
+    </div>`:''}
+    <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Move to different slot</div>
+      <div class="r2" style="margin-bottom:12px">
+        <div class="fg"><label class="lbl">Date</label><input class="inp" type="date" id="move-date" value="${dk}" style="cursor:pointer"></div>
+        <div class="fg"><label class="lbl">Slot</label><select class="sel" id="move-slot">
+          <option value="breakfast" ${sl==='breakfast'?'selected':''}>Breakfast</option>
+          <option value="lunch" ${sl==='lunch'?'selected':''}>Lunch</option>
+          <option value="dinner" ${sl==='dinner'?'selected':''}>Dinner</option>
+          <option value="snack" ${sl==='snack'?'selected':''}>Snack</option>
+        </select></div>
+      </div>
+      <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="moveMeal()">↕️ Move Meal</button>
+      <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="closeModal();setTimeout(()=>printCalMeal('${dk}','${sl}'),100)">🖨️ Print Recipe</button>
+      <button class="btn btn-danger btn-full" onclick="removeMeal('${dk}','${sl}')">Remove from Calendar</button>
+    </div>`);
 }
 function moveMeal(){
   const fromDate=A._moveFrom?.date,fromSlot=A._moveFrom?.slot;
@@ -1583,7 +1616,10 @@ function moveMeal(){
   const meal=A.calendarByDate[fromDate]?.[fromSlot];
   if(!meal)return;
   const conflict=A.calendarByDate[toDate]?.[toSlot];
-  if(conflict&&(toDate!==fromDate||toSlot!==fromSlot)){const ct=typeof conflict==='object'?conflict.title:conflict;alert('⚠️ '+ct+' is already in that slot.');return;}
+  if(conflict&&(toDate!==fromDate||toSlot!==fromSlot)){
+    const ct=typeof conflict==='object'?conflict.title:conflict;
+    alert('⚠️ '+ct+' is already in that slot.');return;
+  }
   if(!A.calendarByDate[toDate])A.calendarByDate[toDate]={};
   A.calendarByDate[toDate][toSlot]=meal;
   delete A.calendarByDate[fromDate][fromSlot];
@@ -1621,6 +1657,26 @@ function checkConflict(){
   if(existing){const title=typeof existing==='object'?existing.title:existing;msg.style.display='block';msg.innerHTML='⚠️ <strong>'+title+'</strong> is already in this slot.';}
   else{msg.style.display='none';}
 }
+function deductInventory(pull){
+  if(!pull||!pull.length)return;
+  pull.forEach(p=>{
+    // Fuzzy match — normalize both sides to lowercase, try contains match
+    const pName=p.item.toLowerCase().trim();
+    const base=A.bases.find(b=>b.name.toLowerCase()===pName||pName.includes(b.name.toLowerCase())||b.name.toLowerCase().includes(pName));
+    const support=!base&&A.supports.find(s=>s.name.toLowerCase()===pName||pName.includes(s.name.toLowerCase())||s.name.toLowerCase().includes(pName));
+    const item=base||support;
+    if(item){
+      // Extract number from qty string — "2 bags", "1 bag = 1.5 lbs", "2 cans" etc
+      const num=parseInt(p.qty)||1;
+      const deduct=Math.max(1,num);
+      if((item.frozen||0)>0)item.frozen=Math.max(0,item.frozen-deduct);
+      else if((item.canned||0)>0)item.canned=Math.max(0,item.canned-deduct);
+      else if((item.dry||0)>0)item.dry=Math.max(0,item.dry-deduct);
+      else if((item.each||0)>0)item.each=Math.max(0,item.each-deduct);
+    }
+  });
+}
+
 function placeOnCal(){
   const dateVal=document.getElementById('cal-date')?.value;
   const slot=document.getElementById('cal-slot')?.value;
@@ -1630,20 +1686,7 @@ function placeOnCal(){
   if(!A.calendarByDate[dateVal])A.calendarByDate[dateVal]={};
   A.calendarByDate[dateVal][slot]={...A.recipe};
   // Deduct inventory
-  if(A.recipe.pull){
-    A.recipe.pull.forEach(p=>{
-      const base=A.bases.find(b=>b.name===p.item);
-      const support=A.supports.find(s=>s.name===p.item);
-      const item=base||support;
-      if(item){
-        const num=parseInt(p.qty)||1;
-        if((item.frozen||0)>0)item.frozen=Math.max(0,item.frozen-num);
-        else if((item.canned||0)>0)item.canned=Math.max(0,item.canned-num);
-        else if((item.dry||0)>0)item.dry=Math.max(0,item.dry-num);
-        else if((item.each||0)>0)item.each=Math.max(0,item.each-num);
-      }
-    });
-  }
+  deductInventory(A.recipe.pull);
   save();
   A.recipe=null;
   const d=new Date(dateVal+'T12:00:00');
