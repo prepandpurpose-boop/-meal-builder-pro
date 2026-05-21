@@ -490,7 +490,7 @@ async function sbSave(email,data){
     if(!r.ok){
       const err=await r.text();
       console.error('Supabase SAVE error:',r.status,err);
-      showSaveStatus('❌ Save failed — '+r.status);
+      showSaveStatus('❌ Save failed — '+r.status+' '+err.substring(0,80));
     } else {
       console.log('Supabase SAVE success');
       showSaveStatus('✅ Saved');
@@ -683,12 +683,24 @@ let _saveTimer=null;
 function save(){
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(()=>{
+    // Only save items that have actual quantities — strip zeros to reduce payload
+    const basesToSave=A.bases.map(b=>({id:b.id,name:b.name,icon:b.icon,frozen:b.frozen||0,canned:b.canned||0,storageTypes:b.storageTypes}));
+    const supportsToSave=A.supports.map(s=>({id:s.id,name:s.name,icon:s.icon,frozen:s.frozen||0,canned:s.canned||0,dry:s.dry||0,each:s.each||0,storageTypes:s.storageTypes,dryUnit:s.dryUnit,eachUnit:s.eachUnit}));
     const data={
-      bases:A.bases,supports:A.supports,pantry:A.pantry,emergency:A.emergency,
-      calendar_by_date:A.calendarByDate,grocery:A.grocery,dietary:A.dietary,
-      household_size:A.householdSize,pp_spices:A.ppSpices,kid_friendly:A.kidFriendly,
-      last_meal_type:A.lastMealType,onboarded:A.onboarded,
-      week_proteins:A.weekProteins,cook_list:A.cookList,
+      bases:basesToSave,
+      supports:supportsToSave,
+      pantry:A.pantry,
+      emergency:A.emergency,
+      calendar_by_date:A.calendarByDate,
+      grocery:A.grocery,
+      dietary:A.dietary,
+      household_size:A.householdSize,
+      pp_spices:A.ppSpices,
+      kid_friendly:A.kidFriendly,
+      last_meal_type:A.lastMealType,
+      onboarded:A.onboarded,
+      week_proteins:A.weekProteins,
+      cook_list:A.cookList,
     };
     sbSave(A.email,data);
     localStorage.setItem('pp_data',JSON.stringify(data));
