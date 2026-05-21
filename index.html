@@ -468,18 +468,50 @@ const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 async function sbGet(email){
   try{
     const e=email.toLowerCase().trim();
-    const r=await fetch(`${SUPA_URL}/rest/v1/user_data?email=ilike.${encodeURIComponent(e)}&select=*`,{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
-    const d=await r.json();return d[0]||null;
-  }catch(e){return null;}
+    const r=await fetch(`${SUPA_URL}/rest/v1/user_data?email=ilike.${encodeURIComponent(e)}&select=*`,{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    const d=await r.json();
+    console.log('Supabase GET result:',d);
+    return d[0]||null;
+  }catch(e){
+    console.error('Supabase GET error:',e);
+    return null;
+  }
 }
 async function sbSave(email,data){
   try{
     const payload={email:email.toLowerCase().trim(),...data,updated_at:new Date().toISOString()};
-    await fetch(`${SUPA_URL}/rest/v1/user_data`,{
-      method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
+    const r=await fetch(`${SUPA_URL}/rest/v1/user_data`,{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},
       body:JSON.stringify(payload)
     });
-  }catch(e){}
+    if(!r.ok){
+      const err=await r.text();
+      console.error('Supabase SAVE error:',r.status,err);
+      showSaveStatus('❌ Save failed — '+r.status);
+    } else {
+      console.log('Supabase SAVE success');
+      showSaveStatus('✅ Saved');
+    }
+  }catch(e){
+    console.error('Supabase SAVE exception:',e);
+    showSaveStatus('❌ Save error — '+e.message);
+  }
+}
+function showSaveStatus(msg){
+  let el=document.getElementById('save-status');
+  if(!el){
+    el=document.createElement('div');
+    el.id='save-status';
+    el.style.cssText='position:fixed;bottom:16px;right:16px;background:#1e4d35;color:#fff;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;z-index:9999;transition:opacity .3s;font-family:DM Sans,sans-serif';
+    document.body.appendChild(el);
+  }
+  el.textContent=msg;
+  el.style.opacity='1';
+  clearTimeout(el._timer);
+  el._timer=setTimeout(()=>{el.style.opacity='0';},3000);
 }
 
 // ─── DEFAULT DATA ─────────────────────────────────────────────────────────────
