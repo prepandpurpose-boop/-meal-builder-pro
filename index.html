@@ -513,7 +513,7 @@ const DEF_SUPPORTS=[
   {id:55,name:'Chickpeas',icon:'🫘',frozen:0,canned:0,dry:0,storageTypes:['canned','dry'],dryUnit:'lbs'},
   {id:56,name:'Green Lentils',icon:'🫘',frozen:0,dry:0,storageTypes:['dry'],dryUnit:'lbs'},
   {id:57,name:'Red Lentils',icon:'🫘',frozen:0,dry:0,storageTypes:['dry'],dryUnit:'lbs'},
-  {id:58,name:'Navy Beans',icon:'🫘',frozen:0,canned:0,dry:0,storageTypes:['canned','dry'],dryUnit:'lbs'},
+  {id:58,name:'Navy Beans',icon:'🫘',frozen:0,canned:0,dry:0,storageTypes:['frozen','canned','dry'],dryUnit:'lbs'},
   {id:59,name:'Split Peas',icon:'🫘',frozen:0,dry:0,storageTypes:['dry'],dryUnit:'lbs'},
   {id:26,name:'Roasted Potatoes',icon:'🥔',frozen:0,storageTypes:['frozen']},
   {id:27,name:'Roasted Peppers & Onions',icon:'🫑',frozen:0,storageTypes:['frozen']},
@@ -550,17 +550,19 @@ const DEF_PANTRY={
     {id:'b1',name:'All Purpose Flour',qty:0,unit:'lbs',have:false},
     {id:'b2',name:'Sugar',qty:0,unit:'lbs',have:false},
     {id:'b3',name:'Brown Sugar',qty:0,unit:'lbs',have:false},
-    {id:'b4',name:'Baking Powder',qty:0,unit:'containers',have:false},
-    {id:'b5',name:'Baking Soda',qty:0,unit:'boxes',have:false},
-    {id:'b6',name:'Yeast',qty:0,unit:'packets',have:false},
-    {id:'b7',name:'Cornstarch',qty:0,unit:'containers',have:false},
+    {id:'b4',name:'Baking Powder',qty:0,unit:'oz',have:false},
+    {id:'b5',name:'Baking Soda',qty:0,unit:'oz',have:false},
+    {id:'b6',name:'Yeast (packets)',qty:0,unit:'packets',have:false},
+    {id:'b6b',name:'Yeast (bulk)',qty:0,unit:'lbs',have:false},
+    {id:'b7',name:'Cornstarch',qty:0,unit:'oz',have:false},
     {id:'b8',name:'Cornmeal',qty:0,unit:'lbs',have:false},
-    {id:'b9',name:'Breadcrumbs',qty:0,unit:'cans',have:false},
+    {id:'b9',name:'Breadcrumbs',qty:0,unit:'oz',have:false},
     {id:'b10',name:'Oats (rolled)',qty:0,unit:'lbs',have:false},
-    {id:'b11',name:'Vanilla Extract',qty:0,unit:'bottles',have:false},
+    {id:'b11',name:'Vanilla Extract',qty:0,unit:'oz',have:false},
+    {id:'b12',name:'Pectin',qty:0,unit:'boxes',have:false},
+    {id:'b12b',name:'Pectin (bulk)',qty:0,unit:'lbs',have:false},
   ],
   fridge:[
-    {id:'f1',name:'Eggs',qty:0,unit:'each',have:false,note:'Count by individual eggs'},
     {id:'f2',name:'Butter',qty:0,unit:'sticks',have:false},
     {id:'f3',name:'Milk',qty:0,unit:'cups',have:false},
     {id:'f4',name:'Heavy Cream',qty:0,unit:'oz',have:false},
@@ -627,7 +629,7 @@ let A={
   page:'dashboard',invTab:'bases',
   calSelDate:null,weekOffset:0,
   generating:false,stretchingIt:false,recipe:null,stretchResult:null,
-  ppSpices:true,buildFromStock:true,kidFriendly:false,
+  ppSpices:true,buildFromStock:true,kidFriendly:false,buildEmergency:false,
   householdSize:4,lastMealType:'Dinner',
   dietary:[],onboarded:false,
   email:'',
@@ -1163,6 +1165,10 @@ function rBuilderForm(){
           <div><div style="font-size:14px;font-weight:600">👶 Kid Friendly</div><div style="font-size:12px;color:var(--text-muted)">${A.kidFriendly?'Mild flavors · lunchbox formats · nut-free':'Adult flavors — toggle on for school lunches'}</div></div>
           <div class="tog ${A.kidFriendly?'on':''}" onclick="A.kidFriendly=!A.kidFriendly;save();render()"><div class="tog-th"></div></div>
         </div>
+        <div class="mode-row">
+          <div><div style="font-size:14px;font-weight:600">🚨 Emergency Meal Mode</div><div style="font-size:12px;color:var(--text-muted)">${A.buildEmergency?'Building for gallon bags — double batch, freezer ready':'Toggle on to build an emergency meal'}</div></div>
+          <div class="tog ${A.buildEmergency?'on':''}" onclick="A.buildEmergency=!A.buildEmergency;save();render()"><div class="tog-th"></div></div>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
           <button class="btn btn-primary btn-lg btn-full" onclick="generateRecipe()">🤖 Build My Meal</button>
           <button class="btn btn-outline btn-lg btn-full" onclick="openStretchIt()">💪 Stretch It</button>
@@ -1203,6 +1209,7 @@ async function generateRecipe(){
   const anchor=document.getElementById('anchor')?.value?.trim()||'';
   const ppSpices=A.ppSpices;
   const kidFriendly=A.kidFriendly||false;
+  const buildEmergency=A.buildEmergency||false;
   A.lastMealType=mealType;save();
   A.generating=true;A.recipe=null;
   showPage('builder');
@@ -1265,6 +1272,17 @@ Dinner: Tacos, enchiladas, stir fry, pasta, chili, soup, casserole, shepherd's p
 Lunch: Wraps, bowls, quesadillas, roll-ups, pinwheels, cold chicken salad, tuna salad, rice bowls, pasta salad, lunchbox plates
 Breakfast: Pancake stacks, stuffed french toast, waffle boards, breakfast burritos, egg scrambles, shakshuka, biscuits and gravy, breakfast hash, omelettes, breakfast quesadillas, overnight oats
 
+${buildEmergency?`EMERGENCY MEAL MODE — ON:
+- This meal is going into GALLON bags for the emergency layer. Build for double batch automatically.
+- Must be a complete meal — protein + starch + vegetable all in one
+- Must reheat perfectly from frozen with zero prep — pull, heat, eat
+- No ingredients that get soggy or degrade when frozen (no fresh lettuce, no crispy toppings)
+- Soups, stews, chilis, casseroles, rice bowls, pasta bakes, curry — all excellent emergency meal formats
+- Scale the recipe to make exactly 2 gallon bags (always build 2 of the same)
+- Include a "FREEZE IN GALLON BAGS" note in the tip field with instructions for portioning and reheating
+- Add the meal to groceryFlags for anything needed to complete the double batch
+- After user schedules this meal, prompt them to log it in Emergency Meals inventory`:''}
+
 MISSING INGREDIENTS: Always build anyway. Flag missing items in groceryFlags with exact quantities.
 
 COOK LIST: When proteins marked "NEEDS TO BE COOKED" are used, include them in cookList with exact bag count needed for this meal and raw lbs to buy (multiply cooked lbs by 1.43 for 30% shrinkage).
@@ -1287,6 +1305,7 @@ RESPOND WITH VALID JSON ONLY — no markdown, no explanation:
 }`;
 
   const userPrompt=`MEAL TYPE: ${mealType} — build an appropriate ${mealType.toLowerCase()} dish. NOT breakfast food for dinner.
+${buildEmergency?'EMERGENCY MEAL MODE: ON — double batch, gallon bags, freezer ready, complete meal, reheats perfectly':''}
 ${kidFriendly?'KID FRIENDLY MODE: ON — mild flavors, nut-free, lunchbox format, eats well cold, kid portions':''}
 ${mealType==='Lunch'?'LUNCH = GRAB AND GO — 3 steps max, no cooking from scratch, always include PACK IT note in tip':''}
 Flavor: ${flavor}
@@ -1692,15 +1711,26 @@ function placeOnCal(){
   // Deduct inventory
   deductInventory(A.recipe.pull);
   save();
+  const wasEmergency=A.buildEmergency;
   A.recipe=null;
+  A.buildEmergency=false;
   const d=new Date(dateVal+'T12:00:00');
   const today=new Date();today.setHours(0,0,0,0);
   const todaySun=new Date(today);todaySun.setDate(today.getDate()-today.getDay());
   const dateSun=new Date(d);dateSun.setDate(d.getDate()-d.getDay());
   A.weekOffset=Math.max(0,Math.min(4,Math.round((dateSun-todaySun)/(7*24*60*60*1000))));
   A.calSelDate=dateVal;
-  alert('✅ Scheduled! Inventory updated.');
-  showPage('calendar');
+  if(wasEmergency){
+    if(confirm('✅ Scheduled!\n\nDon\'t forget to log this in your Emergency Meals inventory.\n\nGo to Emergency Meals now?')){
+      A.invTab='emergency';
+      showPage('inventory');
+    } else {
+      showPage('calendar');
+    }
+  } else {
+    alert('✅ Scheduled! Inventory updated.');
+    showPage('calendar');
+  }
 }
 
 // ─── MAINTENANCE DAY ──────────────────────────────────────────────────────────
@@ -1897,7 +1927,9 @@ function openEditItem(id,list){
       <div class="qty-label">${storageLabel(st)}<div class="qty-sub">${unit}${conv}</div></div>
       <div class="qty-controls">
         <button class="qty-btn" onclick="adjItem('${st}',-1)">−</button>
-        <div class="qty-val" id="qv-${st}">${_editItem[st]||0}</div>
+        <input type="number" min="0" value="${_editItem[st]||0}" id="qv-${st}"
+          onchange="setItem('${st}',+this.value)"
+          style="width:52px;text-align:center;font-size:17px;font-weight:700;color:var(--green);border:1px solid var(--border-strong);border-radius:var(--radius-xs);padding:4px 6px;font-family:'Playfair Display',serif">
         <button class="qty-btn" onclick="adjItem('${st}',1)">+</button>
       </div>
     </div>`;
@@ -1914,7 +1946,11 @@ function adjItem(st,delta){
   if(!_editItem)return;
   _editItem[st]=Math.max(0,(_editItem[st]||0)+delta);
   const el=document.getElementById('qv-'+st);
-  if(el)el.textContent=_editItem[st];
+  if(el)el.value=_editItem[st];
+}
+function setItem(st,val){
+  if(!_editItem)return;
+  _editItem[st]=Math.max(0,val||0);
 }
 function saveEditItem(){
   if(!_editItem||!_editList)return;
