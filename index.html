@@ -1873,36 +1873,40 @@ function rMaintenance(){
     html+=`<div class="cook-list-card" style="margin-bottom:20px">
       <div class="cook-list-title">🍳 What to Cook This Week</div>
       <div class="cook-list-sub">Cook on maintenance day · Cool completely · Bag in quart bags · Label and freeze</div>
-      ${cookList.map(c=>`<div class="cook-item">
-        <div>
-          <div class="cook-item-name">${c.protein}</div>
-          <div class="cook-item-detail">${c.note||'Season lightly so it can go any flavor direction · Heat through 3-4 min on weeknights'}</div>
-        </div>
-        <div class="cook-item-qty">
-          <div class="cook-item-bags">${c.bags} bags</div>
-          <div class="cook-item-raw">Buy ${c.rawLbs} raw</div>
-        </div>
-      </div>`).join('')}
+      ${cookList.map(c=>{
+        const rawLbs=(c.bags*1.5*1.43).toFixed(1);
+        const cookedLbs=(c.bags*1.5).toFixed(1);
+        return`<div class="cook-item">
+          <div>
+            <div class="cook-item-name">${c.protein}</div>
+            <div class="cook-item-detail">Cook ${rawLbs} lbs raw → Yields ${c.bags} quart bags (${cookedLbs} lbs cooked)</div>
+          </div>
+        </div>`;
+      }).join('')}
     </div>
     <div style="display:flex;gap:8px;margin-bottom:20px">
       <button class="btn btn-outline btn-sm" onclick="A.cookList=null;save();render()">Clear Cook List</button>
       <button class="btn btn-outline btn-sm" onclick="showPage('builder')">Add More Meals</button>
     </div>`;
 
-    // Shrinkage rule reminder
     html+=`<div class="card card-pad" style="margin-bottom:20px">
-      <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:12px">📏 Raw Buy Amounts — Shrinkage Rule</div>
-      ${cookList.map(c=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
-        <div>
-          <div style="font-size:14px;font-weight:600">${c.protein}</div>
-          <div style="font-size:12px;color:var(--text-muted)">Yields ${c.bags} quart bags = ${(c.bags*1.5).toFixed(1)} lbs cooked</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:16px;font-weight:700;color:var(--green)">${c.rawLbs}</div>
-          <div style="font-size:11px;color:var(--text-muted)">raw to buy</div>
-        </div>
-      </div>`).join('')}
-      <div style="font-size:12px;color:var(--text-hint);margin-top:10px">30% shrinkage factored in · Always round up at the store</div>
+      <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:12px">🛒 Add to Grocery List</div>
+      ${cookList.map(c=>{
+        const rawLbs=(c.bags*1.5*1.43).toFixed(1);
+        const cookedLbs=(c.bags*1.5).toFixed(1);
+        const onList=A.grocery.find(g=>g.name.toLowerCase().includes(c.protein.toLowerCase()));
+        return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div>
+            <div style="font-size:14px;font-weight:600">${c.protein}</div>
+            <div style="font-size:12px;color:var(--text-muted)">${rawLbs} lbs raw → ${c.bags} quart bags (${cookedLbs} lbs cooked)</div>
+          </div>
+          <div style="text-align:right;display:flex;align-items:center;gap:10px">
+            <div style="font-size:15px;font-weight:700;color:var(--green)">${rawLbs} lbs</div>
+            ${!onList?`<button class="btn btn-sm btn-outline" onclick="addProteinToGroc('${c.protein}','${rawLbs}')">+ List</button>`:`<span style="font-size:11px;color:var(--text-muted)">On list ✓</span>`}
+          </div>
+        </div>`;
+      }).join('')}
+      <div style="font-size:11px;color:var(--text-hint);margin-top:10px">30% shrinkage factored in · Always round up at the store · Check long term storage first</div>
     </div>`;
   }
 
@@ -2324,6 +2328,12 @@ function openDrawer(html){document.getElementById('db').innerHTML=html;document.
 function closeDrawer(){document.getElementById('drawer').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
 function openModal(html){document.getElementById('modal-content').innerHTML=html;document.getElementById('modal').classList.add('show');document.getElementById('modal-overlay').classList.add('show');}
 function closeModal(){document.getElementById('modal').classList.remove('show');document.getElementById('modal-overlay').classList.remove('show');}
+function addProteinToGroc(name,rawLbs){
+  if(!A.grocery.find(g=>g.name.toLowerCase().includes(name.toLowerCase()))){
+    A.grocery.push({id:Date.now(),name,qty:rawLbs+' lbs raw',urgency:'out',done:false,reason:'Maintenance day cook — needed for the week'});
+    save();render();
+  }
+}
 function openEditBase(id){openEditItem(id,'bases');}
 function openEditSupport(id){openEditItem(id,'supports');}
 
