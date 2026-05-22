@@ -1382,13 +1382,17 @@ RESPOND WITH VALID JSON ONLY — no markdown, no explanation:
   "description": "One line that makes them want to make it",
   "macros": {"cal": 450, "protein": 38, "carbs": 35, "fat": 16},
   "pull": [
-    {"icon": "🥩", "item": "Shredded Chicken", "qty": "1 bag = 1.5 lbs cooked", "prepNote": "Already cooked — heat gently 3-4 min over medium heat until warmed through"}
+    {"icon": "🥩", "item": "Shredded Chicken", "qty": "1 bag = 1.5 lbs cooked", "prepNote": "Already cooked — heat gently 3-4 min over medium heat until warmed through"},
+    {"icon": "🥛", "item": "Yogurt", "qty": "3 cups", "prepNote": "From fridge"},
+    {"icon": "🧂", "item": "Salt", "qty": "1 tsp", "prepNote": "From pantry"}
   ],
   "steps": ["Step 1 with real measurements and timing"],
   "tip": "One specific useful tip",
   "groceryFlags": [{"name": "item name", "qty": "exact amount needed", "urgency": "out", "reason": "why needed for this meal"}],
   "cookList": [{"protein": "name", "bags": 2, "rawLbs": "4.3 lbs raw", "note": "cook and bag on maintenance day"}]
-}`;
+}
+
+PULL LIST RULE — CRITICAL: The pull array must include EVERY ingredient needed for the recipe — not just frozen stock. Include frozen bags, canned items, pantry items, fridge items, spices, everything. The person should be able to pull this list and have everything on the counter before they start cooking. Nothing should be a surprise mid-recipe.`;
 
   const userPrompt=`MEAL TYPE: ${mealType} — build an appropriate ${mealType.toLowerCase()} dish. NOT breakfast food for dinner.
 ${mealType==='Breakfast'?`BREAKFAST VARIETY RULE — CRITICAL: Last breakfast built was "${A.lastBuiltBreakfast||'none'}". Build something COMPLETELY DIFFERENT. Never repeat. Choose from this rotation: stuffed french toast, waffle board with toppings, breakfast burrito with protein, egg scramble with meat and vegetables, shakshuka, biscuits and gravy with sausage, breakfast hash with protein and potatoes, omelette stuffed with protein and veg, breakfast quesadilla, overnight oats, yogurt parfait. If last was pancakes — you MUST build something with eggs or a savory protein instead.`:''}
@@ -1438,7 +1442,7 @@ PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}`;
       alert('Could not parse recipe. Try again.');
       showPage('builder');return;
     }
-    A.recipe={id:Date.now(),title:recipe.title||'Your Meal',description:recipe.description||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:recipe.pull||[],steps:recipe.steps||[],tip:recipe.tip||''};
+    A.recipe={id:Date.now(),title:recipe.title||'Your Meal',description:recipe.description||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:recipe.pull||[],steps:recipe.steps||[],tip:recipe.tip||'',servings:servings};
     // Track last built for variety enforcement
     if(mealType==='Breakfast')A.lastBuiltBreakfast=recipe.title||'';
     else A.lastBuiltMeal=recipe.title||'';
@@ -1485,11 +1489,16 @@ function rRecipe(){
   return`<div style="max-width:720px">
     <div class="card" style="margin-bottom:16px;overflow:hidden">
       <div class="recipe-header">
-        <span style="background:rgba(255,255,255,.2);color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block;margin-bottom:10px">${isEmergency?'🚨 Emergency Meal':'✅ Your Meal'}</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <span style="background:rgba(255,255,255,.2);color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">${isEmergency?'🚨 Emergency Meal':'✅ Your Meal'}</span>
+          <span style="background:rgba(255,255,255,.15);color:rgba(255,255,255,.9);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600">👥 Serves ${r.servings||'4'}</span>
+          ${r.servings&&+r.servings<=3?`<span style="background:rgba(255,200,0,.2);color:#ffe082;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600">Small batch — adjust servings if needed</span>`:''}
+        </div>
         <div class="recipe-title-text">${r.title}</div>
         <div class="recipe-desc">${r.description}</div>
       </div>
       <div class="card-pad">
+        <div style="font-size:11px;color:var(--text-hint);margin-bottom:6px">Per serving · ${r.servings||'4'} servings total</div>
         <div class="macro-grid">
           <div class="macro-box"><div class="macro-val">${r.macros.cal}</div><div class="macro-lbl">Calories</div></div>
           <div class="macro-box"><div class="macro-val">${r.macros.protein}g</div><div class="macro-lbl">Protein</div></div>
