@@ -674,6 +674,7 @@ let A={
   calSelDate:null,weekOffset:0,
   generating:false,stretchingIt:false,recipe:null,stretchResult:null,
   ppSpices:true,buildFromStock:true,kidFriendly:false,buildEmergency:false,
+  lastBuiltMeal:'',lastBuiltBreakfast:'',
   householdSize:4,lastMealType:'Dinner',
   dietary:[],onboarded:false,
   email:'',
@@ -1247,7 +1248,7 @@ function rBuilderForm(){
           <div class="tog ${A.ppSpices?'on':''}" onclick="A.ppSpices=!A.ppSpices;render()"><div class="tog-th"></div></div>
         </div>
         <div class="mode-row">
-          <div><div style="font-size:14px;font-weight:600">👶 Kid Friendly</div><div style="font-size:12px;color:var(--text-muted)">${A.kidFriendly?'Mild flavors · lunchbox formats · nut-free':'Adult flavors — toggle on for school lunches'}</div></div>
+          <div><div style="font-size:14px;font-weight:600">👶 Kid Friendly</div><div style="font-size:12px;color:var(--text-muted)">${A.kidFriendly?'All meals — mild, nut-free, fun formats, kid portions':'Toggle on for kid-friendly meals across all types'}</div></div>
           <div class="tog ${A.kidFriendly?'on':''}" onclick="A.kidFriendly=!A.kidFriendly;save();render()"><div class="tog-th"></div></div>
         </div>
         <div class="mode-row">
@@ -1338,14 +1339,16 @@ MEAL TYPE RULES — CRITICAL:
 - Snack = small, satisfying. Energy balls, yogurt parfait, cheese and crackers, fruit and nut butter.
 - NEVER serve shakshuka, frittata, or egg-based dishes for Dinner unless eggs are the ONLY protein available
 
-${A.kidFriendly?`KID FRIENDLY MODE — ON:
-- Mild flavors only — no spicy, no strong heat
+${A.kidFriendly?`KID FRIENDLY MODE — ON (applies to ALL meal types — breakfast, lunch, dinner, snack):
+- Mild flavors only — no spicy, no strong heat, no bitter, no strong cheeses
 - Nut-free always — never suggest peanuts, tree nuts, or nut butters
-- Lunchbox formats: roll-ups, pinwheels, mini quesadillas, pasta salad, rice bowls with mild sauce, chicken wraps
-- Portions sized for kids (half adult portion) — note in description
-- Things that eat well COLD — no dishes that require reheating at school
-- Simple presentation — kids won't eat complicated
-- Flag fun toppings as optional: shredded cheese, mild salsa, sour cream, ranch`:''}
+- Simple presentation — kids won't eat complicated, unfamiliar, or mixed-together dishes unless it's pasta or rice
+- Portions sized for kids — note in description that servings are kid-sized, user adjusts servings count
+- Breakfast: pancake shapes, french toast sticks, fun waffle toppings, scrambled eggs with mild cheese, smoothie bowls, mini omelettes
+- Lunch: roll-ups, pinwheels, mini quesadillas, pasta salad, lunchbox plates, chicken and rice — must eat well cold, no reheating required
+- Dinner: taco bowls, pasta with mild tomato or butter sauce, chicken and rice, mild stir fry, mini sliders, pizza casserole, mac and cheese with protein
+- Snack: cheese and crackers, fruit with yogurt dip, yogurt parfait, ants on a log, mini quesadillas, frozen fruit, apple slices
+- Always flag fun optional toppings in groceryFlags as urgency "low": shredded cheese, mild salsa, sour cream, ranch, ketchup`:''}
 
 VEGETABLE TIMING:
 - FRESH veg: add early, needs cook time, use first
@@ -1388,8 +1391,10 @@ RESPOND WITH VALID JSON ONLY — no markdown, no explanation:
 }`;
 
   const userPrompt=`MEAL TYPE: ${mealType} — build an appropriate ${mealType.toLowerCase()} dish. NOT breakfast food for dinner.
-${buildEmergency?'EMERGENCY MEAL MODE: ON — double batch, gallon bags, freezer ready, complete meal, reheats perfectly':''}
-${kidFriendly?'KID FRIENDLY MODE: ON — mild flavors, nut-free, lunchbox format, eats well cold, kid portions':''}
+${mealType==='Breakfast'?`BREAKFAST VARIETY RULE — CRITICAL: Last breakfast built was "${A.lastBuiltBreakfast||'none'}". Build something COMPLETELY DIFFERENT. Never repeat. Choose from this rotation: stuffed french toast, waffle board with toppings, breakfast burrito with protein, egg scramble with meat and vegetables, shakshuka, biscuits and gravy with sausage, breakfast hash with protein and potatoes, omelette stuffed with protein and veg, breakfast quesadilla, overnight oats, yogurt parfait. If last was pancakes — you MUST build something with eggs or a savory protein instead.`:''}
+${mealType!=='Breakfast'?`LAST MEAL BUILT: "${A.lastBuiltMeal||'none'}" — build something completely different, different protein format, different cuisine style.`:''}
+${buildEmergency?'EMERGENCY MEAL MODE: ON — double batch, gallon bags or freezer containers, complete meal, reheats perfectly':''}
+${kidFriendly?'KID FRIENDLY MODE: ON — mild flavors, nut-free, kid-friendly formats for all meal types, kid portions':''}
 ${mealType==='Lunch'?'LUNCH = GRAB AND GO — 3 steps max, no cooking from scratch, always include PACK IT note in tip':''}
 Flavor: ${flavor}
 Servings: ${servings}
@@ -1434,6 +1439,9 @@ PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}`;
       showPage('builder');return;
     }
     A.recipe={id:Date.now(),title:recipe.title||'Your Meal',description:recipe.description||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:recipe.pull||[],steps:recipe.steps||[],tip:recipe.tip||''};
+    // Track last built for variety enforcement
+    if(mealType==='Breakfast')A.lastBuiltBreakfast=recipe.title||'';
+    else A.lastBuiltMeal=recipe.title||'';
 
     // Update cook list — accumulate across builds this session
     if(recipe.cookList&&recipe.cookList.length>0){
