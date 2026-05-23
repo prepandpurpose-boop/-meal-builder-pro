@@ -1548,7 +1548,13 @@ PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}
 
 ${(mealType==='Dinner'||mealType==='Lunch')&&!A.dietary.includes('Vegetarian')?`FINAL INSTRUCTION — READ THIS LAST:
 This is ${mealType}. It MUST contain animal protein. No exceptions.
-${allProteins.length===0?`No protein is stocked. Pick the most seasonal protein for ${new Date().toLocaleString('en-US',{month:'long'})} from the seasonal guide, flag it on the grocery list as urgency "out" with reason "Typically on sale this time of year — buy extra to freeze", and build the recipe as if the user has it.`:`Use one of the proteins listed above.`}
+${allProteins.length===0?`No protein is stocked. Do ALL of the following:
+1. Pick the most seasonal protein for ${new Date().toLocaleString('en-US',{month:'long'})} (chicken breasts are always a safe choice in grilling season)
+2. Add it to the pull list with qty showing lbs needed and prepNote "Will need to purchase — see grocery list"
+3. Write the cooking steps as if the user HAS the protein — include full cooking instructions
+4. Flag it in groceryFlags with urgency "out" and reason "Typically on sale this time of year — buy extra and freeze"
+5. The recipe title must include the protein name
+NEVER omit the protein from the recipe just because it is not in inventory.`:`Use one of the proteins listed above.`}
 DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese. That is a side dish.`:''}`;
 
   try{
@@ -2293,12 +2299,28 @@ function rMaintenance(){
 
 // ─── GROCERY ───────────────────────────────────────────────────────────────────
 function rGrocery(){
+  // Deduplicate — fuzzy match on protein names
+  const PROTEIN_KEYWORDS=['chicken','beef','turkey','pork','salmon','tuna','shrimp','sausage','steak','ground','shredded'];
+  function isSameGroceryItem(a,b){
+    const na=a.toLowerCase();const nb=b.toLowerCase();
+    if(na===nb)return true;
+    // Check if both contain the same protein keyword
+    for(const kw of PROTEIN_KEYWORDS){
+      if(na.includes(kw)&&nb.includes(kw))return true;
+    }
+    // One contains the other
+    if(na.includes(nb)||nb.includes(na))return true;
+    return false;
+  }
   const consolidated=[];
   A.grocery.forEach(g=>{
-    const existing=consolidated.find(c=>c.name.toLowerCase()===g.name.toLowerCase()&&!c.done===!g.done);
+    const existing=consolidated.find(c=>isSameGroceryItem(c.name,g.name)&&!c.done===!g.done);
     if(existing){
       if(g.urgency==='out')existing.urgency='out';
       if(g.reason&&!existing.reason?.includes(g.reason))existing.reason=(existing.reason||'')+(existing.reason?', ':'')+g.reason;
+      // Keep the more specific/longer name
+      if(g.name.length>existing.name.length)existing.name=g.name;
+      if(g.qty&&(!existing.qty||g.qty.length>existing.qty.length))existing.qty=g.qty;
     } else {
       consolidated.push({...g});
     }
