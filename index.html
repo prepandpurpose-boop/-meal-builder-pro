@@ -2021,52 +2021,44 @@ async function rebuildFavorite(idx){
   if(!fav)return;
   const newServings=+document.getElementById('fav-sv-'+idx)?.value||4;
   const origServings=+(fav.servings||4);
+  const scaleFactor=newServings/origServings;
 
-  // Always rebuild through AI to ensure proper scaling
   A.generating=true;
   showPage('builder');
 
-  const systemPrompt=`You are rescaling a saved recipe to a new serving size. CRITICAL: You must mathematically scale EVERY ingredient quantity. Do not approximate — calculate exactly.
+  // Build explicit before/after scaling examples from actual pull list
+  const scalingExamples=(fav.pull||[]).map(p=>{
+    return`  "${p.item}": was "${p.qty}" → scale by ${scaleFactor.toFixed(3)} → calculate new quantity`;
+  }).join('\n');
 
-Scale factor: ${(newServings/origServings).toFixed(3)}x (from ${origServings} to ${newServings} servings)
+  const systemPrompt=`You are rescaling a recipe. You MUST change every ingredient quantity by the scale factor. This is pure math.
 
-Rules:
-- Multiply every ingredient by the scale factor
-- Round to practical cooking measurements (nearest 1/4 cup, whole eggs, whole bags)
-- For quart bags: always use whole bags only, round up
-- For spices: scale but cap at reasonable amounts (e.g. don't exceed 2 tbsp salt)
-- Adjust cooking time only if batch size significantly changes (e.g. larger casserole needs more oven time)
-- Keep all protein heating instructions exactly the same — heat through 3-4 min gently
-- Macros should be per serving (same as original since same recipe, just more servings)
+SCALE FACTOR: ${scaleFactor.toFixed(3)}x
+FROM: ${origServings} servings → TO: ${newServings} servings
 
-RESPOND WITH VALID JSON ONLY:
-{
-  "title": "same title",
-  "description": "updated description mentioning new serving size",
-  "macros": {"cal": 0, "protein": 0, "carbs": 0, "fat": 0},
-  "pull": [{"icon": "🥩", "item": "name", "qty": "SCALED quantity", "prepNote": "prep note"}],
-  "steps": ["step with SCALED quantities"],
-  "tip": "tip noting the batch size",
-  "groceryFlags": [],
-  "cookList": []
-}`;
+SCALING RULES:
+- Multiply every number in every quantity by ${scaleFactor.toFixed(3)}
+- Round to practical cooking amounts (nearest 1/4 tsp, 1/4 cup, whole eggs, whole bags)
+- For quart bags: round UP to nearest whole bag
+- Spices: scale but cap at 2 tbsp max for any single spice
+- If scale factor > 1 quantities get BIGGER. If < 1 quantities get SMALLER.
+- The macros stay the same (they are per serving)
+- Every single ingredient MUST have a different quantity than the original if scale factor is not 1.0
+
+RESPOND WITH VALID JSON ONLY — no markdown:
+{"title":"","description":"","macros":{"cal":0,"protein":0,"carbs":0,"fat":0},"pull":[{"icon":"","item":"","qty":"SCALED QUANTITY HERE","prepNote":""}],"steps":["step with SCALED quantities"],"tip":"","groceryFlags":[],"cookList":[]}`;
 
   const userPrompt=`RECIPE: ${fav.title}
-ORIGINAL SERVINGS: ${origServings}
-NEW SERVINGS: ${newServings}
-SCALE FACTOR: ${(newServings/origServings).toFixed(3)}x
+SCALE: ${origServings} servings → ${newServings} servings (multiply all quantities by ${scaleFactor.toFixed(3)})
 
-ORIGINAL INGREDIENTS TO SCALE:
-${(fav.pull||[]).map(p=>`${p.item}: ${p.qty}`).join('\n')}
+ORIGINAL INGREDIENTS — scale each one:
+${(fav.pull||[]).map(p=>`- ${p.item}: ${p.qty} → multiply by ${scaleFactor.toFixed(3)}`).join('\n')}
 
-ORIGINAL STEPS TO RESCALE:
+ORIGINAL STEPS — rewrite with scaled quantities:
 ${(fav.steps||[]).map((s,i)=>`${i+1}. ${s}`).join('\n')}
 
-Original tip: ${fav.tip||''}
-
-Dietary restrictions: ${A.dietary.length>0?A.dietary.join(', '):'none'}
-
-Scale every quantity by ${(newServings/origServings).toFixed(3)}. Show the scaled amounts clearly in every step.`;
+Description: ${fav.description||''}
+Dietary: ${A.dietary.length>0?A.dietary.join(', '):'none'}`;
 
   try{
     const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemPrompt,userPrompt})});
