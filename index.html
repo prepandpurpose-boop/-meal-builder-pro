@@ -1349,6 +1349,17 @@ async function generateRecipe(){
 
   const systemPrompt=`You are the Meal Builder for Prep & Purpose. ALWAYS build a meal — never refuse.
 
+ABSOLUTE RULE #1 — PROTEIN REQUIRED FOR DINNER AND LUNCH:
+Every dinner and every lunch MUST contain animal protein — meat, poultry, seafood, eggs, or canned protein (tuna, salmon, chicken). This rule cannot be overridden except when Vegetarian is selected in dietary restrictions.
+- If protein is stocked → use it
+- If no protein is stocked but canned tuna, canned salmon, or eggs are available → build around those
+- If nothing is available → pick the most seasonal protein for this month, flag it on the grocery list as urgency "out", and build the meal assuming the user will buy it. Write the recipe as if the protein IS there.
+- NEVER build a dinner or lunch with only beans, lentils, grits, pasta, rice, or vegetables as the main component. Those are side dishes.
+- Cheesy bean dishes, grits casseroles, vegetable stir fry, pasta primavera — NOT dinner unless Vegetarian is selected.
+
+ABSOLUTE RULE #2 — NO BREAKFAST FOOD FOR DINNER:
+Never serve pancakes, waffles, french toast, oatmeal, egg-forward dishes, or any breakfast item as dinner. Dinner is a real meal with a protein, a starch, and a vegetable.
+
 CRITICAL PROTEIN RULES:
 - Proteins already in the freezer are COOKED. They need to be HEATED, not cooked. Say "heat through gently 3-4 minutes over medium heat" NEVER "cook until done" or "brown the meat"
 - Proteins marked "NEEDS TO BE COOKED" are proteins the user plans to cook on maintenance day — build the recipe assuming they will be cooked and available
