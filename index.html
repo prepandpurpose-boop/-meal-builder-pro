@@ -2018,15 +2018,15 @@ function saveCalMealToFavorites(dk,sl){
 
 function scaleQty(qtyStr, factor){
   if(!qtyStr||factor===1)return qtyStr;
-  
-  // Handle quart bag format: "2 bags = 3 lbs cooked" or "1 bag = 1.5 lbs cooked"
+
+  // Handle quart bag format: "2 bags = 3 lbs cooked"
   const bagMatch=qtyStr.match(/^(\d+(?:\.\d+)?)\s*bags?\s*=\s*(\d+(?:\.\d+)?)\s*lbs\s*cooked/i);
   if(bagMatch){
     const bags=Math.ceil(parseFloat(bagMatch[1])*factor);
     const lbs=(bags*1.5).toFixed(1);
     return`${bags} bag${bags!==1?'s':''} = ${lbs} lbs cooked`;
   }
-  
+
   // Handle "X bags (Y cups cooked)" format
   const bagCupsMatch=qtyStr.match(/^(\d+(?:\.\d+)?)\s*bags?\s*[\(=]\s*(\d+(?:\.\d+)?)\s*cups/i);
   if(bagCupsMatch){
@@ -2035,27 +2035,40 @@ function scaleQty(qtyStr, factor){
     return`${bags} bag${bags!==1?'s':''} = ${cups} cups cooked`;
   }
 
-  // Handle "X bag = Y lbs cooked" (single bag)
-  const singleBagMatch=qtyStr.match(/^(\d+(?:\.\d+)?)\s*bag\b/i);
-  if(singleBagMatch){
-    const bags=Math.ceil(parseFloat(singleBagMatch[1])*factor);
-    return qtyStr.replace(/^\d+(?:\.\d+)?/,bags.toString());
-  }
-
-  // For everything else — find the FIRST number only and scale it
-  const firstNumMatch=qtyStr.match(/^(\d+(?:\/\d+)?(?:\.\d+)?(?:\s+\d+\/\d+)?)/);
+  // Extract leading number and unit
+  const firstNumMatch=qtyStr.match(/^(\d+(?:\/\d+)?(?:\.\d+)?(?:\s+\d+\/\d+)?)\s*([a-zA-Z]*)/);
   if(firstNumMatch){
-    const numStr=firstNumMatch[1];
-    // Parse fraction if present
+    const numStr=firstNumMatch[1].trim();
+    const unit=firstNumMatch[2].toLowerCase();
     let num;
     if(numStr.includes('/')){
       const parts=numStr.split('/');
       num=parseInt(parts[0])/parseInt(parts[1]);
+    } else if(numStr.includes(' ')){
+      const parts=numStr.split(' ');
+      const frac=parts[1].split('/');
+      num=parseInt(parts[0])+parseInt(frac[0])/parseInt(frac[1]);
     } else {
       num=parseFloat(numStr);
     }
-    const scaled=num*factor;
-    // Round to practical cooking measurements
+    let scaled=num*factor;
+
+    // Unit conversions for practical cooking
+    let newUnit=unit;
+    if(unit==='tsp'){
+      if(scaled>=3){scaled=scaled/3;newUnit='tbsp';}
+      if(scaled>=16){scaled=scaled/16;newUnit='cup';}
+    }
+    if(unit==='tbsp'||newUnit==='tbsp'){
+      if(scaled>=16){scaled=scaled/16;newUnit='cup';}
+      else if(scaled>=4){
+        // Keep as tbsp but show practical amount
+        newUnit='tbsp';
+      }
+    }
+    if((unit==='oz')&&scaled>=32){scaled=scaled/16;newUnit='lbs';}
+
+    // Round to practical amounts
     let display;
     if(scaled<0.2)display='1/8';
     else if(scaled<0.4)display='1/4';
@@ -2072,7 +2085,12 @@ function scaleQty(qtyStr, factor){
       else if(Math.abs(dec-0.75)<0.01)display=whole>0?`${whole} 3/4`:'3/4';
       else display=rounded.toFixed(1).replace(/\.0$/,'');
     }
-    return qtyStr.replace(firstNumMatch[0],display);
+
+    // Reconstruct the string with new unit if converted
+    if(newUnit!==unit){
+      return`${display} ${newUnit}${qtyStr.slice(firstNumMatch[0].length)}`;
+    }
+    return qtyStr.replace(firstNumMatch[0].trimEnd(),`${display}${unit?' '+unit:''}`).trimEnd()+qtyStr.slice(firstNumMatch[0].length);
   }
   return qtyStr;
 }
