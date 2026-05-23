@@ -1588,7 +1588,7 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
       alert('Could not parse recipe. Try again.');
       showPage('builder');return;
     }
-    A.recipe={...recipe,servings:servings,id:Date.now(),title:recipe.title||'Your Meal',description:recipe.description||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:(recipe.pull||[]).map(p=>({...p,qty:cleanQty(p.qty)})),steps:recipe.steps||[],tip:recipe.tip||''};
+    A.recipe={...recipe,servings:servings,id:Date.now(),title:recipe.title||'Your Meal',description:recipe.description||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:(recipe.pull||[]).map(p=>({...p,qty:cleanQty(p.qty),item:cleanQty(p.item),prepNote:p.prepNote?cleanQty(p.prepNote):p.prepNote})),steps:recipe.steps||[],tip:recipe.tip||''};
     // Track last built for variety enforcement
     if(mealType==='Breakfast')A.lastBuiltBreakfast=recipe.title||'';
     else A.lastBuiltMeal=recipe.title||'';
@@ -2030,12 +2030,20 @@ function saveCalMealToFavorites(dk,sl){
 // Strip piece counts and fix common AI quantity mistakes
 function cleanQty(qty){
   if(!qty)return qty;
-  // Remove "(about X pieces)", "(X pieces)", "about X pieces" from meat quantities
-  qty=qty.replace(/\s*\(about\s+\d+\s+pieces?\)/gi,'');
-  qty=qty.replace(/\s*\(approximately\s+\d+\s+pieces?\)/gi,'');
-  qty=qty.replace(/\s*about\s+\d+\s+pieces?/gi,'');
-  qty=qty.replace(/\s*\(\d+\s+pieces?\)/gi,'');
-  qty=qty.replace(/\s*\(approx\.\s+\d+\s+pieces?\)/gi,'');
+  // Remove all piece count variations
+  qty=qty.replace(/\s*\(about\s+\d+[\s\-]+pieces?\)/gi,'');
+  qty=qty.replace(/\s*\(approximately\s+\d+[\s\-]+pieces?\)/gi,'');
+  qty=qty.replace(/\s*\(approx\.?\s+\d+[\s\-]+pieces?\)/gi,'');
+  qty=qty.replace(/\s*\(\d+[\s\-]+pieces?\)/gi,'');
+  qty=qty.replace(/\s*about\s+\d+[\s\-]+pieces?/gi,'');
+  qty=qty.replace(/\s*approximately\s+\d+[\s\-]+pieces?/gi,'');
+  qty=qty.replace(/\s*\(\d+[\s\-]+breasts?\)/gi,'');
+  qty=qty.replace(/\s*\(about\s+\d+[\s\-]+breasts?\)/gi,'');
+  qty=qty.replace(/\s*\(\d+[\s\-]+thighs?\)/gi,'');
+  qty=qty.replace(/\s*\(about\s+\d+[\s\-]+thighs?\)/gi,'');
+  qty=qty.replace(/\s*\(\d+[\s\-]+chops?\)/gi,'');
+  qty=qty.replace(/\s*\(\d+[\s\-]+fillets?\)/gi,'');
+  qty=qty.replace(/\s*\(\d+[\s\-]+servings?\)/gi,'');
   // Fix fractional eggs — round up
   qty=qty.replace(/(\d*\.?\d+)\s*eggs?/gi,(match,num)=>{
     const whole=Math.ceil(parseFloat(num));
