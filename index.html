@@ -1531,17 +1531,10 @@ ${dietaryGoals.length>0?`DIETARY GOALS: ${dietaryGoals.join(', ')} — hit these
 Flavor: ${flavor}
 Servings: ${servings}
 ${anchor?`ANCHOR — build around this: ${anchor}`:''}
-Dietary: ${A.dietary.length>0?A.dietary.join(', '):'none'}
+Dietary restrictions: ${A.dietary.length>0?A.dietary.join(', '):'none'}
 
 PROTEINS AVAILABLE:
-${allProteins.length>0?allProteins.join('\n'):`NONE STOCKED — IMPORTANT:
-${(mealType==='Dinner'||mealType==='Lunch')?`This is ${mealType}. Dinner and lunch REQUIRE protein for non-vegetarians.
-- Check if eggs, canned tuna, canned salmon, or canned chicken are available in supports
-- If any canned protein exists — build around it
-- If nothing exists — flag 2 lbs of the most common protein (Ground Beef or Shredded Chicken) on the grocery list as urgency "out"
-- Still build the best possible meal from what IS available but make it clear in the description that protein needs to be added
-- NEVER serve a starch-and-vegetable-only dish as dinner unless Vegetarian is selected`:''}
-${mealType==='Breakfast'||mealType==='Snack'?'Build from eggs, pantry items, and frozen fruit. These meal types do not require meat protein.':''}`}
+${allProteins.length>0?allProteins.join('\n'):`NONE STOCKED — build the meal anyway and flag on grocery list`}
 
 SUPPORTS:
 Frozen: ${frozenSupList.length>0?frozenSupList.join(' | '):'None'}
@@ -1551,7 +1544,12 @@ Ready to use (each): ${eachList.length>0?eachList.join(' | '):'None'}
 
 FRESH ITEMS (USE FIRST): ${freshList.length>0?freshList.join(' | '):'None'}
 FRIDGE: ${fridgeQty.length>0?fridgeQty.join(' | '):'None'}
-PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}`;
+PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}
+
+${(mealType==='Dinner'||mealType==='Lunch')&&!A.dietary.includes('Vegetarian')?`FINAL INSTRUCTION — READ THIS LAST:
+This is ${mealType}. It MUST contain animal protein. No exceptions.
+${allProteins.length===0?`No protein is stocked. Pick the most seasonal protein for ${new Date().toLocaleString('en-US',{month:'long'})} from the seasonal guide, flag it on the grocery list as urgency "out" with reason "Typically on sale this time of year — buy extra to freeze", and build the recipe as if the user has it.`:`Use one of the proteins listed above.`}
+DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese. That is a side dish.`:''}`;
 
   try{
     const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemPrompt,userPrompt})});
