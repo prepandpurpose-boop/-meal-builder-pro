@@ -2018,28 +2018,63 @@ function saveCalMealToFavorites(dk,sl){
 
 function scaleQty(qtyStr, factor){
   if(!qtyStr||factor===1)return qtyStr;
-  // Find all numbers in the quantity string and scale them
-  return qtyStr.replace(/(\d+(?:\.\d+)?)/g,(match)=>{
-    const num=parseFloat(match);
+  
+  // Handle quart bag format: "2 bags = 3 lbs cooked" or "1 bag = 1.5 lbs cooked"
+  const bagMatch=qtyStr.match(/^(\d+(?:\.\d+)?)\s*bags?\s*=\s*(\d+(?:\.\d+)?)\s*lbs\s*cooked/i);
+  if(bagMatch){
+    const bags=Math.ceil(parseFloat(bagMatch[1])*factor);
+    const lbs=(bags*1.5).toFixed(1);
+    return`${bags} bag${bags!==1?'s':''} = ${lbs} lbs cooked`;
+  }
+  
+  // Handle "X bags (Y cups cooked)" format
+  const bagCupsMatch=qtyStr.match(/^(\d+(?:\.\d+)?)\s*bags?\s*[\(=]\s*(\d+(?:\.\d+)?)\s*cups/i);
+  if(bagCupsMatch){
+    const bags=Math.ceil(parseFloat(bagCupsMatch[1])*factor);
+    const cups=bags*3;
+    return`${bags} bag${bags!==1?'s':''} = ${cups} cups cooked`;
+  }
+
+  // Handle "X bag = Y lbs cooked" (single bag)
+  const singleBagMatch=qtyStr.match(/^(\d+(?:\.\d+)?)\s*bag\b/i);
+  if(singleBagMatch){
+    const bags=Math.ceil(parseFloat(singleBagMatch[1])*factor);
+    return qtyStr.replace(/^\d+(?:\.\d+)?/,bags.toString());
+  }
+
+  // For everything else — find the FIRST number only and scale it
+  const firstNumMatch=qtyStr.match(/^(\d+(?:\/\d+)?(?:\.\d+)?(?:\s+\d+\/\d+)?)/);
+  if(firstNumMatch){
+    const numStr=firstNumMatch[1];
+    // Parse fraction if present
+    let num;
+    if(numStr.includes('/')){
+      const parts=numStr.split('/');
+      num=parseInt(parts[0])/parseInt(parts[1]);
+    } else {
+      num=parseFloat(numStr);
+    }
     const scaled=num*factor;
-    // Round to practical cooking amounts
-    if(scaled<=0.1)return '1/8';
-    if(scaled<0.3)return '1/4';
-    if(scaled<0.6)return '1/2';
-    if(scaled<0.9)return '3/4';
-    if(scaled<1.2)return '1';
-    // For larger numbers round to nearest 0.25
-    const rounded=Math.round(scaled*4)/4;
-    // Return whole number if no decimal needed
-    if(rounded===Math.floor(rounded))return String(Math.floor(rounded));
-    // Return fraction-friendly decimals
-    const dec=rounded-Math.floor(rounded);
-    const whole=Math.floor(rounded);
-    if(Math.abs(dec-0.25)<0.01)return whole>0?`${whole} 1/4`:'1/4';
-    if(Math.abs(dec-0.5)<0.01)return whole>0?`${whole} 1/2`:'1/2';
-    if(Math.abs(dec-0.75)<0.01)return whole>0?`${whole} 3/4`:'3/4';
-    return rounded.toFixed(1).replace(/\.0$/,'');
-  });
+    // Round to practical cooking measurements
+    let display;
+    if(scaled<0.2)display='1/8';
+    else if(scaled<0.4)display='1/4';
+    else if(scaled<0.6)display='1/3';
+    else if(scaled<0.8)display='1/2';
+    else if(scaled<1.0)display='3/4';
+    else{
+      const rounded=Math.round(scaled*4)/4;
+      const whole=Math.floor(rounded);
+      const dec=rounded-whole;
+      if(dec<0.01)display=String(whole);
+      else if(Math.abs(dec-0.25)<0.01)display=whole>0?`${whole} 1/4`:'1/4';
+      else if(Math.abs(dec-0.5)<0.01)display=whole>0?`${whole} 1/2`:'1/2';
+      else if(Math.abs(dec-0.75)<0.01)display=whole>0?`${whole} 3/4`:'3/4';
+      else display=rounded.toFixed(1).replace(/\.0$/,'');
+    }
+    return qtyStr.replace(firstNumMatch[0],display);
+  }
+  return qtyStr;
 }
 
 function rebuildFavorite(idx){
