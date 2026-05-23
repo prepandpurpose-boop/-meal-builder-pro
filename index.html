@@ -1244,9 +1244,7 @@ function rBuilderForm(){
         </div>
         <div class="r2">
           <div class="fg"><label class="lbl">Servings</label>
-            <select class="sel" id="sv">
-              <option>2</option><option ${A.householdSize<=4?'selected':''}>4</option><option ${A.householdSize>4?'selected':''}>6</option><option>8</option><option>10</option><option>12</option><option>16</option><option>20</option><option>24</option>
-            </select>
+            <input type="number" class="sel" id="sv" min="1" max="100" value="${A.householdSize||4}" style="text-align:center;font-size:16px;font-weight:600;color:var(--green)" placeholder="How many?">
           </div>
           <div class="fg"><label class="lbl">Flavor</label>
             <select class="sel" id="fl">
@@ -2096,17 +2094,7 @@ function rFavorites(){
         </div>
         <div class="fg">
           <label class="lbl">Rebuild for how many servings?</label>
-          <select class="sel" id="fav-sv-${i}">
-            <option value="2">2 servings</option>
-            <option value="4" selected>4 servings</option>
-            <option value="6">6 servings</option>
-            <option value="8">8 servings</option>
-            <option value="10">10 servings</option>
-            <option value="12">12 servings</option>
-            <option value="16">16 servings</option>
-            <option value="20">20 servings</option>
-            <option value="24">24 servings</option>
-          </select>
+          <input type="number" class="sel" id="fav-sv-${i}" min="1" max="100" value="${fav.servings||4}" style="text-align:center;font-size:16px;font-weight:600;color:var(--green)" placeholder="How many?">
         </div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-primary btn-full" data-idx="${i}" onclick="rebuildFavorite(+this.dataset.idx)">🔄 Rebuild</button>
