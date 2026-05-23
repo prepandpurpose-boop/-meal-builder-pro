@@ -1508,6 +1508,7 @@ RESPOND WITH VALID JSON ONLY — no markdown, no explanation:
   "macros": {"cal": 450, "protein": 38, "carbs": 35, "fat": 16},
   "pull": [
     {"icon": "🥩", "item": "Shredded Chicken", "qty": "1 bag = 1.5 lbs cooked", "prepNote": "Already cooked — heat gently 3-4 min over medium heat until warmed through"},
+    {"icon": "🍗", "item": "Chicken Thighs", "qty": "2 lbs", "prepNote": "Pat dry, season both sides — weight only, never write piece counts"},
     {"icon": "🥛", "item": "Yogurt", "qty": "3 cups", "prepNote": "From fridge"},
     {"icon": "🧂", "item": "Salt", "qty": "1 tsp", "prepNote": "From pantry"}
   ],
@@ -1517,13 +1518,13 @@ RESPOND WITH VALID JSON ONLY — no markdown, no explanation:
   "cookList": [{"protein": "name", "bags": 2, "rawLbs": "4.3 lbs raw", "note": "cook and bag on maintenance day"}]
 }
 
-PULL LIST RULE — CRITICAL: The pull array must include EVERY ingredient needed for the recipe — not just frozen stock. Include frozen bags, canned items, pantry items, fridge items, spices, everything. The person should be able to pull this list and have everything on the counter before they start cooking. Nothing should be a surprise mid-recipe.
+PULL LIST RULE — CRITICAL: The pull array must include EVERY ingredient needed for the recipe — not just frozen stock. Include frozen bags, canned items, pantry items, fridge items, spices, everything.
 
-QUANTITY RULES:
-- MEAT: Show weight only — "2 lbs chicken thighs" NOT "2 lbs (about 8 pieces)". Never guess piece counts for meat. Weight is the only reliable measure.
-- EGGS: Always whole numbers only. Round UP to nearest whole egg. Never write "3/4 eggs" or "1.5 eggs". 0.75 eggs = 1 egg. 1.5 eggs = 2 eggs.
-- BAGS: Always whole quart bags. Never partial bags.
-- SPICES: Use tsp or tbsp. Convert automatically — if over 3 tsp use tbsp, if over 16 tbsp use cups.`;
+QUANTITY RULES — NO EXCEPTIONS:
+- MEAT qty field: weight only. "2 lbs" or "1.5 lbs". NEVER include piece counts. NEVER write "about X pieces" or "(X pieces)". If you write a piece count the recipe is wrong.
+- EGGS: whole numbers only. Round UP. Never "3/4 eggs". Never "1.5 eggs".
+- BAGS: whole quart bags only. Never partial.
+- SPICES: tsp or tbsp. Over 3 tsp → use tbsp. Over 16 tbsp → use cups.`;
 
   const userPrompt=`MEAL TYPE: ${mealType} — build an appropriate ${mealType.toLowerCase()} dish. NOT breakfast food for dinner.
 ${grabAndGo?'GRAB AND GO MODE: ON — build a batchable item with yield, storage instructions, and grab size.':''}
@@ -1587,7 +1588,7 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
       alert('Could not parse recipe. Try again.');
       showPage('builder');return;
     }
-    A.recipe={id:Date.now(),title:recipe.title||'Your Meal',description:recipe.description||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:recipe.pull||[],steps:recipe.steps||[],tip:recipe.tip||'',servings:servings};
+    A.recipe={...recipe,servings:servings,id:Date.now(),title:recipe.title||'Your Meal',description:recipe.description||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:(recipe.pull||[]).map(p=>({...p,qty:cleanQty(p.qty)})),steps:recipe.steps||[],tip:recipe.tip||''};
     // Track last built for variety enforcement
     if(mealType==='Breakfast')A.lastBuiltBreakfast=recipe.title||'';
     else A.lastBuiltMeal=recipe.title||'';
@@ -2024,6 +2025,23 @@ function saveCalMealToFavorites(dk,sl){
   save();
   closeModal();
   alert('⭐ '+meal.title+' saved to Favorites! Rebuild it at any serving size from the Favorites page.');
+}
+
+// Strip piece counts and fix common AI quantity mistakes
+function cleanQty(qty){
+  if(!qty)return qty;
+  // Remove "(about X pieces)", "(X pieces)", "about X pieces" from meat quantities
+  qty=qty.replace(/\s*\(about\s+\d+\s+pieces?\)/gi,'');
+  qty=qty.replace(/\s*\(approximately\s+\d+\s+pieces?\)/gi,'');
+  qty=qty.replace(/\s*about\s+\d+\s+pieces?/gi,'');
+  qty=qty.replace(/\s*\(\d+\s+pieces?\)/gi,'');
+  qty=qty.replace(/\s*\(approx\.\s+\d+\s+pieces?\)/gi,'');
+  // Fix fractional eggs — round up
+  qty=qty.replace(/(\d*\.?\d+)\s*eggs?/gi,(match,num)=>{
+    const whole=Math.ceil(parseFloat(num));
+    return whole+' egg'+(whole!==1?'s':'');
+  });
+  return qty.trim();
 }
 
 function scaleQty(qtyStr, factor){
