@@ -2166,15 +2166,6 @@ function rFavorites(){
   return html;
 }
 
-function rebuildFavorite(idx){
-  const fav=A.favorites[idx];
-  if(!fav)return;
-  const servings=document.getElementById('fav-sv-'+idx)?.value||'4';
-  // Load the saved recipe and rebuild with new serving size
-  A.recipe={...fav,servings};
-  showPage('builder');
-}
-
 function removeFavorite(idx){
   if(!confirm('Remove this from favorites?'))return;
   A.favorites.splice(idx,1);
