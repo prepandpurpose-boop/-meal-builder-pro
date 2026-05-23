@@ -1604,7 +1604,6 @@ function rRecipe(){
       <div class="conflict-msg" id="conflict-msg"></div>
       <button class="btn btn-primary btn-full btn-lg" style="margin-bottom:8px" onclick="placeOnCal()">📅 Add to Calendar & Deduct Inventory</button>
       <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="printRecipe()">🖨️ Print This Recipe</button>
-      <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="saveToFavorites()">⭐ Save to Favorites</button>
       <button class="btn btn-ghost btn-full" onclick="A.recipe=null;render()">↩ Generate a Different Meal</button>
       `}
     </div>
@@ -1808,6 +1807,7 @@ function openMealDetail(dk,sl){
       </div>
       <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="moveMeal()">↕️ Move Meal</button>
       <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="closeModal();setTimeout(()=>printCalMeal('${dk}','${sl}'),100)">🖨️ Print Recipe</button>
+      <button class="btn btn-gold btn-full" style="margin-bottom:8px" onclick="saveCalMealToFavorites('${dk}','${sl}')">⭐ Save to Favorites</button>
       <button class="btn btn-danger btn-full" onclick="removeMeal('${dk}','${sl}')">Remove from Calendar</button>
     </div>`);
 }
@@ -1926,7 +1926,80 @@ function saveToFavorites(){
   }
   A.favorites.push({...A.recipe,savedAt:new Date().toISOString()});
   save();
-  alert('⭐ Saved to Favorites! You can rebuild it at any serving size from the Favorites page.');
+  alert('⭐ Saved to Favorites!');
+}
+
+function saveCalMealToFavorites(dk,sl){
+  const meal=A.calendarByDate[dk]?.[sl];
+  if(!meal||typeof meal!=='object'||!meal.title){alert('No recipe data found for this meal.');return;}
+  if(A.favorites.find(f=>f.title===meal.title)){
+    alert('This meal is already in your favorites.');closeModal();return;
+  }
+  A.favorites.push({...meal,savedAt:new Date().toISOString()});
+  save();
+  closeModal();
+  alert('⭐ '+meal.title+' saved to Favorites! Rebuild it at any serving size from the Favorites page.');
+}
+
+async function rebuildFavorite(idx){
+  const fav=A.favorites[idx];
+  if(!fav)return;
+  const newServings=document.getElementById('fav-sv-'+idx)?.value||'4';
+  const origServings=fav.servings||'4';
+  if(newServings===origServings){
+    // Same serving size — just load it directly
+    A.recipe={...fav,servings:newServings};
+    showPage('builder');return;
+  }
+  // Different serving size — rebuild via AI with scaling instructions
+  A.generating=true;
+  showPage('builder');
+  const systemPrompt=`You are rebuilding a specific saved recipe at a new serving size. The user loved this meal and wants it again scaled to ${newServings} servings instead of ${origServings}. Rebuild it exactly — same dish, same flavors, same general approach — but scale ALL ingredient quantities correctly for ${newServings} servings. Adjust cooking times if needed for larger batches.
+
+PROTEIN RULES: All proteins are already cooked. Heat through 3-4 min. Never say "cook until done." 1 quart bag = 1.5 lbs cooked.
+
+RESPOND WITH VALID JSON ONLY:
+{
+  "title": "same title",
+  "description": "same description updated for new serving size",
+  "macros": {"cal": 0, "protein": 0, "carbs": 0, "fat": 0},
+  "pull": [{"icon": "🥩", "item": "name", "qty": "scaled quantity", "prepNote": "prep note"}],
+  "steps": ["scaled step 1"],
+  "tip": "tip",
+  "groceryFlags": [],
+  "cookList": []
+}`;
+
+  const userPrompt=`RECIPE TO REBUILD: ${fav.title}
+ORIGINAL SERVING SIZE: ${origServings} servings
+NEW SERVING SIZE: ${newServings} servings
+SCALE FACTOR: ${(+newServings/+origServings).toFixed(2)}x
+
+ORIGINAL PULL LIST (scale these quantities):
+${fav.pull.map(p=>`${p.item}: ${p.qty}`).join('\n')}
+
+ORIGINAL STEPS (rewrite with scaled quantities):
+${fav.steps.join('\n')}
+
+Dietary restrictions: ${A.dietary.length>0?A.dietary.join(', '):'none'}`;
+
+  try{
+    const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemPrompt,userPrompt})});
+    const data=await r.json();
+    A.generating=false;
+    let raw=data.content?.[0]?.text||'';
+    raw=raw.replace(/```json|```/g,'').trim();
+    if(!raw.startsWith('{'))raw=raw.substring(raw.indexOf('{'));
+    const lastBrace=raw.lastIndexOf('}');
+    if(lastBrace>=0)raw=raw.substring(0,lastBrace+1);
+    const recipe=JSON.parse(raw);
+    A.recipe={...recipe,servings:newServings,id:Date.now()};
+    showPage('builder');
+  }catch(e){
+    A.generating=false;
+    alert('Could not rescale recipe. Try again.');
+    showPage('favorites');
+  }
 }
 
 function rFavorites(){
