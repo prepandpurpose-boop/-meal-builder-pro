@@ -675,7 +675,7 @@ let A={
   calSelDate:null,weekOffset:0,
   generating:false,stretchingIt:false,recipe:null,stretchResult:null,
   ppSpices:true,buildFromStock:true,kidFriendly:false,buildEmergency:false,grabAndGo:false,includeSoups:true,
-  lastBuiltMeal:'',lastBuiltBreakfast:'',
+  lastBuiltMeal:'',lastBuiltBreakfast:'',lastBuiltProtein:'',
   favorites:[],
   householdSize:4,lastMealType:'Dinner',
   dietary:[],onboarded:false,
@@ -1542,6 +1542,7 @@ ${grabAndGo?'GRAB AND GO MODE: ON — build a batchable item with yield, storage
 ${!includeSoups?'SOUPS OFF: No soups, stews, chilis, or broth-based dishes under any circumstances.':''}
 ${mealType==='Breakfast'?`BREAKFAST VARIETY RULE: Last breakfast built was "${A.lastBuiltBreakfast||'none'}". Build something COMPLETELY DIFFERENT.`:''}
 ${mealType!=='Breakfast'?`LAST MEAL BUILT: "${A.lastBuiltMeal||'none'}" — build something completely different.`:''}
+${A.lastBuiltProtein&&mealType!=='Breakfast'?`LAST PROTEIN USED: "${A.lastBuiltProtein}" — use a DIFFERENT protein this time. Rotate.`:''}
 ${buildEmergency?'EMERGENCY MEAL MODE: ON — dinner only, double batch, gallon bags or freezer containers, complete meal, reheats perfectly':''}
 ${kidFriendly?'KID FRIENDLY MODE: ON — mild flavors, nut-free, kid-friendly formats for all meal types, kid portions':''}
 ${mealType==='Lunch'&&!grabAndGo?'LUNCH = GRAB AND GO — 3 steps max, no scratch cooking, always include PACK IT note in tip':''}
@@ -1567,7 +1568,7 @@ PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}
 ${(mealType==='Dinner'||mealType==='Lunch')&&!A.dietary.includes('Vegetarian')?`FINAL INSTRUCTION — READ THIS LAST:
 This is ${mealType}. It MUST contain animal protein. No exceptions.
 ${allProteins.length===0?`No protein is stocked. Do ALL of the following:
-1. Pick the most seasonal protein for ${new Date().toLocaleString('en-US',{month:'long'})} (chicken breasts are always a safe choice in grilling season)
+1. Pick the most seasonal protein for ${new Date().toLocaleString('en-US',{month:'long'})} — ${A.lastBuiltProtein?`DO NOT pick ${A.lastBuiltProtein} again, rotate to something different`:'chicken breasts are a safe default in grilling season'}
 2. Add it to the pull list with qty showing lbs needed and prepNote "Will need to purchase — see grocery list"
 3. Write the cooking steps as if the user HAS the protein — include full cooking instructions
 4. Flag it in groceryFlags with urgency "out" and reason "Typically on sale this time of year — buy extra and freeze"
@@ -1602,7 +1603,19 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
     A.recipe={...recipe,servings:servings,id:Date.now(),title:recipe.title||'Your Meal',description:recipe.description||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:(recipe.pull||[]).map(p=>({...p,qty:cleanQty(p.qty),item:cleanQty(p.item),prepNote:p.prepNote?cleanQty(p.prepNote):p.prepNote})),steps:recipe.steps||[],tip:recipe.tip||''};
     // Track last built for variety enforcement
     if(mealType==='Breakfast')A.lastBuiltBreakfast=recipe.title||'';
-    else A.lastBuiltMeal=recipe.title||'';
+    else{
+      A.lastBuiltMeal=recipe.title||'';
+      // Track protein used — check cookList first, then groceryFlags
+      const proteinFromCook=recipe.cookList?.[0]?.protein||'';
+      const proteinFromGroc=(recipe.groceryFlags||[]).find(g=>
+        ['chicken','beef','turkey','pork','salmon','tuna','shrimp','sausage','steak'].some(k=>g.name.toLowerCase().includes(k))
+      )?.name||'';
+      // Also check pull list for protein
+      const proteinFromPull=(recipe.pull||[]).find(p=>
+        ['chicken','beef','turkey','pork','salmon','tuna','shrimp','sausage','steak'].some(k=>p.item.toLowerCase().includes(k))
+      )?.item||'';
+      A.lastBuiltProtein=proteinFromCook||proteinFromGroc||proteinFromPull||A.lastBuiltProtein;
+    }
 
     // Update cook list — accumulate across builds this session
     if(recipe.cookList&&recipe.cookList.length>0){
