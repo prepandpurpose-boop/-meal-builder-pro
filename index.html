@@ -1245,8 +1245,7 @@ function rBuilderForm(){
         <div class="r2">
           <div class="fg"><label class="lbl">Servings</label>
             <select class="sel" id="sv">
-              <option>2</option><option ${A.householdSize<=4?'selected':''}>4</option><option ${A.householdSize>4?'selected':''}>6</option><option>8</option><option>10</option><option>12</option>
-              ${A.grabAndGo?'<option>16</option><option>20</option><option>24</option>':''}
+              <option>2</option><option ${A.householdSize<=4?'selected':''}>4</option><option ${A.householdSize>4?'selected':''}>6</option><option>8</option><option>10</option><option>12</option><option>16</option><option>20</option><option>24</option>
             </select>
           </div>
           <div class="fg"><label class="lbl">Flavor</label>
@@ -2104,6 +2103,9 @@ function rFavorites(){
             <option value="8">8 servings</option>
             <option value="10">10 servings</option>
             <option value="12">12 servings</option>
+            <option value="16">16 servings</option>
+            <option value="20">20 servings</option>
+            <option value="24">24 servings</option>
           </select>
         </div>
         <div style="display:flex;gap:8px">
