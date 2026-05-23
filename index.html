@@ -1245,7 +1245,8 @@ function rBuilderForm(){
         <div class="r2">
           <div class="fg"><label class="lbl">Servings</label>
             <select class="sel" id="sv">
-              <option>2</option><option ${A.householdSize<=4?'selected':''}>4</option><option ${A.householdSize>4?'selected':''}>6</option><option>8</option>
+              <option>2</option><option ${A.householdSize<=4?'selected':''}>4</option><option ${A.householdSize>4?'selected':''}>6</option><option>8</option><option>10</option><option>12</option>
+              ${A.grabAndGo?'<option>16</option><option>20</option><option>24</option>':''}
             </select>
           </div>
           <div class="fg"><label class="lbl">Flavor</label>
@@ -1364,16 +1365,75 @@ MEAL TYPE RULES — CRITICAL:
 - Breakfast = exciting and varied. Rotate: stuffed french toast, pancake stacks, waffle boards, breakfast burritos, egg scrambles with protein, biscuits and gravy, breakfast hash, omelettes, breakfast casserole, oatmeal bake, overnight oats, yogurt parfait. Build from scratch if flour/butter/eggs on hand.
 - Snack = small and light. No cooking. Cheese and crackers, fruit and dip, yogurt parfait, ants on a log, mini quesadilla, frozen fruit. NOT a meal.
 - NEVER serve shakshuka, frittata, or egg-based dishes for Dinner unless eggs are the ONLY protein available.
+- PROTEIN RULE FOR DINNER AND LUNCH: Every dinner and every lunch must contain a meaningful protein source — meat, poultry, seafood, eggs, or canned protein. Beans, lentils, and grits alone do not count as a complete dinner protein unless Vegetarian is selected in dietary restrictions. If no protein is available, flag it on the grocery list and build the best possible meal noting that protein should be added.
+- Cheesy grits, bean casseroles, pasta without protein, rice without protein — these are SIDE DISHES not dinners. Always add a protein or flag that one is needed.
+
+SEASONAL & BUDGET BUYING GUIDE — This is critical to the Prep & Purpose philosophy. Empty inventory does not limit what can be built. It means the person needs to shop smart. Always build the best possible meal and flag everything needed on the grocery list. Prioritize what is in season and on sale in America right now. The current month is ${new Date().toLocaleString('en-US',{month:'long'})}.
+
+PROTEINS BY MONTH (what is typically on sale):
+- January: whole chickens, pork roasts, ground beef (post-holiday clearance), canned tuna
+- February: chicken thighs, ground turkey, pork chops
+- March: whole chickens, corned beef, ground beef
+- April: ham (Easter — best time to buy and freeze), lamb, chicken breasts
+- May: ground beef (grilling season starts), chicken breasts, hot dogs, sausage
+- June: ground beef, chicken, ribs, sausage, hot dogs (peak grilling season)
+- July: ground beef, chicken, ribs, hot dogs (peak grilling — best prices of the year)
+- August: chicken, ground beef, back to school ground turkey deals
+- September: chicken thighs, ground beef, pork shoulder
+- October: whole turkeys start appearing, pork, chicken thighs
+- November: turkey (best time to buy and freeze extras), ham, chicken
+- December: ham, turkey (post-Thanksgiving clearance), prime rib, shrimp
+- Year-round deals: canned tuna, canned salmon, chicken thighs, eggs, ground turkey
+
+PRODUCE BY SEASON (what is cheap and abundant):
+- Winter (Dec-Feb): citrus (oranges, lemons, limes, grapefruit), sweet potatoes, potatoes, carrots, cabbage, onions, winter squash, apples, pears, broccoli, cauliflower, kale, collard greens
+- Spring (Mar-May): asparagus, peas, spinach, lettuce, radishes, strawberries, artichokes, broccoli, green onions
+- Summer (Jun-Aug): tomatoes, zucchini, corn, cucumbers, bell peppers, eggplant, peaches, berries, watermelon, green beans, summer squash
+- Fall (Sep-Nov): butternut squash, sweet potatoes, apples, pears, Brussels sprouts, cauliflower, broccoli, kale, pumpkin, beets, turnips
+
+SCRATCH BAKING RULES:
+- SAFE TO BUILD FROM SCRATCH (simple ratios, scale cleanly): Pancakes, waffles, french toast, biscuits, cornbread, muffins, oatmeal bakes, egg casseroles, cookies, brownies, crepes. These use baking powder or baking soda and scale perfectly.
+- NEVER BUILD FROM SCRATCH (yeast dough, unreliable scaling): Sandwich bread, dinner rolls, pizza dough, cinnamon rolls, hamburger buns, hot dog buns, pie crust, tortillas. Always flag as store-bought.
+- For french toast specifically: buy the bread (flag on grocery list), build only the egg custard mixture recipe.
+- For waffles: always note in tip that a waffle iron is required.
+
+CONVENIENT ITEMS — always flag these on the grocery list when a recipe needs them, never omit:
+- Bread, sandwich bread, dinner rolls, hamburger buns, hot dog buns — flag exact quantity needed
+- Tortillas (flour or corn) — flag pack size needed
+- Pizza crust, pre-made pie crust, puff pastry — flag as needed
+- The app NEVER builds scratch recipes for these items. Scaling bread and dough recipes is unreliable.
+- If relevant, add ONE short note in the tip field only: "Tortillas/bread/crust can be made from scratch if you prefer" — nothing more. No recipe, no instructions, no ingredients list for the dough.
+- Always flag as store-bought on the grocery list with reason: "Store-bought recommended — or make from scratch if you prefer"
+- Never block a meal build because a bread or crust item is not in inventory. Flag it and move on.
+
+GROCERY FLAG RULES:
+- Always include the reason field explaining WHY the item is needed
+- For seasonal items add: "In season now — typically lower price at the store"
+- For proteins add: "Typically on sale this time of year — buy extra and freeze"
+- For convenient items add: "Store-bought works great — or can be made from scratch"
+- For any item that can be bought in bulk to freeze add: "Consider buying extra — freezes well"
+- urgency "out" = needed to make this meal · urgency "low" = optional upgrade or restock
+
+When flagging a protein on the grocery list with no inventory, always note in the reason field: "Typically on sale this time of year — check store sales and buy extra to freeze."
 
 ${!includeSoups?`SOUPS OFF — CRITICAL: User has turned off soups and stews. NEVER suggest soup, stew, chili, broth-based dishes, gumbo, or any liquid-heavy meal. Build around skillet meals, casseroles, baked dishes, rice bowls, and dry-heat formats only.`:''}
 
 ${grabAndGo?`GRAB AND GO MODE — ON:
 - Build a BATCHABLE item that can be made once and grabbed all week.
-- Best formats: muffins, baked oatmeal bars, granola bars, energy balls, egg muffin cups, breakfast burritos (wrap in foil and freeze), baked egg casserole, overnight oats jars.
-- Always specify: yield (makes 12 muffins, 9 bars, 6 burritos etc), storage (fridge or freezer), and how long it keeps.
-- Individual grab size in the description — "grab 2 muffins" or "grab 1 bar and a piece of fruit."
+- Best formats: muffins, baked oatmeal bars, granola bars, energy balls, egg muffin cups, breakfast burritos (wrap in foil and freeze), baked egg casserole, overnight oats jars, pancakes, waffles, french toast.
+- Always specify: yield in individual pieces (makes 24 pancakes, 12 muffins, 9 bars), storage (fridge or freezer), and how long it keeps.
+- Individual grab size in the description — "grab 2 pancakes and a piece of fruit" or "grab 1 bar."
 - Flag any missing baking ingredients in groceryFlags with exact amounts.
-- Include baking time and temperature in steps.`:''}
+- Include baking time and temperature in steps where applicable.
+- PANCAKES, WAFFLES, FRENCH TOAST BATCH RULES:
+  * Scale up to the serving size selected — if 24 servings, make 24 pieces
+  * Cool completely before freezing
+  * Freeze flat on a baking sheet first, then transfer to quart bags (prevents sticking)
+  * Reheat in toaster 2-3 minutes or microwave 45-60 seconds
+  * Keeps in freezer up to 3 months
+  * Always include these freeze instructions in the tip field
+  * For french toast: buy bread from store (flag on grocery list), build the egg mixture recipe only
+  * For waffles: note in tip that a waffle iron is needed`:''}
 
 ${dietaryGoals.length>0?`DIETARY GOALS — optimize toward these targets (do not violate, build meals that genuinely hit these):
 ${dietaryGoals.includes('High Protein')?'- HIGH PROTEIN: minimum 35g protein per serving. Lead with protein. Use 2+ bags of protein base. Add eggs, beans, or cheese to boost further.':''}
@@ -1466,7 +1526,14 @@ ${anchor?`ANCHOR — build around this: ${anchor}`:''}
 Dietary: ${A.dietary.length>0?A.dietary.join(', '):'none'}
 
 PROTEINS AVAILABLE:
-${allProteins.length>0?allProteins.join('\n'):'None — build from eggs, beans, lentils, or canned tuna. Flag proteins needed on grocery list.'}
+${allProteins.length>0?allProteins.join('\n'):`NONE STOCKED — IMPORTANT:
+${(mealType==='Dinner'||mealType==='Lunch')?`This is ${mealType}. Dinner and lunch REQUIRE protein for non-vegetarians.
+- Check if eggs, canned tuna, canned salmon, or canned chicken are available in supports
+- If any canned protein exists — build around it
+- If nothing exists — flag 2 lbs of the most common protein (Ground Beef or Shredded Chicken) on the grocery list as urgency "out"
+- Still build the best possible meal from what IS available but make it clear in the description that protein needs to be added
+- NEVER serve a starch-and-vegetable-only dish as dinner unless Vegetarian is selected`:''}
+${mealType==='Breakfast'||mealType==='Snack'?'Build from eggs, pantry items, and frozen fruit. These meal types do not require meat protein.':''}`}
 
 SUPPORTS:
 Frozen: ${frozenSupList.length>0?frozenSupList.join(' | '):'None'}
@@ -1552,7 +1619,7 @@ function rRecipe(){
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
           <span style="background:rgba(255,255,255,.2);color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">${isEmergency?'🚨 Emergency Meal':'✅ Your Meal'}</span>
           <span style="background:rgba(255,255,255,.15);color:rgba(255,255,255,.9);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600">👥 Serves ${r.servings||'4'}</span>
-          ${r.servings&&+r.servings<=3?`<span style="background:rgba(255,200,0,.2);color:#ffe082;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600">Small batch — adjust servings if needed</span>`:''}
+          ${r.servings&&+r.servings<=2?`<span style="background:rgba(255,200,0,.2);color:#ffe082;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600">Small batch — adjust servings if needed</span>`:''}
         </div>
         <div class="recipe-title-text">${r.title}</div>
         <div class="recipe-desc">${r.description}</div>
