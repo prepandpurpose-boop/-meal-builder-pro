@@ -1517,7 +1517,13 @@ RESPOND WITH VALID JSON ONLY — no markdown, no explanation:
   "cookList": [{"protein": "name", "bags": 2, "rawLbs": "4.3 lbs raw", "note": "cook and bag on maintenance day"}]
 }
 
-PULL LIST RULE — CRITICAL: The pull array must include EVERY ingredient needed for the recipe — not just frozen stock. Include frozen bags, canned items, pantry items, fridge items, spices, everything. The person should be able to pull this list and have everything on the counter before they start cooking. Nothing should be a surprise mid-recipe.`;
+PULL LIST RULE — CRITICAL: The pull array must include EVERY ingredient needed for the recipe — not just frozen stock. Include frozen bags, canned items, pantry items, fridge items, spices, everything. The person should be able to pull this list and have everything on the counter before they start cooking. Nothing should be a surprise mid-recipe.
+
+QUANTITY RULES:
+- MEAT: Show weight only — "2 lbs chicken thighs" NOT "2 lbs (about 8 pieces)". Never guess piece counts for meat. Weight is the only reliable measure.
+- EGGS: Always whole numbers only. Round UP to nearest whole egg. Never write "3/4 eggs" or "1.5 eggs". 0.75 eggs = 1 egg. 1.5 eggs = 2 eggs.
+- BAGS: Always whole quart bags. Never partial bags.
+- SPICES: Use tsp or tbsp. Convert automatically — if over 3 tsp use tbsp, if over 16 tbsp use cups.`;
 
   const userPrompt=`MEAL TYPE: ${mealType} — build an appropriate ${mealType.toLowerCase()} dish. NOT breakfast food for dinner.
 ${grabAndGo?'GRAB AND GO MODE: ON — build a batchable item with yield, storage instructions, and grab size.':''}
@@ -2022,6 +2028,15 @@ function saveCalMealToFavorites(dk,sl){
 
 function scaleQty(qtyStr, factor){
   if(!qtyStr||factor===1)return qtyStr;
+
+  // Eggs must always be whole numbers — round up
+  if(qtyStr.match(/egg/i)){
+    const numMatch=qtyStr.match(/^(\d+(?:\.\d+)?)/);
+    if(numMatch){
+      const scaled=Math.ceil(parseFloat(numMatch[1])*factor);
+      return qtyStr.replace(numMatch[0],scaled.toString());
+    }
+  }
 
   // Handle quart bag format: "2 bags = 3 lbs cooked"
   const bagMatch=qtyStr.match(/^(\d+(?:\.\d+)?)\s*bags?\s*=\s*(\d+(?:\.\d+)?)\s*lbs\s*cooked/i);
