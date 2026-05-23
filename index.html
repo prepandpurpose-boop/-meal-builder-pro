@@ -1627,9 +1627,11 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
 
 function rRecipe(){
   const r=A.recipe;
+  // Clean all pull quantities at render time — catches old saved recipes too
+  const cleanedPull=(r.pull||[]).map(p=>({...p,qty:cleanQty(p.qty),item:cleanQty(p.item),prepNote:p.prepNote?cleanQty(p.prepNote):p.prepNote}));
   const stockKeywords=['quart bag','frozen bag','cans','1 can','2 cans','3 cans','lbs cooked','bag ='];
-  const fromStock=r.pull.filter(p=>stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
-  const fromKitchen=r.pull.filter(p=>!stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
+  const fromStock=cleanedPull.filter(p=>stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
+  const fromKitchen=cleanedPull.filter(p=>!stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
   const isEmergency=A.buildEmergency;
 
   return`<div style="max-width:720px">
@@ -2030,20 +2032,23 @@ function saveCalMealToFavorites(dk,sl){
 // Strip piece counts and fix common AI quantity mistakes
 function cleanQty(qty){
   if(!qty)return qty;
-  // Remove all piece count variations
+  // Remove piece counts in all formats
+  qty=qty.replace(/\s*[,\-—–]\s*about\s+\d+[\s\-]+pieces?/gi,'');
+  qty=qty.replace(/\s*[,\-—–]\s*approximately\s+\d+[\s\-]+pieces?/gi,'');
   qty=qty.replace(/\s*\(about\s+\d+[\s\-]+pieces?\)/gi,'');
   qty=qty.replace(/\s*\(approximately\s+\d+[\s\-]+pieces?\)/gi,'');
   qty=qty.replace(/\s*\(approx\.?\s+\d+[\s\-]+pieces?\)/gi,'');
   qty=qty.replace(/\s*\(\d+[\s\-]+pieces?\)/gi,'');
   qty=qty.replace(/\s*about\s+\d+[\s\-]+pieces?/gi,'');
   qty=qty.replace(/\s*approximately\s+\d+[\s\-]+pieces?/gi,'');
-  qty=qty.replace(/\s*\(\d+[\s\-]+breasts?\)/gi,'');
-  qty=qty.replace(/\s*\(about\s+\d+[\s\-]+breasts?\)/gi,'');
-  qty=qty.replace(/\s*\(\d+[\s\-]+thighs?\)/gi,'');
-  qty=qty.replace(/\s*\(about\s+\d+[\s\-]+thighs?\)/gi,'');
-  qty=qty.replace(/\s*\(\d+[\s\-]+chops?\)/gi,'');
-  qty=qty.replace(/\s*\(\d+[\s\-]+fillets?\)/gi,'');
-  qty=qty.replace(/\s*\(\d+[\s\-]+servings?\)/gi,'');
+  // Remove piece counts for specific meat cuts
+  qty=qty.replace(/\s*[,\-—–]?\s*\(?(about\s+)?\d+[\s\-]+(breasts?|thighs?|chops?|fillets?|drumsticks?|wings?)\)?/gi,'');
+  // Remove "X pieces, Y lbs" or "X-Y pieces, Z lbs" format — keep only the weight
+  qty=qty.replace(/^\d+[\-\d]*\s*pieces?,?\s*/gi,'');
+  // Remove "(about X lbs)" when pieces come first — just keep weight portion
+  qty=qty.replace(/\(\s*about\s+([\d.]+\s*lbs?)\s*\)/gi,'$1');
+  // Remove trailing punctuation left over
+  qty=qty.replace(/^[,\s\-—–]+|[,\s\-—–]+$/g,'').trim();
   // Fix fractional eggs — round up
   qty=qty.replace(/(\d*\.?\d+)\s*eggs?/gi,(match,num)=>{
     const whole=Math.ceil(parseFloat(num));
