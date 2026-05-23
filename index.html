@@ -2019,44 +2019,54 @@ function saveCalMealToFavorites(dk,sl){
 async function rebuildFavorite(idx){
   const fav=A.favorites[idx];
   if(!fav)return;
-  const newServings=document.getElementById('fav-sv-'+idx)?.value||'4';
-  const origServings=fav.servings||'4';
-  if(newServings===origServings){
-    // Same serving size — just load it directly
-    A.recipe={...fav,servings:newServings};
-    showPage('builder');return;
-  }
-  // Different serving size — rebuild via AI with scaling instructions
+  const newServings=+document.getElementById('fav-sv-'+idx)?.value||4;
+  const origServings=+(fav.servings||4);
+
+  // Always rebuild through AI to ensure proper scaling
   A.generating=true;
   showPage('builder');
-  const systemPrompt=`You are rebuilding a specific saved recipe at a new serving size. The user loved this meal and wants it again scaled to ${newServings} servings instead of ${origServings}. Rebuild it exactly — same dish, same flavors, same general approach — but scale ALL ingredient quantities correctly for ${newServings} servings. Adjust cooking times if needed for larger batches.
 
-PROTEIN RULES: All proteins are already cooked. Heat through 3-4 min. Never say "cook until done." 1 quart bag = 1.5 lbs cooked.
+  const systemPrompt=`You are rescaling a saved recipe to a new serving size. CRITICAL: You must mathematically scale EVERY ingredient quantity. Do not approximate — calculate exactly.
+
+Scale factor: ${(newServings/origServings).toFixed(3)}x (from ${origServings} to ${newServings} servings)
+
+Rules:
+- Multiply every ingredient by the scale factor
+- Round to practical cooking measurements (nearest 1/4 cup, whole eggs, whole bags)
+- For quart bags: always use whole bags only, round up
+- For spices: scale but cap at reasonable amounts (e.g. don't exceed 2 tbsp salt)
+- Adjust cooking time only if batch size significantly changes (e.g. larger casserole needs more oven time)
+- Keep all protein heating instructions exactly the same — heat through 3-4 min gently
+- Macros should be per serving (same as original since same recipe, just more servings)
 
 RESPOND WITH VALID JSON ONLY:
 {
   "title": "same title",
-  "description": "same description updated for new serving size",
+  "description": "updated description mentioning new serving size",
   "macros": {"cal": 0, "protein": 0, "carbs": 0, "fat": 0},
-  "pull": [{"icon": "🥩", "item": "name", "qty": "scaled quantity", "prepNote": "prep note"}],
-  "steps": ["scaled step 1"],
-  "tip": "tip",
+  "pull": [{"icon": "🥩", "item": "name", "qty": "SCALED quantity", "prepNote": "prep note"}],
+  "steps": ["step with SCALED quantities"],
+  "tip": "tip noting the batch size",
   "groceryFlags": [],
   "cookList": []
 }`;
 
-  const userPrompt=`RECIPE TO REBUILD: ${fav.title}
-ORIGINAL SERVING SIZE: ${origServings} servings
-NEW SERVING SIZE: ${newServings} servings
-SCALE FACTOR: ${(+newServings/+origServings).toFixed(2)}x
+  const userPrompt=`RECIPE: ${fav.title}
+ORIGINAL SERVINGS: ${origServings}
+NEW SERVINGS: ${newServings}
+SCALE FACTOR: ${(newServings/origServings).toFixed(3)}x
 
-ORIGINAL PULL LIST (scale these quantities):
-${fav.pull.map(p=>`${p.item}: ${p.qty}`).join('\n')}
+ORIGINAL INGREDIENTS TO SCALE:
+${(fav.pull||[]).map(p=>`${p.item}: ${p.qty}`).join('\n')}
 
-ORIGINAL STEPS (rewrite with scaled quantities):
-${fav.steps.join('\n')}
+ORIGINAL STEPS TO RESCALE:
+${(fav.steps||[]).map((s,i)=>`${i+1}. ${s}`).join('\n')}
 
-Dietary restrictions: ${A.dietary.length>0?A.dietary.join(', '):'none'}`;
+Original tip: ${fav.tip||''}
+
+Dietary restrictions: ${A.dietary.length>0?A.dietary.join(', '):'none'}
+
+Scale every quantity by ${(newServings/origServings).toFixed(3)}. Show the scaled amounts clearly in every step.`;
 
   try{
     const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemPrompt,userPrompt})});
@@ -2072,6 +2082,7 @@ Dietary restrictions: ${A.dietary.length>0?A.dietary.join(', '):'none'}`;
     showPage('builder');
   }catch(e){
     A.generating=false;
+    console.error('Rebuild error:',e);
     alert('Could not rescale recipe. Try again.');
     showPage('favorites');
   }
