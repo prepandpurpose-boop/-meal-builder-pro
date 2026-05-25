@@ -676,7 +676,7 @@ let A={
   generating:false,stretchingIt:false,recipe:null,stretchResult:null,
   ppSpices:true,buildFromStock:true,kidFriendly:false,buildEmergency:false,grabAndGo:false,includeSoups:true,
   lastBuiltMeal:'',lastBuiltBreakfast:'',lastBuiltProtein:'',
-  favorites:[],
+  favorites:[],homeCanned:[],
   householdSize:4,lastMealType:'Dinner',
   dietary:[],onboarded:false,
   email:'',
@@ -715,6 +715,7 @@ function save(){
       grab_and_go:A.grabAndGo||false,
       include_soups:A.includeSoups!==false,
       favorites:A.favorites||[],
+      home_canned:A.homeCanned||[],
       last_meal_type:A.lastMealType,
       onboarded:A.onboarded,
       week_proteins:A.weekProteins,
@@ -766,6 +767,7 @@ async function loadUserData(email){
     A.grabAndGo=remote.grab_and_go||false;
     A.includeSoups=remote.include_soups!==false;
     A.favorites=remote.favorites||[];
+    A.homeCanned=remote.home_canned||[];
     A.dietaryGoals=remote.dietary_goals||[];
     A.lastMealType=remote.last_meal_type||'Dinner';
     A.onboarded=remote.onboarded||false;
@@ -790,6 +792,7 @@ async function loadUserData(email){
       A.grabAndGo=d.grab_and_go||false;
       A.includeSoups=d.include_soups!==false;
       A.favorites=d.favorites||[];
+      A.homeCanned=d.home_canned||[];
       A.dietaryGoals=d.dietary_goals||[];
       A.lastMealType=d.last_meal_type||'Dinner';
       A.onboarded=d.onboarded||false;
@@ -1022,6 +1025,7 @@ function rFrozenSupports(){
 
 function rCannedDry(){
   const items=A.supports.filter(s=>s.storageTypes.includes('canned')||s.storageTypes.includes('dry')||s.storageTypes.includes('each'));
+  const homeCanned=A.homeCanned||[];
   let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
     <div class="page-title" style="font-size:18px">Canned, Dry & Eggs</div>
     <button class="btn btn-outline btn-sm" onclick="openAddPantrySupport()">+ Add Custom</button>
@@ -1040,7 +1044,37 @@ function rCannedDry(){
       </td>
     </tr>`;
   });
-  html+=`</tbody></table></div>`;
+  html+=`</tbody></table></div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin:24px 0 14px">
+    <div>
+      <div class="page-title" style="font-size:18px">🫙 Home Canned Goods</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Track by jar size — the app calculates volume for recipes</div>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="openAddHomeCanned()">+ Add Jar</button>
+  </div>`;
+
+  if(homeCanned.length===0){
+    html+=`<div class="card card-pad" style="text-align:center;color:var(--text-muted);font-size:13px">No home canned goods logged yet. Hit + Add Jar to start.</div>`;
+  } else {
+    // Volume lookup by jar size in cups
+    const JAR_CUPS={halfPint:1,pint:2,pintHalf:3,quart:4,halfGallon:8};
+    const JAR_LABELS={halfPint:'Half Pint (1 cup)',pint:'Pint (2 cups)',pintHalf:'Pint & Half (3 cups)',quart:'Quart (4 cups)',halfGallon:'Half Gallon (8 cups)'};
+    html+=`<div class="card"><table class="inv-table"><thead><tr><th>Item</th><th>Jars</th><th>Total Volume</th><th></th></tr></thead><tbody>`;
+    homeCanned.forEach((item,i)=>{
+      const cups=(JAR_CUPS[item.jarSize]||2)*item.qty;
+      html+=`<tr>
+        <td><span style="font-size:18px;margin-right:8px">${item.icon||'🫙'}</span><strong>${item.name}</strong><div style="font-size:11px;color:var(--text-muted)">${JAR_LABELS[item.jarSize]||'Pint'}</div></td>
+        <td><span class="qty-badge">${item.qty} jar${item.qty!==1?'s':''}</span></td>
+        <td style="font-size:13px;color:var(--text-muted)">${cups} cups</td>
+        <td style="text-align:right">
+          <button class="btn btn-sm btn-outline" data-idx="${i}" onclick="openEditHomeCanned(+this.dataset.idx)">Update</button>
+          <button class="btn btn-sm btn-ghost" data-idx="${i}" onclick="deleteHomeCanned(+this.dataset.idx)" style="color:#c62828;margin-left:4px">×</button>
+        </td>
+      </tr>`;
+    });
+    html+=`</tbody></table></div>`;
+  }
   return html;
 }
 
@@ -1562,6 +1596,7 @@ Dry: ${dryList.length>0?dryList.join(' | '):'None'}
 Ready to use (each): ${eachList.length>0?eachList.join(' | '):'None'}
 
 FRESH ITEMS (USE FIRST): ${freshList.length>0?freshList.join(' | '):'None'}
+HOME CANNED (use like canned goods — full flavor, already cooked): ${(A.homeCanned||[]).length>0?(A.homeCanned||[]).map(hc=>{const cups={halfPint:1,pint:2,pintHalf:3,quart:4,halfGallon:8}[hc.jarSize]||2;return`${hc.name}: ${hc.qty} jar${hc.qty!==1?'s':''} (${hc.qty*cups} cups total)`;}).join(' | '):'None'}
 FRIDGE: ${fridgeQty.length>0?fridgeQty.join(' | '):'None'}
 PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}
 
@@ -2030,7 +2065,81 @@ function placeOnCal(){
   showPage('calendar');
 }
 
-// ─── FAVORITES ─────────────────────────────────────────────────────────────────
+// ─── HOME CANNED ───────────────────────────────────────────────────────────────
+const HC_ICONS={'tomatoes':'🍅','green beans':'🫘','beans':'🫘','corn':'🌽','peppers':'🫑','salsa':'🍅','soup':'🍲','broth':'🍲','stock':'🍲','fruit':'🍑','peaches':'🍑','pears':'🍐','applesauce':'🍎','jam':'🍓','jelly':'🍓','pickles':'🥒','beets':'🫚','carrots':'🥕','potatoes':'🥔','squash':'🎃'};
+
+function getHCIcon(name){
+  const n=name.toLowerCase();
+  for(const[k,v]of Object.entries(HC_ICONS)){if(n.includes(k))return v;}
+  return '🫙';
+}
+
+function jarSizeOptions(selected='pint'){
+  const sizes=[
+    {val:'halfPint',label:'Half Pint (1 cup)'},
+    {val:'pint',label:'Pint (2 cups)'},
+    {val:'pintHalf',label:'Pint & Half (3 cups)'},
+    {val:'quart',label:'Quart (4 cups)'},
+    {val:'halfGallon',label:'Half Gallon (8 cups)'},
+  ];
+  return sizes.map(s=>`<option value="${s.val}" ${selected===s.val?'selected':''}>${s.label}</option>`).join('');
+}
+
+function openAddHomeCanned(){
+  openModal(`<div class="modal-header"><div class="modal-title">🫙 Add Home Canned Item</div><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="fg"><label class="lbl">Item Name</label><input class="inp" id="hc-name" placeholder="e.g. Green Beans, Tomatoes, Salsa"></div>
+    <div class="r2">
+      <div class="fg"><label class="lbl">Jar Size</label>
+        <select class="sel" id="hc-size">${jarSizeOptions('pint')}</select>
+      </div>
+      <div class="fg"><label class="lbl">Number of Jars</label>
+        <input class="inp" type="number" id="hc-qty" value="1" min="1" max="200">
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" style="margin-top:12px" onclick="saveHomeCanned()">Add to Inventory ✅</button>`);
+}
+
+function saveHomeCanned(){
+  const name=document.getElementById('hc-name')?.value.trim();
+  const jarSize=document.getElementById('hc-size')?.value||'pint';
+  const qty=+document.getElementById('hc-qty')?.value||1;
+  if(!name){alert('Please enter an item name.');return;}
+  A.homeCanned.push({id:Date.now(),name,icon:getHCIcon(name),jarSize,qty});
+  save();closeModal();render();
+}
+
+function openEditHomeCanned(idx){
+  const item=A.homeCanned[idx];
+  if(!item)return;
+  openModal(`<div class="modal-header"><div class="modal-title">🫙 Update ${item.name}</div><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div class="fg"><label class="lbl">Item Name</label><input class="inp" id="hc-name" value="${item.name}"></div>
+    <div class="r2">
+      <div class="fg"><label class="lbl">Jar Size</label>
+        <select class="sel" id="hc-size">${jarSizeOptions(item.jarSize)}</select>
+      </div>
+      <div class="fg"><label class="lbl">Number of Jars</label>
+        <input class="inp" type="number" id="hc-qty" value="${item.qty}" min="0" max="200">
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" style="margin-top:12px" onclick="updateHomeCanned(${idx})">Save Changes ✅</button>
+    <button class="btn btn-danger btn-full" style="margin-top:8px" onclick="deleteHomeCanned(${idx})">Remove Item</button>`);
+}
+
+function updateHomeCanned(idx){
+  const item=A.homeCanned[idx];
+  if(!item)return;
+  item.name=document.getElementById('hc-name')?.value.trim()||item.name;
+  item.icon=getHCIcon(item.name);
+  item.jarSize=document.getElementById('hc-size')?.value||item.jarSize;
+  item.qty=+document.getElementById('hc-qty')?.value||0;
+  save();closeModal();render();
+}
+
+function deleteHomeCanned(idx){
+  if(!confirm('Remove this item from home canned inventory?'))return;
+  A.homeCanned.splice(idx,1);
+  save();closeModal();render();
+}
 function saveToFavorites(){
   if(!A.recipe)return;
   if(A.favorites.find(f=>f.title===A.recipe.title)){
