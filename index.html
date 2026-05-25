@@ -676,7 +676,7 @@ let A={
   generating:false,stretchingIt:false,recipe:null,stretchResult:null,
   ppSpices:true,buildFromStock:true,kidFriendly:false,buildEmergency:false,grabAndGo:false,includeSoups:true,
   lastBuiltMeal:'',lastBuiltBreakfast:'',lastBuiltProtein:'',
-  favorites:[],homeCanned:[],
+  favorites:[],homeCanned:[],grocWindow:1,
   householdSize:4,lastMealType:'Dinner',
   dietary:[],onboarded:false,
   email:'',
@@ -1983,7 +1983,34 @@ function moveMeal(){
 }
 function removeMeal(dateKey,slot){
   if(A.calendarByDate[dateKey])delete A.calendarByDate[dateKey][slot];
+  // Recalculate cook list — remove proteins no longer needed
+  rebuildCookList();
   save();closeModal();render();
+}
+
+function rebuildCookList(){
+  if(!A.cookList||A.cookList.length===0)return;
+  // Get all proteins still on the calendar this week and next 3 weeks
+  const today=new Date();today.setHours(0,0,0,0);
+  const cutoff=new Date(today);cutoff.setDate(today.getDate()+28);
+  const needed={};
+  Object.entries(A.calendarByDate).forEach(([dk,slots])=>{
+    const d=new Date(dk+'T12:00:00');
+    if(d<today||d>cutoff)return;
+    Object.values(slots).forEach(meal=>{
+      if(!meal||!meal.cookList)return;
+      meal.cookList.forEach(c=>{
+        if(!needed[c.protein])needed[c.protein]=0;
+        needed[c.protein]+=c.bags;
+      });
+    });
+  });
+  // Only keep cook list items still needed
+  A.cookList=A.cookList.filter(c=>needed[c.protein]>0).map(c=>({
+    ...c,
+    bags:needed[c.protein]||c.bags,
+    rawLbs:((needed[c.protein]||c.bags)*1.5*1.43).toFixed(1)+' lbs raw'
+  }));
 }
 function openAddToCal(dateKey,slot){
   openModal(`<div class="modal-header"><div class="modal-title">Plan ${slot.charAt(0).toUpperCase()+slot.slice(1)}</div><button class="modal-close" onclick="closeModal()">×</button></div>
@@ -2513,13 +2540,21 @@ function rGrocery(){
   const weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+6);
   const weekLabel=weekStart.toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+weekEnd.toLocaleDateString('en-US',{month:'short',day:'numeric'});
 
-  let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-    <div><div class="page-title" style="font-size:18px">Shopping List</div><div style="font-size:13px;color:var(--text-muted)">Week of ${weekLabel} · ${out.length+low.length} items needed</div></div>
+  const grocWindow=A.grocWindow||1;
+  const windowLabels={1:'This Week',2:'2 Weeks',3:'3 Weeks',4:'This Month'};
+
+  let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div><div class="page-title" style="font-size:18px">Shopping List</div><div style="font-size:13px;color:var(--text-muted)">${out.length+low.length} items needed</div></div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-outline btn-sm" onclick="printGroc()">🖨️ Print</button>
       <button class="btn btn-primary btn-sm" onclick="openAddGroc()">+ Add Item</button>
     </div>
   </div>
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <div style="font-size:12px;font-weight:600;color:var(--text-muted);align-self:center">Shop for:</div>
+    ${[1,2,3,4].map(w=>`<button class="btn btn-sm ${grocWindow===w?'btn-primary':'btn-outline'}" onclick="A.grocWindow=${w};save();render()">${windowLabels[w]}</button>`).join('')}
+  </div>
+  <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Showing meals planned for: <strong>${grocWindow===1?weekLabel:grocWindow===2?'next 2 weeks':grocWindow===3?'next 3 weeks':'next 4 weeks'}</strong></div>
   <div class="alert alert-gold" style="margin-bottom:16px"><span>🏠</span><div><strong>Check long term storage first</strong> — chest freezer, pantry overflow, bulk storage — before purchasing anything. <button onclick="showPage('maintenance')" style="background:none;border:none;color:#6b5100;font-weight:700;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;font-size:13px;padding:0">View Cook List →</button></div></div>`;
 
   if(out.length===0&&low.length===0&&done.length===0){
