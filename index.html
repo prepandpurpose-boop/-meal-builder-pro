@@ -1653,20 +1653,8 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
       A.lastBuiltProtein=proteinFromCook||proteinFromGroc||proteinFromPull||A.lastBuiltProtein;
     }
 
-    // Update cook list — accumulate across builds this session
-    if(recipe.cookList&&recipe.cookList.length>0){
-      const existing=A.cookList||[];
-      recipe.cookList.forEach(newItem=>{
-        const found=existing.find(e=>e.protein===newItem.protein);
-        if(found){
-          found.bags=Math.max(found.bags,newItem.bags);
-          found.rawLbs=newItem.rawLbs;
-        } else {
-          existing.push(newItem);
-        }
-      });
-      A.cookList=existing;
-    }
+    // Store cookList on recipe so placeOnCal can save it with the meal and recalc properly
+    A.recipe.cookList=recipe.cookList||null;
 
     // Auto-add grocery flags
     if(recipe.groceryFlags?.length>0){
@@ -1858,6 +1846,7 @@ function dateKey(d){
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 function rCalendar(){
+  if(A.calViewMode==='month')return rMonthView();
   const weekOffset=A.weekOffset||0;
   const weekStart=getWeekStart(weekOffset);
   const days=[];
@@ -1872,10 +1861,14 @@ function rCalendar(){
 
   let html=`<div class="cal-layout">
     <div style="min-width:260px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <button class="btn btn-outline btn-sm" onclick="A.weekOffset=Math.max(0,(A.weekOffset||0)-1);A.calSelDate=null;render()" ${weekOffset===0?'disabled':''}>‹</button>
         <span style="font-size:13px;font-weight:600;color:var(--green)">${weekLabel}</span>
         <button class="btn btn-outline btn-sm" onclick="A.weekOffset=Math.min(4,(A.weekOffset||0)+1);A.calSelDate=null;render()" ${weekOffset===4?'disabled':''}>›</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <button class="btn btn-outline btn-sm" style="flex:1;font-size:11px" onclick="printWeekCalendar()">🖨️ Print Week</button>
+        <button class="btn btn-outline btn-sm" style="flex:1;font-size:11px" onclick="A.calViewMode='month';render()">📅 Month View</button>
       </div>
       <div class="cal-week">
         ${days.map(d=>{
@@ -1984,36 +1977,54 @@ function moveMeal(){
 }
 function removeMeal(dateKey,slot){
   if(A.calendarByDate[dateKey])delete A.calendarByDate[dateKey][slot];
-  // Recalculate cook list — remove proteins no longer needed
-  rebuildCookList();
+  recalcCookListFromCalendar();
   save();closeModal();render();
 }
 
-function rebuildCookList(){
-  if(!A.cookList||A.cookList.length===0)return;
-  const PROTEIN_KEYWORDS=['chicken','beef','turkey','pork','salmon','tuna','shrimp','sausage','steak','ground','shredded'];
-  // Get all proteins still referenced in any calendar meal's pull list
-  const stillNeeded=new Set();
-  Object.values(A.calendarByDate).forEach(slots=>{
+function recalcCookListFromCalendar(){
+  // Calculate exactly what needs to be cooked based on scheduled meals
+  const needed={};
+  const today=new Date();today.setHours(0,0,0,0);
+  const cutoff=new Date(today);cutoff.setDate(today.getDate()+28);
+  
+  Object.entries(A.calendarByDate).forEach(([dk,slots])=>{
+    const d=new Date(dk+'T12:00:00');
+    if(d<today||d>cutoff)return;
     Object.values(slots).forEach(meal=>{
       if(!meal||!meal.pull)return;
+      // Find proteins in pull list that need to be purchased/cooked
       meal.pull.forEach(p=>{
-        if(!p.item)return;
-        const itemLower=p.item.toLowerCase();
-        PROTEIN_KEYWORDS.forEach(kw=>{if(itemLower.includes(kw))stillNeeded.add(kw);});
+        if(!p.prepNote)return;
+        const needsCooking=p.prepNote.toLowerCase().includes('needs to be cooked')||
+                          p.prepNote.toLowerCase().includes('will need to purchase')||
+                          p.prepNote.toLowerCase().includes('needs to cook');
+        if(!needsCooking)return;
+        // Extract lbs from qty
+        const lbsMatch=(p.qty||'').match(/(\d+(?:\.\d+)?)\s*lbs?/i);
+        if(!lbsMatch)return;
+        const lbs=parseFloat(lbsMatch[1]);
+        const bags=Math.ceil(lbs/1.5);
+        const key=p.item;
+        if(!needed[key])needed[key]=0;
+        needed[key]+=bags;
       });
-      // Also check title
-      if(meal.title){
-        const titleLower=meal.title.toLowerCase();
-        PROTEIN_KEYWORDS.forEach(kw=>{if(titleLower.includes(kw))stillNeeded.add(kw);});
+      // Also check recipe cookList if stored
+      if(meal.cookList){
+        meal.cookList.forEach(c=>{
+          if(!needed[c.protein])needed[c.protein]=0;
+          needed[c.protein]+=c.bags;
+        });
       }
     });
   });
-  // Remove cook list items whose protein is no longer in any calendar meal
-  A.cookList=A.cookList.filter(c=>{
-    const proteinLower=c.protein.toLowerCase();
-    return [...stillNeeded].some(kw=>proteinLower.includes(kw));
-  });
+
+  if(Object.keys(needed).length===0){
+    A.cookList=null;
+    return;
+  }
+  A.cookList=Object.entries(needed).map(([protein,bags])=>({
+    protein,bags,rawLbs:(bags*1.5*1.43).toFixed(1)+' lbs raw'
+  }));
 }
 function openAddToCal(dateKey,slot){
   openModal(`<div class="modal-header"><div class="modal-title">Plan ${slot.charAt(0).toUpperCase()+slot.slice(1)}</div><button class="modal-close" onclick="closeModal()">×</button></div>
@@ -2081,38 +2092,11 @@ function placeOnCal(){
   const existing=A.calendarByDate[dateVal]?.[slot];
   if(existing){alert('⚠️ That slot is already taken. Move or remove it first.');return;}
   if(!A.calendarByDate[dateVal])A.calendarByDate[dateVal]={};
-  A.calendarByDate[dateVal][slot]={...A.recipe};
+  // Store recipe WITH its cookList so recalc can use it
+  A.calendarByDate[dateVal][slot]={...A.recipe,cookList:A.recipe.cookList||null};
   deductInventory(A.recipe.pull);
-
-  // Update cook list — check if recipe needs proteins not in frozen inventory
-  const PROTEIN_KEYWORDS=['chicken','beef','turkey','pork','salmon','tuna','shrimp','sausage','steak','ground','shredded'];
-  if(A.recipe.cookList&&A.recipe.cookList.length>0){
-    // AI provided a cook list — merge it in
-    const existing=A.cookList||[];
-    A.recipe.cookList.forEach(newItem=>{
-      const match=existing.find(e=>e.protein===newItem.protein);
-      if(match){match.bags+=newItem.bags;}
-      else{existing.push({...newItem});}
-    });
-    A.cookList=existing;
-  } else {
-    // Check pull list for proteins flagged as "will need to purchase"
-    (A.recipe.pull||[]).forEach(p=>{
-      if(!p.prepNote||!p.prepNote.toLowerCase().includes('purchase'))return;
-      const isProtein=PROTEIN_KEYWORDS.some(kw=>p.item.toLowerCase().includes(kw));
-      if(!isProtein)return;
-      // Extract lbs from qty
-      const lbsMatch=p.qty.match(/(\d+(?:\.\d+)?)\s*lbs?/i);
-      const lbs=lbsMatch?parseFloat(lbsMatch[1]):1.5;
-      const bags=Math.ceil(lbs/1.5);
-      const existing=A.cookList||[];
-      const match=existing.find(e=>e.protein.toLowerCase()===p.item.toLowerCase());
-      if(match){match.bags+=bags;}
-      else{existing.push({protein:p.item,bags,rawLbs:(bags*1.5*1.43).toFixed(1)+' lbs raw'});}
-      A.cookList=existing;
-    });
-  }
-
+  // Recalculate cook list from all scheduled meals
+  recalcCookListFromCalendar();
   save();
   A.recipe=null;
   const d=new Date(dateVal+'T12:00:00');
@@ -2393,7 +2377,7 @@ function rFavorites(){
     <div class="empty">
       <div style="font-size:48px;margin-bottom:10px">⭐</div>
       <div style="font-size:15px;font-weight:600;margin-bottom:6px">No favorites yet</div>
-      <div style="margin-bottom:16px">When you build a meal you love, hit "Save to Favorites" to keep it here.</div>
+      <div style="margin-bottom:16px">Cook a meal, schedule it on the calendar, open it, and hit Save to Favorites.</div>
       <button class="btn btn-primary" onclick="showPage('builder')">Build a Meal →</button>
     </div>`;
   }
@@ -2410,7 +2394,7 @@ function rFavorites(){
         <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
           <span style="font-size:12px;color:var(--green);font-weight:600">${fav.macros?.cal||'—'} cal</span>
           <span style="font-size:12px;color:var(--text-muted)">${fav.macros?.protein||'—'}g protein</span>
-          <span style="font-size:12px;color:var(--text-muted)">${fav.macros?.carbs||'—'}g carbs</span>
+          <span style="font-size:12px;color:var(--text-muted)">Saved at ${fav.servings||4} servings</span>
         </div>
         <div class="fg">
           <label class="lbl">Rebuild for how many servings?</label>
@@ -2425,6 +2409,142 @@ function rFavorites(){
   });
   html+=`</div>`;
   return html;
+}
+
+function printWeekCalendar(){
+  const weekOffset=A.weekOffset||0;
+  const weekStart=getWeekStart(weekOffset);
+  const days=[];
+  for(let i=0;i<7;i++){const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);days.push(d);}
+  const slots=['breakfast','lunch','dinner','snack'];
+  const slotLabels={breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',snack:'Snack'};
+  const slotIcons={breakfast:'🌅',lunch:'☀️',dinner:'🌙',snack:'🍎'};
+  const weekEnd=days[6];
+  const label=`${days[0].toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${weekEnd.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}`;
+
+  const rows=slots.map(slot=>`
+    <tr>
+      <td style="font-weight:600;white-space:nowrap;padding:8px;border:1px solid #ddd;background:#f9f9f9">${slotIcons[slot]} ${slotLabels[slot]}</td>
+      ${days.map(d=>{
+        const key=dateKey(d);
+        const meal=A.calendarByDate[key]?.[slot];
+        return`<td style="padding:8px;border:1px solid #ddd;font-size:12px;vertical-align:top">${meal?meal.title:''}</td>`;
+      }).join('')}
+    </tr>`).join('');
+
+  const html=`<html><head><title>Meal Plan: ${label}</title>
+  <style>body{font-family:Arial,sans-serif;padding:20px;color:#1a1a1a}h2{color:#1e4d35;margin-bottom:4px}p{color:#666;font-size:13px;margin-bottom:16px}table{width:100%;border-collapse:collapse}th{background:#1e4d35;color:#fff;padding:10px 8px;border:1px solid #ddd;font-size:13px;text-align:center}td{vertical-align:top}@media print{body{padding:10px}}</style>
+  </head><body>
+  <h2>🥗 Meal Plan — ${label}</h2>
+  <p>Prep & Purpose · mealbuilderpro.prepandpurpose.com</p>
+  <table>
+    <thead><tr>
+      <th style="width:80px">Slot</th>
+      ${days.map(d=>`<th>${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getDay()]}<br><span style="font-weight:400;font-size:11px">${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span></th>`).join('')}
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <p style="margin-top:16px;font-size:11px;color:#999">Printed from Meal Builder Pro · Prep & Purpose · Reduce decisions. Install structure.</p>
+  </body></html>`;
+
+  const w=window.open('','_blank');w.document.write(html);w.document.close();w.print();
+}
+
+function rMonthView(){
+  const now=new Date();
+  const monthOffset=A.monthOffset||0;
+  const firstDay=new Date(now.getFullYear(),now.getMonth()+monthOffset,1);
+  const lastDay=new Date(now.getFullYear(),now.getMonth()+monthOffset+1,0);
+  const monthLabel=firstDay.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const startDow=firstDay.getDay();
+  const totalDays=lastDay.getDate();
+  const todayKey=dateKey(new Date());
+
+  let html=`<div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <button class="btn btn-outline btn-sm" onclick="A.monthOffset=(A.monthOffset||0)-1;render()">‹</button>
+      <div style="font-size:16px;font-weight:700;color:var(--green)">${monthLabel}</div>
+      <button class="btn btn-outline btn-sm" onclick="A.monthOffset=(A.monthOffset||0)+1;render()">›</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="btn btn-outline btn-sm" onclick="A.calViewMode='week';render()">← Week View</button>
+      <button class="btn btn-outline btn-sm" onclick="printMonthCalendar()">🖨️ Print Month</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">
+      ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div style="text-align:center;font-size:11px;font-weight:700;color:var(--text-muted);padding:4px">${d}</div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">
+      ${Array(startDow).fill('<div></div>').join('')}
+      ${Array.from({length:totalDays},(_,i)=>{
+        const day=i+1;
+        const d=new Date(firstDay.getFullYear(),firstDay.getMonth(),day);
+        const key=dateKey(d);
+        const meals=A.calendarByDate[key]||{};
+        const mealCount=Object.values(meals).filter(m=>m&&m.title).length;
+        const isToday=key===todayKey;
+        return`<div onclick="A.calViewMode='week';A.weekOffset=Math.max(0,Math.min(4,Math.round((new Date('${key}T12:00:00')-new Date())/604800000)));A.calSelDate='${key}';render()" style="border:1px solid var(--border);border-radius:6px;padding:6px;min-height:70px;cursor:pointer;background:${isToday?'var(--green-light)':'var(--surface)'};border-color:${isToday?'var(--green)':'var(--border)'}">
+          <div style="font-size:12px;font-weight:${isToday?'700':'600'};color:${isToday?'var(--green)':'var(--text)'};margin-bottom:4px">${day}</div>
+          ${Object.entries(meals).filter(([,m])=>m&&m.title).map(([slot,m])=>`<div style="font-size:10px;background:var(--green);color:#fff;border-radius:3px;padding:1px 4px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${m.title}</div>`).join('')}
+          ${mealCount===0?`<div style="font-size:10px;color:var(--text-hint)">tap to plan</div>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+  return html;
+}
+
+function printMonthCalendar(){
+  const now=new Date();
+  const monthOffset=A.monthOffset||0;
+  const firstDay=new Date(now.getFullYear(),now.getMonth()+monthOffset,1);
+  const lastDay=new Date(now.getFullYear(),now.getMonth()+monthOffset+1,0);
+  const monthLabel=firstDay.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const startDow=firstDay.getDay();
+  const totalDays=lastDay.getDate();
+
+  const cells=Array(startDow).fill('<td style="border:1px solid #ddd;height:80px"></td>').join('');
+  const dayCells=Array.from({length:totalDays},(_,i)=>{
+    const day=i+1;
+    const d=new Date(firstDay.getFullYear(),firstDay.getMonth(),day);
+    const key=dateKey(d);
+    const meals=A.calendarByDate[key]||{};
+    const mealLines=Object.entries(meals).filter(([,m])=>m&&m.title)
+      .map(([slot,m])=>`<div style="font-size:9px;margin-top:2px"><strong>${slot.charAt(0).toUpperCase()}:</strong> ${m.title}</div>`).join('');
+    return`<td style="border:1px solid #ddd;height:80px;vertical-align:top;padding:4px"><div style="font-weight:700;font-size:12px">${day}</div>${mealLines}</td>`;
+  }).join('');
+
+  // Wrap in weeks
+  const allCells=cells+dayCells;
+  const totalCells=startDow+totalDays;
+  const rows=Math.ceil(totalCells/7);
+  let tableRows='';
+  for(let r=0;r<rows;r++){
+    const start=r*7;
+    const rowCells=Array.from({length:7},(_,c)=>{
+      const idx=start+c;
+      const day=idx-startDow+1;
+      if(day<1||day>totalDays)return'<td style="border:1px solid #ddd;height:80px;background:#f9f9f9"></td>';
+      const d=new Date(firstDay.getFullYear(),firstDay.getMonth(),day);
+      const key=dateKey(d);
+      const meals=A.calendarByDate[key]||{};
+      const mealLines=Object.entries(meals).filter(([,m])=>m&&m.title)
+        .map(([slot,m])=>`<div style="font-size:9px;margin-top:1px"><b>${slot.charAt(0).toUpperCase()}:</b> ${m.title}</div>`).join('');
+      return`<td style="border:1px solid #ddd;height:80px;vertical-align:top;padding:4px"><div style="font-weight:700;font-size:11px">${day}</div>${mealLines}</td>`;
+    }).join('');
+    tableRows+=`<tr>${rowCells}</tr>`;
+  }
+
+  const html=`<html><head><title>Meal Plan: ${monthLabel}</title>
+  <style>body{font-family:Arial,sans-serif;padding:16px;color:#1a1a1a}h2{color:#1e4d35;margin-bottom:4px}p{color:#666;font-size:12px}table{width:100%;border-collapse:collapse}th{background:#1e4d35;color:#fff;padding:8px;border:1px solid #ddd;font-size:12px}@media print{body{padding:8px}}</style>
+  </head><body>
+  <h2>📅 ${monthLabel} — Meal Plan</h2>
+  <p>Prep & Purpose · mealbuilderpro.prepandpurpose.com</p>
+  <table><thead><tr>${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(d=>`<th>${d}</th>`).join('')}</tr></thead>
+  <tbody>${tableRows}</tbody></table>
+  <p style="margin-top:12px;font-size:10px;color:#999">Printed from Meal Builder Pro · Reduce decisions. Install structure.</p>
+  </body></html>`;
+
+  const w=window.open('','_blank');w.document.write(html);w.document.close();w.print();
 }
 
 function removeFavorite(idx){
