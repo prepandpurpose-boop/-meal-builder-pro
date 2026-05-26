@@ -1990,27 +1990,29 @@ function removeMeal(dateKey,slot){
 
 function rebuildCookList(){
   if(!A.cookList||A.cookList.length===0)return;
-  // Get all proteins still on the calendar this week and next 3 weeks
-  const today=new Date();today.setHours(0,0,0,0);
-  const cutoff=new Date(today);cutoff.setDate(today.getDate()+28);
-  const needed={};
-  Object.entries(A.calendarByDate).forEach(([dk,slots])=>{
-    const d=new Date(dk+'T12:00:00');
-    if(d<today||d>cutoff)return;
+  const PROTEIN_KEYWORDS=['chicken','beef','turkey','pork','salmon','tuna','shrimp','sausage','steak','ground','shredded'];
+  // Get all proteins still referenced in any calendar meal's pull list
+  const stillNeeded=new Set();
+  Object.values(A.calendarByDate).forEach(slots=>{
     Object.values(slots).forEach(meal=>{
-      if(!meal||!meal.cookList)return;
-      meal.cookList.forEach(c=>{
-        if(!needed[c.protein])needed[c.protein]=0;
-        needed[c.protein]+=c.bags;
+      if(!meal||!meal.pull)return;
+      meal.pull.forEach(p=>{
+        if(!p.item)return;
+        const itemLower=p.item.toLowerCase();
+        PROTEIN_KEYWORDS.forEach(kw=>{if(itemLower.includes(kw))stillNeeded.add(kw);});
       });
+      // Also check title
+      if(meal.title){
+        const titleLower=meal.title.toLowerCase();
+        PROTEIN_KEYWORDS.forEach(kw=>{if(titleLower.includes(kw))stillNeeded.add(kw);});
+      }
     });
   });
-  // Only keep cook list items still needed
-  A.cookList=A.cookList.filter(c=>needed[c.protein]>0).map(c=>({
-    ...c,
-    bags:needed[c.protein]||c.bags,
-    rawLbs:((needed[c.protein]||c.bags)*1.5*1.43).toFixed(1)+' lbs raw'
-  }));
+  // Remove cook list items whose protein is no longer in any calendar meal
+  A.cookList=A.cookList.filter(c=>{
+    const proteinLower=c.protein.toLowerCase();
+    return [...stillNeeded].some(kw=>proteinLower.includes(kw));
+  });
 }
 function openAddToCal(dateKey,slot){
   openModal(`<div class="modal-header"><div class="modal-title">Plan ${slot.charAt(0).toUpperCase()+slot.slice(1)}</div><button class="modal-close" onclick="closeModal()">×</button></div>
