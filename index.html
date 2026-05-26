@@ -677,7 +677,7 @@ let A={
   generating:false,stretchingIt:false,recipe:null,stretchResult:null,
   ppSpices:true,buildFromStock:true,kidFriendly:false,buildEmergency:false,grabAndGo:false,includeSoups:true,
   lastBuiltMeal:'',lastBuiltBreakfast:'',lastBuiltProtein:'',
-  favorites:[],homeCanned:[],grocWindow:1,
+  favorites:[],homeCanned:[],grocWindow:1,emergencyCookList:[],
   householdSize:4,lastMealType:'Dinner',
   dietary:[],onboarded:false,
   email:'',
@@ -717,6 +717,7 @@ function save(){
       include_soups:A.includeSoups!==false,
       favorites:A.favorites||[],
       home_canned:A.homeCanned||[],
+      emergency_cook_list:A.emergencyCookList||[],
       last_meal_type:A.lastMealType,
       onboarded:A.onboarded,
       week_proteins:A.weekProteins,
@@ -768,6 +769,7 @@ async function loadUserData(email){
     A.includeSoups=remote.include_soups!==false;
     A.favorites=remote.favorites||[];
     A.homeCanned=remote.home_canned||[];
+    A.emergencyCookList=remote.emergency_cook_list||[];
     A.dietaryGoals=remote.dietary_goals||[];
     A.lastMealType=remote.last_meal_type||'Dinner';
     A.onboarded=remote.onboarded||false;
@@ -793,6 +795,7 @@ async function loadUserData(email){
       A.includeSoups=d.include_soups!==false;
       A.favorites=d.favorites||[];
       A.homeCanned=d.home_canned||[];
+      A.emergencyCookList=d.emergency_cook_list||[];
       A.dietaryGoals=d.dietary_goals||[];
       A.lastMealType=d.last_meal_type||'Dinner';
       A.onboarded=d.onboarded||false;
@@ -2033,18 +2036,16 @@ function recalcCookListFromCalendar(){
     });
   });
 
-  if(Object.keys(needed).length===0){
-    // Keep emergency items — only clear weekly bases
-    A.cookList=(A.cookList||[]).filter(c=>c.type==='emergency')||null;
-    if(A.cookList&&A.cookList.length===0)A.cookList=null;
+  if(Object.keys(needed).length===0&&(A.emergencyCookList||[]).length===0){
+    A.cookList=null;
     return;
   }
-  // Keep emergency items, replace weekly bases
-  const emergencyItems=(A.cookList||[]).filter(c=>c.type==='emergency');
+  // Weekly bases from calendar
   const weeklyItems=Object.entries(needed).map(([protein,bags])=>({
     protein,bags,rawLbs:(bags*1.5*1.43).toFixed(1)+' lbs raw',type:'weekly'
   }));
-  A.cookList=[...weeklyItems,...emergencyItems];
+  // Merge weekly + emergency for display only — emergencyCookList is the source of truth
+  A.cookList=[...weeklyItems,...(A.emergencyCookList||[])];
 }
 function openAddToCal(dateKey,slot){
   openModal(`<div class="modal-header"><div class="modal-title">Plan ${slot.charAt(0).toUpperCase()+slot.slice(1)}</div><button class="modal-close" onclick="closeModal()">×</button></div>
@@ -2103,47 +2104,35 @@ function logEmergencyMeal(){
     recipe:{...A.recipe} // Save full recipe for later viewing
   });
 
-  // Update cook list — check if any proteins need to be cooked (for the emergency meal itself)
+  // Save emergency cook items to separate persistent list
   const PROTEIN_KEYWORDS=['chicken','beef','turkey','pork','salmon','tuna','shrimp','sausage','steak','ground','shredded'];
-  (A.recipe.pull||[]).forEach(p=>{
+  const savedRecipe={...A.recipe};
+  const eCookList=A.emergencyCookList||[];
+
+  (savedRecipe.pull||[]).forEach(p=>{
     if(!p.prepNote)return;
     const needsCooking=p.prepNote.toLowerCase().includes('needs to be cooked')||
-                      p.prepNote.toLowerCase().includes('will need to purchase')||
-                      p.prepNote.toLowerCase().includes('needs to cook');
+                      p.prepNote.toLowerCase().includes('will need to purchase');
     if(!needsCooking)return;
     const isProtein=PROTEIN_KEYWORDS.some(kw=>(p.item||'').toLowerCase().includes(kw));
     if(!isProtein)return;
-    // Extract lbs from qty — double batch so multiply by 2
     const lbsMatch=(p.qty||'').match(/(\d+(?:\.\d+)?)\s*lbs?/i);
     const lbs=lbsMatch?parseFloat(lbsMatch[1])*2:3;
-    const rawLbs=(lbs*1.43).toFixed(1);
-    // For emergency meals — show as lbs needed, not quart bags
-    const existing=A.cookList||[];
-    const match=existing.find(e=>e.protein.toLowerCase()===p.item.toLowerCase());
-    if(match){
-      // Convert existing bags back to lbs and add
-      const existingLbs=match.bags*1.5;
-      const totalLbs=existingLbs+lbs;
-      match.bags=Math.ceil(totalLbs/1.5);
-      match.rawLbs=(match.bags*1.5*1.43).toFixed(1)+' lbs raw';
-    } else {
-      const bags=Math.ceil(lbs/1.5);
-      existing.push({protein:p.item,bags,rawLbs:rawLbs+' lbs raw',note:'For emergency meal — cook and use directly'});
+    const bags=Math.ceil(lbs/1.5);
+    if(!eCookList.find(e=>e.protein===p.item&&e.mealName===savedRecipe.title)){
+      eCookList.push({protein:p.item,bags,rawLbs:(lbs*1.43).toFixed(1)+' lbs raw',type:'emergency',mealName:savedRecipe.title});
     }
-    A.cookList=existing;
   });
 
-  // Also check recipe cookList if AI provided one
-  if(A.recipe.cookList&&A.recipe.cookList.length>0){
-    const existing=A.cookList||[];
-    A.recipe.cookList.forEach(c=>{
-      const bags=c.bags*2; // Double batch for emergency
-      const match=existing.find(e=>e.protein===c.protein);
-      if(match){match.bags+=bags;match.rawLbs=(match.bags*1.5*1.43).toFixed(1)+' lbs raw';}
-      else{existing.push({protein:c.protein,bags,rawLbs:(bags*1.5*1.43).toFixed(1)+' lbs raw'});}
+  if(savedRecipe.cookList&&savedRecipe.cookList.length>0){
+    savedRecipe.cookList.forEach(c=>{
+      const bags=c.bags*2;
+      if(!eCookList.find(e=>e.protein===c.protein&&e.mealName===savedRecipe.title)){
+        eCookList.push({protein:c.protein,bags,rawLbs:(bags*1.5*1.43).toFixed(1)+' lbs raw',type:'emergency',mealName:savedRecipe.title});
+      }
     });
-    A.cookList=existing;
   }
+  A.emergencyCookList=eCookList;
 
   save();
   A.recipe=null;
@@ -3229,8 +3218,12 @@ function closeDrawer(){document.getElementById('drawer').classList.remove('open'
 function openModal(html){document.getElementById('modal-content').innerHTML=html;document.getElementById('modal').classList.add('show');document.getElementById('modal-overlay').classList.add('show');}
 function closeModal(){document.getElementById('modal').classList.remove('show');document.getElementById('modal-overlay').classList.remove('show');}
 function removeCookItem(protein,type){
-  A.cookList=(A.cookList||[]).filter(c=>!(c.protein===protein&&(type?c.type===type:true)));
-  if(A.cookList.length===0)A.cookList=null;
+  if(type==='emergency'){
+    A.emergencyCookList=(A.emergencyCookList||[]).filter(c=>c.protein!==protein);
+  } else {
+    A.cookList=(A.cookList||[]).filter(c=>!(c.protein===protein&&c.type!=='emergency'));
+  }
+  recalcCookListFromCalendar();
   save();render();
 }
 
