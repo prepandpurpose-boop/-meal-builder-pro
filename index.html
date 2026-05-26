@@ -2083,6 +2083,36 @@ function placeOnCal(){
   if(!A.calendarByDate[dateVal])A.calendarByDate[dateVal]={};
   A.calendarByDate[dateVal][slot]={...A.recipe};
   deductInventory(A.recipe.pull);
+
+  // Update cook list — check if recipe needs proteins not in frozen inventory
+  const PROTEIN_KEYWORDS=['chicken','beef','turkey','pork','salmon','tuna','shrimp','sausage','steak','ground','shredded'];
+  if(A.recipe.cookList&&A.recipe.cookList.length>0){
+    // AI provided a cook list — merge it in
+    const existing=A.cookList||[];
+    A.recipe.cookList.forEach(newItem=>{
+      const match=existing.find(e=>e.protein===newItem.protein);
+      if(match){match.bags+=newItem.bags;}
+      else{existing.push({...newItem});}
+    });
+    A.cookList=existing;
+  } else {
+    // Check pull list for proteins flagged as "will need to purchase"
+    (A.recipe.pull||[]).forEach(p=>{
+      if(!p.prepNote||!p.prepNote.toLowerCase().includes('purchase'))return;
+      const isProtein=PROTEIN_KEYWORDS.some(kw=>p.item.toLowerCase().includes(kw));
+      if(!isProtein)return;
+      // Extract lbs from qty
+      const lbsMatch=p.qty.match(/(\d+(?:\.\d+)?)\s*lbs?/i);
+      const lbs=lbsMatch?parseFloat(lbsMatch[1]):1.5;
+      const bags=Math.ceil(lbs/1.5);
+      const existing=A.cookList||[];
+      const match=existing.find(e=>e.protein.toLowerCase()===p.item.toLowerCase());
+      if(match){match.bags+=bags;}
+      else{existing.push({protein:p.item,bags,rawLbs:(bags*1.5*1.43).toFixed(1)+' lbs raw'});}
+      A.cookList=existing;
+    });
+  }
+
   save();
   A.recipe=null;
   const d=new Date(dateVal+'T12:00:00');
@@ -2444,7 +2474,7 @@ function rMaintenance(){
             <div class="cook-item-name">${c.protein}</div>
             <div class="cook-item-detail">Cook ${rawLbs} lbs raw → Yields ${c.bags} quart bags (${cookedLbs} lbs cooked)</div>
           </div>
-          <button class="btn btn-sm btn-ghost" data-idx="${i}" onclick="removeCookItem(+this.dataset.idx)" style="color:#c62828;font-size:18px;padding:4px 8px">×</button>
+          <button class="btn btn-sm btn-ghost" onclick="removeCookItem('${c.protein}')" style="color:#c62828;font-size:18px;padding:4px 8px" title="Remove from cook list">×</button>
         </div>`;
       }).join('')}
     </div>
@@ -2923,10 +2953,9 @@ function openDrawer(html){document.getElementById('db').innerHTML=html;document.
 function closeDrawer(){document.getElementById('drawer').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
 function openModal(html){document.getElementById('modal-content').innerHTML=html;document.getElementById('modal').classList.add('show');document.getElementById('modal-overlay').classList.add('show');}
 function closeModal(){document.getElementById('modal').classList.remove('show');document.getElementById('modal-overlay').classList.remove('show');}
-function removeCookItem(idx){
-  const filtered=A.cookList.filter(c=>c.bags>0);
-  filtered.splice(idx,1);
-  A.cookList=filtered.length>0?filtered:null;
+function removeCookItem(protein){
+  A.cookList=(A.cookList||[]).filter(c=>c.protein!==protein);
+  if(A.cookList.length===0)A.cookList=null;
   save();render();
 }
 
