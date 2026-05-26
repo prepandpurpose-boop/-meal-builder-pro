@@ -2076,10 +2076,43 @@ function logEmergencyMeal(){
   deductInventory(A.recipe.pull);
   // Log to emergency meals
   A.emergency.push({id:Date.now(),name:A.recipe.title,dateMade:dateVal,qty});
+
+  // Update cook list — check if any proteins need to be cooked (double batch)
+  const PROTEIN_KEYWORDS=['chicken','beef','turkey','pork','salmon','tuna','shrimp','sausage','steak','ground','shredded'];
+  (A.recipe.pull||[]).forEach(p=>{
+    if(!p.prepNote)return;
+    const needsCooking=p.prepNote.toLowerCase().includes('needs to be cooked')||
+                      p.prepNote.toLowerCase().includes('will need to purchase')||
+                      p.prepNote.toLowerCase().includes('needs to cook');
+    if(!needsCooking)return;
+    const isProtein=PROTEIN_KEYWORDS.some(kw=>(p.item||'').toLowerCase().includes(kw));
+    if(!isProtein)return;
+    const lbsMatch=(p.qty||'').match(/(\d+(?:\.\d+)?)\s*lbs?/i);
+    const lbs=lbsMatch?parseFloat(lbsMatch[1]):1.5;
+    // Double batch — multiply by 2
+    const bags=Math.ceil((lbs*2)/1.5);
+    const existing=A.cookList||[];
+    const match=existing.find(e=>e.protein.toLowerCase()===p.item.toLowerCase());
+    if(match){match.bags+=bags;}
+    else{existing.push({protein:p.item,bags,rawLbs:(bags*1.5*1.43).toFixed(1)+' lbs raw'});}
+    A.cookList=existing;
+  });
+
+  // Also check recipe cookList if AI provided one
+  if(A.recipe.cookList&&A.recipe.cookList.length>0){
+    const existing=A.cookList||[];
+    A.recipe.cookList.forEach(c=>{
+      const bags=c.bags*2; // Double batch for emergency
+      const match=existing.find(e=>e.protein===c.protein);
+      if(match){match.bags+=bags;match.rawLbs=(match.bags*1.5*1.43).toFixed(1)+' lbs raw';}
+      else{existing.push({protein:c.protein,bags,rawLbs:(bags*1.5*1.43).toFixed(1)+' lbs raw'});}
+    });
+    A.cookList=existing;
+  }
+
   save();
   A.recipe=null;
   A.buildEmergency=false;
-  // Go to emergency inventory to show the logged meal
   A.invTab='emergency';
   showPage('inventory');
   alert('✅ Emergency meals logged! Inventory deducted for 2 batches.');
