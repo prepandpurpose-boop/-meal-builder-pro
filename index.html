@@ -863,6 +863,8 @@ function showPage(p){
   const nb=document.getElementById('nav-'+p);if(nb)nb.classList.add('active');
   document.getElementById('topbar-title').textContent=PAGE_TITLES[p]||p;
   document.getElementById('topbar-actions').innerHTML='';
+  // Always recalc cook list when visiting maintenance day
+  if(p==='maintenance')recalcCookListFromCalendar();
   render();
   document.getElementById('sidebar').classList.remove('open');
 }
@@ -1109,11 +1111,13 @@ function rEmergency(){
         <td>
           <div style="font-weight:600">${meal.name}</div>
           ${i===0?`<span class="badge badge-red" style="font-size:10px">Pull First</span>`:''}
-          ${hasRecipe?`<div style="display:flex;gap:6px;margin-top:6px">
-            <button class="btn btn-sm btn-outline" onclick="viewEmergencyRecipe(${meal.id})">📋 View Recipe</button>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+            ${hasRecipe?`
+            <button class="btn btn-sm btn-outline" onclick="viewEmergencyRecipe(${meal.id})">📋 Recipe</button>
             <button class="btn btn-sm btn-outline" onclick="printEmergencyRecipe(${meal.id})">🖨️ Print</button>
             <button class="btn btn-sm btn-outline" style="color:#b07800" onclick="saveEmergencyToFavorites(${meal.id})">⭐ Save</button>
-          </div>`:''}
+            `:`<span style="font-size:11px;color:var(--text-hint)">Recipe not saved — rebuild in Meal Builder to attach</span>`}
+          </div>
         </td>
         <td style="font-size:13px;color:var(--text-muted)">${meal.dateMade}</td>
         <td><span class="qty-badge">${meal.qty} gallon bag${meal.qty>1?'s':''}</span></td>
@@ -2672,15 +2676,19 @@ function rMaintenance(){
     // Emergency Meals section
     if(emergencyItems.length>0){
       html+=`<div class="cook-list-card" style="margin-bottom:12px;background:linear-gradient(135deg,#7b1a1a 0%,#a32020 100%)">
-        <div class="cook-list-title">🚨 Emergency Meals — Cook & Use Directly</div>
-        <div class="cook-list-sub">Cook · Season · Go straight into the gallon bag meal — do NOT bag in quart bags</div>
+        <div class="cook-list-title">🚨 Emergency Meal Builds</div>
+        <div class="cook-list-sub">These proteins are needed for your emergency gallon bag meals</div>
         ${emergencyItems.map(c=>{
           const rawLbs=(c.bags*1.5*1.43).toFixed(1);
           const cookedLbs=(c.bags*1.5).toFixed(1);
           return`<div class="cook-item" style="display:flex;align-items:center;justify-content:space-between">
             <div>
               <div class="cook-item-name">${c.protein}</div>
-              <div class="cook-item-detail">Cook ${rawLbs} lbs raw (${cookedLbs} lbs cooked) → For: ${c.mealName||'Emergency Meal'}</div>
+              <div class="cook-item-detail">${rawLbs} lbs raw → ${cookedLbs} lbs cooked · For: ${c.mealName||'Emergency Meal'}</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:6px;line-height:1.5">
+                <strong>Building today:</strong> Set aside ${cookedLbs} lbs cooked before bagging the rest into quart bags<br>
+                <strong>Building later:</strong> Pull ${c.bags} quart bag${c.bags!==1?'s':''} from freezer when ready to assemble
+              </div>
             </div>
             <button class="btn btn-sm btn-ghost" onclick="removeCookItem('${c.protein}','emergency')" style="color:#ffaaaa;font-size:18px;padding:4px 8px" title="Remove">×</button>
           </div>`;
