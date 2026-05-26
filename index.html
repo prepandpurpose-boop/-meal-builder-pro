@@ -1102,8 +1102,17 @@ function rEmergency(){
   else{
     html+=`<div class="card"><table class="inv-table"><thead><tr><th>Meal</th><th>Date Made</th><th>Bags</th><th></th></tr></thead><tbody>`;
     sorted.forEach((meal,i)=>{
+      const hasRecipe=meal.recipe&&meal.recipe.title;
       html+=`<tr>
-        <td><div style="font-weight:600">${meal.name}</div>${i===0?`<span class="badge badge-red" style="font-size:10px">Pull First</span>`:''}</td>
+        <td>
+          <div style="font-weight:600">${meal.name}</div>
+          ${i===0?`<span class="badge badge-red" style="font-size:10px">Pull First</span>`:''}
+          ${hasRecipe?`<div style="display:flex;gap:6px;margin-top:6px">
+            <button class="btn btn-sm btn-outline" onclick="viewEmergencyRecipe(${meal.id})">📋 View Recipe</button>
+            <button class="btn btn-sm btn-outline" onclick="printEmergencyRecipe(${meal.id})">🖨️ Print</button>
+            <button class="btn btn-sm btn-outline" style="color:#b07800" onclick="saveEmergencyToFavorites(${meal.id})">⭐ Save</button>
+          </div>`:''}
+        </td>
         <td style="font-size:13px;color:var(--text-muted)">${meal.dateMade}</td>
         <td><span class="qty-badge">${meal.qty} gallon bag${meal.qty>1?'s':''}</span></td>
         <td style="text-align:right">
@@ -2075,9 +2084,15 @@ function logEmergencyMeal(){
   deductInventory(A.recipe.pull);
   deductInventory(A.recipe.pull);
   // Log to emergency meals
-  A.emergency.push({id:Date.now(),name:A.recipe.title,dateMade:dateVal,qty});
+  A.emergency.push({
+    id:Date.now(),
+    name:A.recipe.title,
+    dateMade:dateVal,
+    qty,
+    recipe:{...A.recipe} // Save full recipe for later viewing
+  });
 
-  // Update cook list — check if any proteins need to be cooked (double batch)
+  // Update cook list — check if any proteins need to be cooked (for the emergency meal itself)
   const PROTEIN_KEYWORDS=['chicken','beef','turkey','pork','salmon','tuna','shrimp','sausage','steak','ground','shredded'];
   (A.recipe.pull||[]).forEach(p=>{
     if(!p.prepNote)return;
@@ -2087,14 +2102,23 @@ function logEmergencyMeal(){
     if(!needsCooking)return;
     const isProtein=PROTEIN_KEYWORDS.some(kw=>(p.item||'').toLowerCase().includes(kw));
     if(!isProtein)return;
+    // Extract lbs from qty — double batch so multiply by 2
     const lbsMatch=(p.qty||'').match(/(\d+(?:\.\d+)?)\s*lbs?/i);
-    const lbs=lbsMatch?parseFloat(lbsMatch[1]):1.5;
-    // Double batch — multiply by 2
-    const bags=Math.ceil((lbs*2)/1.5);
+    const lbs=lbsMatch?parseFloat(lbsMatch[1])*2:3;
+    const rawLbs=(lbs*1.43).toFixed(1);
+    // For emergency meals — show as lbs needed, not quart bags
     const existing=A.cookList||[];
     const match=existing.find(e=>e.protein.toLowerCase()===p.item.toLowerCase());
-    if(match){match.bags+=bags;}
-    else{existing.push({protein:p.item,bags,rawLbs:(bags*1.5*1.43).toFixed(1)+' lbs raw'});}
+    if(match){
+      // Convert existing bags back to lbs and add
+      const existingLbs=match.bags*1.5;
+      const totalLbs=existingLbs+lbs;
+      match.bags=Math.ceil(totalLbs/1.5);
+      match.rawLbs=(match.bags*1.5*1.43).toFixed(1)+' lbs raw';
+    } else {
+      const bags=Math.ceil(lbs/1.5);
+      existing.push({protein:p.item,bags,rawLbs:rawLbs+' lbs raw',note:'For emergency meal — cook and use directly'});
+    }
     A.cookList=existing;
   });
 
@@ -2626,6 +2650,7 @@ function rMaintenance(){
           <div>
             <div class="cook-item-name">${c.protein}</div>
             <div class="cook-item-detail">Cook ${rawLbs} lbs raw → Yields ${c.bags} quart bags (${cookedLbs} lbs cooked)</div>
+            ${c.note?`<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:2px">${c.note}</div>`:''}
           </div>
           <button class="btn btn-sm btn-ghost" onclick="removeCookItem('${c.protein}')" style="color:#c62828;font-size:18px;padding:4px 8px" title="Remove from cook list">×</button>
         </div>`;
@@ -2916,6 +2941,59 @@ function saveEmergency(){
   const name=document.getElementById('em-name')?.value.trim();if(!name)return;
   A.emergency.push({id:Date.now(),name,dateMade:document.getElementById('em-date').value,qty:+document.getElementById('em-qty').value||2});
   save();closeModal();render();
+}
+function viewEmergencyRecipe(id){
+  const meal=A.emergency.find(m=>m.id===id);
+  if(!meal||!meal.recipe){alert('No recipe saved for this meal.');return;}
+  const r=meal.recipe;
+  const stockKeywords=['quart bag','frozen bag','cans','1 can','2 cans','3 cans','lbs cooked','bag ='];
+  const fromStock=(r.pull||[]).filter(p=>stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
+  const fromKitchen=(r.pull||[]).filter(p=>!stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
+
+  const stockRows=fromStock.map(p=>'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><div><div style="font-size:14px;font-weight:600">'+p.item+'</div><div style="font-size:12px;color:var(--text-muted)">'+(p.prepNote||'')+'</div></div><span style="font-size:13px;font-weight:600;color:var(--green)">'+p.qty+'</span></div>').join('');
+  const kitchenRows=fromKitchen.map(p=>'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><div><div style="font-size:14px;font-weight:600">'+p.item+'</div><div style="font-size:12px;color:var(--text-muted)">'+(p.prepNote||'')+'</div></div><span style="font-size:13px;font-weight:600">'+p.qty+'</span></div>').join('');
+  const stepRows=(r.steps||[]).map((s,i)=>'<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)"><div style="background:var(--green);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">'+(i+1)+'</div><div style="font-size:14px;line-height:1.5">'+s+'</div></div>').join('');
+
+  let content='<div class="modal-header"><div class="modal-title">🚨 '+r.title+'</div><button class="modal-close" onclick="closeModal()">×</button></div>';
+  content+='<div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">'+(r.description||'')+'</div>';
+  content+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding:12px;background:var(--surface-alt);border-radius:8px"><span><strong>'+(r.macros&&r.macros.cal||'—')+'</strong> cal</span><span><strong>'+(r.macros&&r.macros.protein||'—')+'g</strong> protein</span><span><strong>'+(r.macros&&r.macros.carbs||'—')+'g</strong> carbs</span><span><strong>'+(r.macros&&r.macros.fat||'—')+'g</strong> fat</span></div>';
+  if(fromStock.length>0)content+='<div style="font-weight:700;font-size:12px;color:var(--green);margin-bottom:8px">❄️ FROM YOUR STOCK</div>'+stockRows;
+  if(fromKitchen.length>0)content+='<div style="font-weight:700;font-size:12px;color:var(--text-muted);margin:12px 0 8px">🧂 FROM YOUR KITCHEN</div>'+kitchenRows;
+  content+='<div style="font-weight:700;font-size:12px;color:var(--text-muted);margin:12px 0 8px">🥄 STEPS</div>'+stepRows;
+  if(r.tip)content+='<div style="margin-top:12px;padding:10px;background:#fffbee;border-left:3px solid #c8864a;font-size:13px;color:#6b5100">'+r.tip+'</div>';
+  content+='<div style="display:flex;gap:8px;margin-top:16px"><button class="btn btn-outline btn-full" onclick="printEmergencyRecipe('+id+')">🖨️ Print Recipe</button><button class="btn btn-outline btn-full" style="color:#b07800" onclick="saveEmergencyToFavorites('+id+');closeModal()">⭐ Save to Favorites</button></div>';
+  openModal(content);
+}
+
+function printEmergencyRecipe(id){
+  const meal=A.emergency.find(m=>m.id===id);
+  if(!meal?.recipe){alert('No recipe saved for this meal.');return;}
+  const r=meal.recipe;
+  const html=`<html><head><title>${r.title}</title>
+  <style>body{font-family:Arial,sans-serif;padding:20px;max-width:600px;color:#1a1a1a}h2{color:#1e4d35}h3{color:#1e4d35;font-size:14px;margin:16px 0 8px}.row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee;font-size:13px}.macros{display:flex;gap:16px;background:#f5f5f5;padding:10px;border-radius:6px;margin:12px 0}.step{display:flex;gap:10px;margin-bottom:8px;font-size:13px}.num{background:#1e4d35;color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}.tip{background:#fffbee;border-left:3px solid #c8864a;padding:8px;font-size:12px;margin-top:12px}@media print{body{padding:10px}}</style>
+  </head><body>
+  <h2>🚨 ${r.title}</h2>
+  <p style="color:#666;font-size:13px">${r.description||''} · Logged ${meal.dateMade} · ${meal.qty} gallon bags</p>
+  <div class="macros"><span><strong>${r.macros?.cal}</strong> cal</span><span><strong>${r.macros?.protein}g</strong> protein</span><span><strong>${r.macros?.carbs}g</strong> carbs</span><span><strong>${r.macros?.fat}g</strong> fat</span></div>
+  <h3>PULL LIST</h3>
+  ${(r.pull||[]).map(p=>`<div class="row"><div><strong>${p.item}</strong>${p.prepNote?` — ${p.prepNote}`:''}</div><span>${p.qty}</span></div>`).join('')}
+  <h3>STEPS</h3>
+  ${(r.steps||[]).map((s,i)=>`<div class="step"><div class="num">${i+1}</div><div>${s}</div></div>`).join('')}
+  ${r.tip?`<div class="tip">${r.tip}</div>`:''}
+  <p style="margin-top:20px;font-size:11px;color:#999">Prep & Purpose · mealbuilderpro.prepandpurpose.com · Reduce decisions. Install structure.</p>
+  </body></html>`;
+  const w=window.open('','_blank');w.document.write(html);w.document.close();w.print();
+}
+
+function saveEmergencyToFavorites(id){
+  const meal=A.emergency.find(m=>m.id===id);
+  if(!meal?.recipe){alert('No recipe saved for this meal.');return;}
+  if(A.favorites.find(f=>f.title===meal.recipe.title)){
+    alert('This meal is already in your favorites.');return;
+  }
+  A.favorites.push({...meal.recipe,savedAt:new Date().toISOString()});
+  save();
+  alert('⭐ '+meal.recipe.title+' saved to Favorites!');
 }
 function openEditEmergency(id){
   const meal=A.emergency.find(m=>m.id===id);if(!meal)return;
