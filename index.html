@@ -1282,7 +1282,7 @@ function rBuilderForm(){
           </div>
           <div class="fg"><label class="lbl">Flavor</label>
             <select class="sel" id="fl">
-              <option>Surprise Me</option><option>Classic American</option><option>Comfort Food</option><option>Southern & Soul Food</option><option>Tex-Mex</option><option>Italian</option><option>BBQ & Smoky</option><option>Cajun</option><option>Asian-Style</option><option>Mediterranean</option><option>Caribbean</option>
+              <option>Surprise Me</option><option>Classic American</option><option>Comfort Food</option><option>Southern & Soul Food</option><option>Tex-Mex</option><option>Mexican</option><option>Italian</option><option>BBQ & Smoky</option><option>Cajun</option><option>Asian-Style</option><option>Mediterranean</option><option>Caribbean</option>
             </select>
           </div>
         </div>
@@ -1498,7 +1498,8 @@ FLAVOR DIRECTION GUIDE — build dishes that genuinely represent these cuisines:
 - Classic American: meat and potatoes, casseroles, pot roast, meatloaf, chicken and gravy, simple proteins with a starch and vegetable
 - Comfort Food: creamy, cheesy, hearty — mac and cheese, pot pie, creamy pasta, smothered chicken, loaded anything
 - Southern & Soul Food: fried concepts (use oil), gravy, cornbread, collard greens, black-eyed peas, smothered pork chops, grits, biscuits
-- Tex-Mex: cumin, chili powder, cheese, tortillas, salsa, beans, ground beef or chicken
+- Tex-Mex: cumin, chili powder, cheese, tortillas, salsa, beans, ground beef or chicken — American-style Mexican food
+- Mexican: authentic Mexican flavors — chile verde, carnitas, barbacoa, pozole, enchiladas verdes, mole, al pastor, caldo, tamale-inspired dishes, epazote, dried chiles, tomatillos, Mexican oregano, cotija cheese, crema. Deeper and more complex than Tex-Mex.
 - Italian: tomato sauce, pasta, olive oil, basil, oregano, parmesan, garlic
 - BBQ & Smoky: smoked paprika, chipotle, BBQ sauce, slow-cooked concepts, smoky rubs
 - Cajun: holy trinity (onion, celery, bell pepper), bold spice, Louisiana-style, rice
@@ -2435,14 +2436,15 @@ function rMaintenance(){
     html+=`<div class="cook-list-card" style="margin-bottom:20px">
       <div class="cook-list-title">🍳 What to Cook This Week</div>
       <div class="cook-list-sub">Cook on maintenance day · Cool completely · Bag in quart bags · Label and freeze</div>
-      ${cookList.map(c=>{
+      ${cookList.filter(c=>c.bags>0).map((c,i)=>{
         const rawLbs=(c.bags*1.5*1.43).toFixed(1);
         const cookedLbs=(c.bags*1.5).toFixed(1);
-        return`<div class="cook-item">
+        return`<div class="cook-item" style="display:flex;align-items:center;justify-content:space-between">
           <div>
             <div class="cook-item-name">${c.protein}</div>
             <div class="cook-item-detail">Cook ${rawLbs} lbs raw → Yields ${c.bags} quart bags (${cookedLbs} lbs cooked)</div>
           </div>
+          <button class="btn btn-sm btn-ghost" data-idx="${i}" onclick="removeCookItem(+this.dataset.idx)" style="color:#c62828;font-size:18px;padding:4px 8px">×</button>
         </div>`;
       }).join('')}
     </div>
@@ -2453,7 +2455,7 @@ function rMaintenance(){
 
     html+=`<div class="card card-pad" style="margin-bottom:20px">
       <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:12px">🛒 Add to Grocery List</div>
-      ${cookList.map(c=>{
+      ${cookList.filter(c=>c.bags>0).map(c=>{
         const rawLbs=(c.bags*1.5*1.43).toFixed(1);
         const cookedLbs=(c.bags*1.5).toFixed(1);
         const onList=A.grocery.find(g=>g.name.toLowerCase().includes(c.protein.toLowerCase()));
@@ -2921,6 +2923,13 @@ function openDrawer(html){document.getElementById('db').innerHTML=html;document.
 function closeDrawer(){document.getElementById('drawer').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
 function openModal(html){document.getElementById('modal-content').innerHTML=html;document.getElementById('modal').classList.add('show');document.getElementById('modal-overlay').classList.add('show');}
 function closeModal(){document.getElementById('modal').classList.remove('show');document.getElementById('modal-overlay').classList.remove('show');}
+function removeCookItem(idx){
+  const filtered=A.cookList.filter(c=>c.bags>0);
+  filtered.splice(idx,1);
+  A.cookList=filtered.length>0?filtered:null;
+  save();render();
+}
+
 function addProteinToGroc(name,rawLbs){
   if(!A.grocery.find(g=>g.name.toLowerCase().includes(name.toLowerCase()))){
     A.grocery.push({id:Date.now(),name,qty:rawLbs+' lbs raw',urgency:'out',done:false,reason:'Maintenance day cook — needed for the week'});
