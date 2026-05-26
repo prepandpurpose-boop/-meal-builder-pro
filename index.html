@@ -1999,38 +1999,56 @@ function removeMeal(dateKey,slot){
   save();closeModal();render();
 }
 
+function getCookMethod(form){
+  switch(form){
+    case 'shredded': return'Roast or simmer whole, then shred with two forks while hot';
+    case 'pulled': return'Low and slow braise 3-4 hours, pull apart with forks';
+    case 'browned & drained': return'Brown in skillet over medium-high heat, drain fat completely';
+    case 'browned & crumbled': return'Brown in skillet, crumble as it cooks, drain fat';
+    case 'diced': return'Cook through in skillet or oven, cool, dice into 1/2 inch pieces';
+    case 'sliced': return'Cook through, rest 5 min, slice thin against the grain';
+    default: return'Cook fully through, cool completely before bagging';
+  }
+}
+
 function recalcCookListFromCalendar(){
   // Calculate exactly what needs to be cooked based on scheduled meals
-  const needed={};
+  const needed={};// protein -> {bags, form, cookMethod}
   const today=new Date();today.setHours(0,0,0,0);
   const cutoff=new Date(today);cutoff.setDate(today.getDate()+28);
-  
+
   Object.entries(A.calendarByDate).forEach(([dk,slots])=>{
     const d=new Date(dk+'T12:00:00');
     if(d<today||d>cutoff)return;
     Object.values(slots).forEach(meal=>{
       if(!meal||!meal.pull)return;
-      // Find proteins in pull list that need to be purchased/cooked
       meal.pull.forEach(p=>{
         if(!p.prepNote)return;
         const needsCooking=p.prepNote.toLowerCase().includes('needs to be cooked')||
                           p.prepNote.toLowerCase().includes('will need to purchase')||
                           p.prepNote.toLowerCase().includes('needs to cook');
         if(!needsCooking)return;
-        // Extract lbs from qty
         const lbsMatch=(p.qty||'').match(/(\d+(?:\.\d+)?)\s*lbs?/i);
         if(!lbsMatch)return;
         const lbs=parseFloat(lbsMatch[1]);
         const bags=Math.ceil(lbs/1.5);
         const key=p.item;
-        if(!needed[key])needed[key]=0;
-        needed[key]+=bags;
+        // Detect form from item name
+        const itemL=(p.item||'').toLowerCase();
+        let form='cooked';
+        if(itemL.includes('shredded'))form='shredded';
+        else if(itemL.includes('ground'))form='browned & drained';
+        else if(itemL.includes('pulled'))form='pulled';
+        else if(itemL.includes('diced'))form='diced';
+        else if(itemL.includes('sliced'))form='sliced';
+        else if(itemL.includes('sausage'))form='browned & crumbled';
+        if(!needed[key]){needed[key]={bags:0,form,cookMethod:getCookMethod(form)};}
+        needed[key].bags+=bags;
       });
-      // Also check recipe cookList if stored
       if(meal.cookList){
         meal.cookList.forEach(c=>{
-          if(!needed[c.protein])needed[c.protein]=0;
-          needed[c.protein]+=c.bags;
+          if(!needed[c.protein]){needed[c.protein]={bags:0,form:'cooked',cookMethod:'Cook fully'};}
+          needed[c.protein].bags+=c.bags;
         });
       }
     });
@@ -2041,8 +2059,14 @@ function recalcCookListFromCalendar(){
     return;
   }
   // Weekly bases from calendar
-  const weeklyItems=Object.entries(needed).map(([protein,bags])=>({
-    protein,bags,rawLbs:(bags*1.5*1.43).toFixed(1)+' lbs raw',type:'weekly'
+  const weeklyItems=Object.entries(needed).map(([protein,data])=>({
+    protein,
+    bags:data.bags,
+    rawLbs:(data.bags*1.5*1.43).toFixed(1)+' lbs raw',
+    cookedLbs:(data.bags*1.5).toFixed(1),
+    form:data.form||'cooked',
+    cookMethod:data.cookMethod||'Cook fully',
+    type:'weekly'
   }));
   // Merge weekly + emergency for display only — emergencyCookList is the source of truth
   A.cookList=[...weeklyItems,...(A.emergencyCookList||[])];
@@ -2643,70 +2667,92 @@ function rMaintenance(){
     const weeklyBases=cookList.filter(c=>c.bags>0&&c.type!=='emergency');
     const emergencyItems=cookList.filter(c=>c.bags>0&&c.type==='emergency');
 
-    // Weekly Bases section
+    // ── WEEKLY BASES ──────────────────────────────────────────────────
     if(weeklyBases.length>0){
       html+=`<div class="cook-list-card" style="margin-bottom:12px">
-        <div class="cook-list-title">🍳 Weekly Bases — Quart Bags</div>
-        <div class="cook-list-sub">Cook · Cool completely · Bag in quart bags · Label and freeze</div>
+        <div class="cook-list-title">🍳 Weekly Bases — What to Cook</div>
+        <div class="cook-list-sub">Cook on maintenance day · Cool completely · Bag in quart bags · Label and freeze</div>
         ${weeklyBases.map(c=>{
-          const rawLbs=(c.bags*1.5*1.43).toFixed(1);
-          const cookedLbs=(c.bags*1.5).toFixed(1);
-          return`<div class="cook-item" style="display:flex;align-items:center;justify-content:space-between">
-            <div>
-              <div class="cook-item-name">${c.protein}</div>
-              <div class="cook-item-detail">Cook ${rawLbs} lbs raw → Yields ${c.bags} quart bags (${cookedLbs} lbs cooked)</div>
+          const rawLbs=c.rawLbs||(c.bags*1.5*1.43).toFixed(1)+' lbs raw';
+          const cookedLbs=c.cookedLbs||(c.bags*1.5).toFixed(1);
+          const form=c.form||'cooked';
+          const cookMethod=c.cookMethod||getCookMethod(form);
+          const rawNum=parseFloat(rawLbs);
+          return`<div class="cook-item" style="border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:14px;margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div style="flex:1">
+                <div class="cook-item-name">${c.protein}</div>
+                <div class="cook-item-detail" style="margin-bottom:8px">Buy <strong>${rawNum.toFixed(1)} lbs raw</strong> → Cook → Yields <strong>${c.bags} quart bags</strong> (${cookedLbs} lbs cooked)</div>
+                <div style="font-size:12px;color:rgba(255,255,255,.8);background:rgba(0,0,0,.15);border-radius:6px;padding:8px 10px;line-height:1.7">
+                  <div>📦 <strong>Form needed:</strong> ${form}</div>
+                  <div>🔥 <strong>How to cook:</strong> ${cookMethod}</div>
+                  <div>❄️ <strong>After cooking:</strong> Cool completely → bag ${c.bags} quart bags → label → freeze</div>
+                </div>
+              </div>
+              <button class="btn btn-sm btn-ghost" onclick="removeCookItem('${c.protein}','weekly')" style="color:#c62828;font-size:18px;padding:4px 8px;margin-left:8px" title="Remove">×</button>
             </div>
-            <button class="btn btn-sm btn-ghost" onclick="removeCookItem('${c.protein}','weekly')" style="color:#c62828;font-size:18px;padding:4px 8px" title="Remove">×</button>
           </div>`;
         }).join('')}
       </div>`;
     }
 
-    // Emergency Meals section
+    // ── EMERGENCY MEAL BUILDS ──────────────────────────────────────────
     if(emergencyItems.length>0){
       html+=`<div class="cook-list-card" style="margin-bottom:12px;background:linear-gradient(135deg,#7b1a1a 0%,#a32020 100%)">
         <div class="cook-list-title">🚨 Emergency Meal Builds</div>
-        <div class="cook-list-sub">These proteins are needed for your emergency gallon bag meals</div>
+        <div class="cook-list-sub">Protein needed to assemble your gallon bag emergency meals</div>
         ${emergencyItems.map(c=>{
-          const rawLbs=(c.bags*1.5*1.43).toFixed(1);
+          const rawLbs=parseFloat(c.rawLbs)||c.bags*1.5*1.43;
           const cookedLbs=(c.bags*1.5).toFixed(1);
-          return`<div class="cook-item" style="display:flex;align-items:center;justify-content:space-between">
-            <div>
-              <div class="cook-item-name">${c.protein}</div>
-              <div class="cook-item-detail">${rawLbs} lbs raw → ${cookedLbs} lbs cooked · For: ${c.mealName||'Emergency Meal'}</div>
-              <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:6px;line-height:1.5">
-                <strong>Building today:</strong> Set aside ${cookedLbs} lbs cooked before bagging the rest into quart bags<br>
-                <strong>Building later:</strong> Pull ${c.bags} quart bag${c.bags!==1?'s':''} from freezer when ready to assemble
+          const form=c.form||'cooked';
+          const cookMethod=c.cookMethod||getCookMethod(form);
+          return`<div class="cook-item" style="border-bottom:1px solid rgba(255,255,255,.15);padding-bottom:14px;margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div style="flex:1">
+                <div class="cook-item-name">${c.protein}</div>
+                <div class="cook-item-detail" style="margin-bottom:8px">Buy <strong>${rawLbs.toFixed(1)} lbs raw</strong> → Cook → Yields <strong>${cookedLbs} lbs cooked</strong> · For: ${c.mealName||'Emergency Meal'}</div>
+                <div style="font-size:12px;color:rgba(255,255,255,.8);background:rgba(0,0,0,.2);border-radius:6px;padding:8px 10px;line-height:1.7">
+                  <div>📦 <strong>Form needed:</strong> ${form}</div>
+                  <div>🔥 <strong>How to cook:</strong> ${cookMethod}</div>
+                  <div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.15)">
+                    <div>⚡ <strong>Building today:</strong> Set aside ${cookedLbs} lbs cooked — go straight into the gallon bag meal, do not freeze separately</div>
+                    <div>📅 <strong>Building later:</strong> Pull ${c.bags} quart bag${c.bags!==1?'s':''} from freezer when ready to assemble</div>
+                  </div>
+                </div>
               </div>
+              <button class="btn btn-sm btn-ghost" onclick="removeCookItem('${c.protein}','emergency')" style="color:#ffaaaa;font-size:18px;padding:4px 8px;margin-left:8px" title="Remove">×</button>
             </div>
-            <button class="btn btn-sm btn-ghost" onclick="removeCookItem('${c.protein}','emergency')" style="color:#ffaaaa;font-size:18px;padding:4px 8px" title="Remove">×</button>
           </div>`;
         }).join('')}
       </div>`;
     }
 
     html+=`<div style="display:flex;gap:8px;margin-bottom:20px">
-      <button class="btn btn-outline btn-sm" onclick="A.cookList=null;recalcCookListFromCalendar();save();render()">Clear Cook List</button>
+      <button class="btn btn-outline btn-sm" onclick="A.emergencyCookList=[];recalcCookListFromCalendar();save();render()">Clear All</button>
       <button class="btn btn-outline btn-sm" onclick="showPage('builder')">Add More Meals</button>
     </div>`;
 
-    // Add to grocery list — combined
+    // ── GROCERY LIST / WHAT TO BUY ────────────────────────────────────
     const allItems=cookList.filter(c=>c.bags>0);
     if(allItems.length>0){
       html+=`<div class="card card-pad" style="margin-bottom:20px">
-        <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:12px">🛒 Add to Grocery List</div>
+        <div style="font-size:15px;font-weight:700;color:var(--green);margin-bottom:4px">🛒 What to Buy</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Everything you need for this week's meals and emergency builds combined</div>
         ${allItems.map(c=>{
-          const rawLbs=c.type==='emergency'?(c.bags*1.5*1.43).toFixed(1):(c.bags*1.5*1.43).toFixed(1);
-          const label=c.type==='emergency'?`${rawLbs} lbs raw → For emergency meal`:`${rawLbs} lbs raw → ${c.bags} quart bags`;
-          const onList=A.grocery.find(g=>g.name.toLowerCase().includes(c.protein.toLowerCase()));
-          return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
-            <div>
-              <div style="font-size:14px;font-weight:600">${c.protein} ${c.type==='emergency'?'<span style="font-size:10px;background:#c62828;color:#fff;padding:1px 5px;border-radius:3px;margin-left:4px">Emergency</span>':''}</div>
-              <div style="font-size:12px;color:var(--text-muted)">${label}</div>
+          const rawLbs=parseFloat(c.rawLbs)||(c.bags*1.5*1.43);
+          const form=c.form||'cooked';
+          const isEmergency=c.type==='emergency';
+          const onList=A.grocery.find(g=>g.name.toLowerCase().includes(c.protein.toLowerCase().split(' ')[0]));
+          return`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:600">${c.protein}
+                ${isEmergency?'<span style="font-size:10px;background:#c62828;color:#fff;padding:1px 6px;border-radius:3px;margin-left:6px">Emergency Build</span>':'<span style="font-size:10px;background:var(--green);color:#fff;padding:1px 6px;border-radius:3px;margin-left:6px">Weekly Base</span>'}
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Need: ${form} · Buy ${rawLbs.toFixed(1)} lbs raw · ${isEmergency?'For gallon bag emergency meal':'For '+c.bags+' quart bags'}</div>
             </div>
-            <div style="text-align:right;display:flex;align-items:center;gap:10px">
-              <div style="font-size:15px;font-weight:700;color:var(--green)">${rawLbs} lbs</div>
-              ${!onList?`<button class="btn btn-sm btn-outline" onclick="addProteinToGroc('${c.protein}','${rawLbs}')">+ List</button>`:`<span style="font-size:11px;color:var(--text-muted)">On list ✓</span>`}
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="font-size:16px;font-weight:700;color:var(--green)">${rawLbs.toFixed(1)} lbs</div>
+              ${!onList?`<button class="btn btn-sm btn-outline" onclick="addProteinToGroc('${c.protein}','${rawLbs.toFixed(1)}')">+ List</button>`:`<span style="font-size:11px;color:var(--text-muted)">On list ✓</span>`}
             </div>
           </div>`;
         }).join('')}
@@ -2848,7 +2894,7 @@ function openAddGroc(){
 function saveAddGroc(){
   const name=document.getElementById('ag-name')?.value.trim();
   if(!name)return;
-  A.grocery.push({id:Date.now(),name,qty:document.getElementById('ag-qty')?.value.trim()||'',urgency:document.getElementById('ag-urg')?.value||'low',done:false});
+  A.grocery.push({id:Date.now(),name,qty:document.getElementById('ag-qty')?.value.trim()||'',urgency:document.getElementById('ag-urg')?.value||'low',done:false,manualAdd:true});
   save();closeModal();render();
 }
 
@@ -3220,8 +3266,8 @@ function closeModal(){document.getElementById('modal').classList.remove('show');
 function removeCookItem(protein,type){
   if(type==='emergency'){
     A.emergencyCookList=(A.emergencyCookList||[]).filter(c=>c.protein!==protein);
-  } else {
-    A.cookList=(A.cookList||[]).filter(c=>!(c.protein===protein&&c.type!=='emergency'));
+    // Also remove matching grocery items that were auto-added for this protein
+    A.grocery=A.grocery.filter(g=>!g.name.toLowerCase().includes(protein.toLowerCase())||g.manualAdd);
   }
   recalcCookListFromCalendar();
   save();render();
