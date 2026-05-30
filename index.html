@@ -2642,22 +2642,41 @@ function rMaintenance(){
   const cookList=A.cookList||[];
 
   // Build Pull to Fridge list from this week's calendar meals
-  const pullToFridge={};// item -> {bags, meals:[]}
-  const stockKeywords=['quart bag','frozen bag','lbs cooked','bag ='];
+  const pullToFridge={};// item -> {qty, icon, meals:[]}
+  const stockKeywords=['quart bag','frozen bag','lbs cooked','bag =','bags cooked'];
+  const PROTEIN_KEYWORDS=['chicken','beef','turkey','pork','salmon','tuna','shrimp','sausage','steak','ground','shredded'];
   for(let i=0;i<7;i++){
     const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
     const dk=dateKey(d);
     const slots=A.calendarByDate[dk]||{};
     Object.entries(slots).forEach(([slot,meal])=>{
-      if(!meal||!meal.pull)return;
-      meal.pull.forEach(p=>{
-        if(!p.qty)return;
-        const isStock=stockKeywords.some(k=>p.qty.toLowerCase().includes(k));
-        if(!isStock)return;
-        const key=p.item;
-        if(!pullToFridge[key])pullToFridge[key]={qty:p.qty,icon:p.icon||'❄️',meals:[]};
-        pullToFridge[key].meals.push({day:d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}),slot,meal:meal.title});
-      });
+      if(!meal)return;
+      const dayLabel=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+      // Try pull list first
+      if(meal.pull&&meal.pull.length>0){
+        meal.pull.forEach(p=>{
+          if(!p.qty)return;
+          const isStock=stockKeywords.some(k=>p.qty.toLowerCase().includes(k));
+          if(!isStock)return;
+          const key=p.item;
+          if(!pullToFridge[key])pullToFridge[key]={qty:p.qty,icon:p.icon||'❄️',meals:[]};
+          pullToFridge[key].meals.push({day:dayLabel,slot,meal:meal.title});
+        });
+      } else if(meal.title){
+        // Old meal without pull list — check bases inventory for matching proteins
+        A.bases.forEach(b=>{
+          if(b.frozen>0){
+            const titleL=meal.title.toLowerCase();
+            const nameL=b.name.toLowerCase();
+            // Check if meal title contains this protein
+            if(PROTEIN_KEYWORDS.some(kw=>titleL.includes(kw)&&nameL.includes(kw))){
+              const key=b.name;
+              if(!pullToFridge[key])pullToFridge[key]={qty:'1+ quart bag',icon:b.icon||'🥩',meals:[]};
+              pullToFridge[key].meals.push({day:dayLabel,slot,meal:meal.title});
+            }
+          }
+        });
+      }
     });
   }
 
