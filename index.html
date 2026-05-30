@@ -2641,6 +2641,33 @@ function rMaintenance(){
   const weekLabel=weekStart.toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+weekEnd.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   const cookList=A.cookList||[];
 
+  // Build Pull to Fridge list from this week's calendar meals
+  const pullToFridge={};// item -> {bags, meals:[]}
+  const stockKeywords=['quart bag','frozen bag','lbs cooked','bag ='];
+  for(let i=0;i<7;i++){
+    const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
+    const dk=dateKey(d);
+    const slots=A.calendarByDate[dk]||{};
+    Object.entries(slots).forEach(([slot,meal])=>{
+      if(!meal||!meal.pull)return;
+      meal.pull.forEach(p=>{
+        if(!p.qty)return;
+        const isStock=stockKeywords.some(k=>p.qty.toLowerCase().includes(k));
+        if(!isStock)return;
+        const key=p.item;
+        if(!pullToFridge[key])pullToFridge[key]={qty:p.qty,icon:p.icon||'❄️',meals:[]};
+        pullToFridge[key].meals.push({day:d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}),slot,meal:meal.title});
+      });
+    });
+  }
+
+  // Also add emergency build pulls
+  (A.emergencyCookList||[]).forEach(c=>{
+    const key=c.protein;
+    if(!pullToFridge[key])pullToFridge[key]={qty:c.bags+' quart bag'+(c.bags!==1?'s':''),icon:'🚨',meals:[]};
+    pullToFridge[key].meals.push({day:'Emergency Build',slot:'',meal:c.mealName||'Emergency Meal'});
+  });
+
   let html=`<div class="page-title">Maintenance Day</div>
   <div class="page-sub">Everything you need to cook, bag, and stock your kitchen for the week.</div>`;
 
@@ -2653,7 +2680,27 @@ function rMaintenance(){
     <button class="btn btn-outline btn-sm" onclick="A.weekOffset=Math.min(4,(A.weekOffset||0)+1);render()" ${(A.weekOffset||0)===4?'disabled':''}>Next ›</button>
   </div>`;
 
-  // Cook list
+  // ── PULL TO FRIDGE ────────────────────────────────────────────────────
+  const pullItems=Object.entries(pullToFridge);
+  if(pullItems.length>0){
+    html+=`<div class="card card-pad" style="margin-bottom:20px;border-left:4px solid var(--green)">
+      <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:var(--green);margin-bottom:4px">🧊 Pull to Fridge</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Move these from freezer to fridge today so they're thawed and ready when you need them</div>
+      ${pullItems.map(([item,data])=>`
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:24px">${data.icon}</div>
+          <div style="flex:1">
+            <div style="font-size:15px;font-weight:600;color:var(--text)">${item}</div>
+            <div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:4px">${data.qty}</div>
+            <div style="font-size:12px;color:var(--text-muted)">Needed for: ${data.meals.map(m=>`${m.day}${m.slot?' ('+m.slot+')':''} — ${m.meal}`).join(' · ')}</div>
+          </div>
+          <div style="background:var(--green-light);color:var(--green);font-size:11px;font-weight:700;padding:4px 8px;border-radius:20px;white-space:nowrap">Pull Now</div>
+        </div>`).join('')}
+      <div style="font-size:11px;color:var(--text-hint);margin-top:12px">❄️ Thaw in fridge overnight · Never thaw on counter · Use within 3-4 days of thawing</div>
+    </div>`;
+  }
+
+  // ── COOK LIST ─────────────────────────────────────────────────────────
   if(cookList.length===0){
     html+=`<div class="card card-pad" style="margin-bottom:16px">
       <div style="text-align:center;padding:24px 0">
@@ -2663,7 +2710,6 @@ function rMaintenance(){
         <button class="btn btn-primary" onclick="showPage('builder')">Go to Meal Builder →</button>
       </div>
     </div>`;
-  } else {
     const weeklyBases=cookList.filter(c=>c.bags>0&&c.type!=='emergency');
     const emergencyItems=cookList.filter(c=>c.bags>0&&c.type==='emergency');
 
