@@ -3202,7 +3202,45 @@ function saveEditEmergency(id){
   if(m){m.name=document.getElementById('ee-name').value.trim()||m.name;m.dateMade=document.getElementById('ee-date').value;m.qty=+document.getElementById('ee-qty').value||0;}
   save();closeModal();render();
 }
-function deleteEmergency(id){A.emergency=A.emergency.filter(m=>m.id!==id);save();closeModal();render();}
+function deleteEmergency(id){
+  const meal=A.emergency.find(m=>m.id===id);
+  if(!meal)return;
+  openModal(`<div class="modal-header"><div class="modal-title">Remove Emergency Meal</div><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:8px">${meal.name}</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Why are you removing this?</div>
+    <button class="btn btn-primary btn-full" style="margin-bottom:10px" onclick="confirmDeleteEmergency(${id},false)">🍽️ We ate it — remove from log</button>
+    <button class="btn btn-outline btn-full" onclick="confirmDeleteEmergency(${id},true)">❌ Logged by mistake — restore inventory</button>`);
+}
+
+function confirmDeleteEmergency(id,restoreInventory){
+  const meal=A.emergency.find(m=>m.id===id);
+  if(!meal)return;
+  if(restoreInventory&&meal.recipe&&meal.recipe.pull){
+    // Restore inventory for double batch
+    restoreInventoryFromPull(meal.recipe.pull);
+    restoreInventoryFromPull(meal.recipe.pull);
+  }
+  // Also remove from emergencyCookList
+  A.emergencyCookList=(A.emergencyCookList||[]).filter(c=>c.mealName!==meal.name);
+  A.emergency=A.emergency.filter(m=>m.id!==id);
+  save();closeModal();render();
+}
+
+function restoreInventoryFromPull(pull){
+  if(!pull)return;
+  pull.forEach(p=>{
+    if(!p.qty||!p.item)return;
+    const bagMatch=p.qty.match(/^(\d+)\s*bag/i);
+    if(!bagMatch)return;
+    const bags=parseInt(bagMatch[1]);
+    // Find matching base
+    const base=A.bases.find(b=>b.name.toLowerCase()===p.item.toLowerCase());
+    if(base){base.frozen=Math.min((base.frozen||0)+bags,99);return;}
+    // Find matching support
+    const support=A.supports.find(s=>s.name.toLowerCase()===p.item.toLowerCase());
+    if(support)support.frozen=Math.min((support.frozen||0)+bags,99);
+  });
+}
 
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
 function openSettings(){
