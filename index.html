@@ -2128,31 +2128,58 @@ function logEmergencyMeal(){
     recipe:{...A.recipe} // Save full recipe for later viewing
   });
 
-  // Save emergency cook items to separate persistent list
+  // Always add to emergencyCookList — even if fully stocked, need assembly reminder
   const PROTEIN_KEYWORDS=['chicken','beef','turkey','pork','salmon','tuna','shrimp','sausage','steak','ground','shredded'];
   const savedRecipe={...A.recipe};
   const eCookList=A.emergencyCookList||[];
 
+  // Find proteins in pull list
+  let proteinsFound=false;
   (savedRecipe.pull||[]).forEach(p=>{
-    if(!p.prepNote)return;
-    const needsCooking=p.prepNote.toLowerCase().includes('needs to be cooked')||
-                      p.prepNote.toLowerCase().includes('will need to purchase');
-    if(!needsCooking)return;
     const isProtein=PROTEIN_KEYWORDS.some(kw=>(p.item||'').toLowerCase().includes(kw));
     if(!isProtein)return;
+    proteinsFound=true;
+    const needsCooking=p.prepNote&&(p.prepNote.toLowerCase().includes('needs to be cooked')||
+                      p.prepNote.toLowerCase().includes('will need to purchase'));
     const lbsMatch=(p.qty||'').match(/(\d+(?:\.\d+)?)\s*lbs?/i);
-    const lbs=lbsMatch?parseFloat(lbsMatch[1])*2:3;
-    const bags=Math.ceil(lbs/1.5);
+    const bagMatch=(p.qty||'').match(/(\d+)\s*bag/i);
+    const bags=bagMatch?parseInt(bagMatch[1])*2:lbsMatch?Math.ceil(parseFloat(lbsMatch[1])*2/1.5):2;
+    const rawLbs=needsCooking?(bags*1.5*1.43).toFixed(1)+' lbs raw':null;
     if(!eCookList.find(e=>e.protein===p.item&&e.mealName===savedRecipe.title)){
-      eCookList.push({protein:p.item,bags,rawLbs:(lbs*1.43).toFixed(1)+' lbs raw',type:'emergency',mealName:savedRecipe.title});
+      eCookList.push({
+        protein:p.item,
+        bags,
+        rawLbs,
+        type:'emergency',
+        mealName:savedRecipe.title,
+        needsCooking:!!needsCooking,
+        icon:p.icon||'🥩',
+        qty:p.qty
+      });
     }
   });
+
+  // If no proteins found in pull list, add a generic assembly reminder
+  if(!proteinsFound){
+    if(!eCookList.find(e=>e.mealName===savedRecipe.title)){
+      eCookList.push({
+        protein:'Ingredients',
+        bags:2,
+        rawLbs:null,
+        type:'emergency',
+        mealName:savedRecipe.title,
+        needsCooking:false,
+        icon:'🚨',
+        qty:'2 gallon bags'
+      });
+    }
+  }
 
   if(savedRecipe.cookList&&savedRecipe.cookList.length>0){
     savedRecipe.cookList.forEach(c=>{
       const bags=c.bags*2;
       if(!eCookList.find(e=>e.protein===c.protein&&e.mealName===savedRecipe.title)){
-        eCookList.push({protein:c.protein,bags,rawLbs:(bags*1.5*1.43).toFixed(1)+' lbs raw',type:'emergency',mealName:savedRecipe.title});
+        eCookList.push({protein:c.protein,bags,rawLbs:(bags*1.5*1.43).toFixed(1)+' lbs raw',type:'emergency',mealName:savedRecipe.title,needsCooking:true});
       }
     });
   }
@@ -2641,10 +2668,11 @@ function rMaintenance(){
   const weekLabel=weekStart.toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+weekEnd.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   const cookList=A.cookList||[];
 
-  // Build Pull to Fridge list from this week's calendar meals
-  const pullToFridge={};// item -> {qty, icon, meals:[]}
-  const stockKeywords=['quart bag','frozen bag','lbs cooked','bag =','bags cooked'];
-  const PROTEIN_KEYWORDS=['chicken','beef','turkey','pork','salmon','tuna','shrimp','sausage','steak','ground','shredded'];
+  // Build Pull to Fridge list — Layer 2 proteins only, all meals this week
+  const pullToFridge={};
+  const PROTEIN_KEYWORDS=['chicken','beef','turkey','pork','salmon','tuna','shrimp','sausage','steak','ground','shredded','tuna'];
+  const baseNames=A.bases.map(b=>b.name.toLowerCase());
+
   for(let i=0;i<7;i++){
     const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
     const dk=dateKey(d);
@@ -2652,39 +2680,52 @@ function rMaintenance(){
     Object.entries(slots).forEach(([slot,meal])=>{
       if(!meal)return;
       const dayLabel=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-      // Try pull list first
+      const slotLabel=slot.charAt(0).toUpperCase()+slot.slice(1);
+
       if(meal.pull&&meal.pull.length>0){
+        // New meal with pull list — find protein items (Layer 2 only)
         meal.pull.forEach(p=>{
-          if(!p.qty)return;
-          const isStock=stockKeywords.some(k=>p.qty.toLowerCase().includes(k));
-          if(!isStock)return;
+          if(!p.item)return;
+          const itemL=p.item.toLowerCase();
+          const isProtein=PROTEIN_KEYWORDS.some(kw=>itemL.includes(kw));
+          const isBase=baseNames.some(b=>itemL.includes(b.split(' ')[0]));
+          if(!isProtein&&!isBase)return;
+          // Skip Layer 3 supports
+          const isSupport=A.supports.some(s=>s.name.toLowerCase()===itemL);
+          if(isSupport)return;
           const key=p.item;
-          if(!pullToFridge[key])pullToFridge[key]={qty:p.qty,icon:p.icon||'❄️',meals:[]};
-          pullToFridge[key].meals.push({day:dayLabel,slot,meal:meal.title});
+          if(!pullToFridge[key])pullToFridge[key]={qty:p.qty,icon:p.icon||'🥩',meals:[]};
+          else if(p.qty&&p.qty!==pullToFridge[key].qty){
+            // Accumulate quantities — add bags
+            const existing=parseInt(pullToFridge[key].qty)||0;
+            const adding=parseInt(p.qty)||0;
+            if(existing&&adding)pullToFridge[key].qty=(existing+adding)+' quart bags';
+          }
+          pullToFridge[key].meals.push({day:dayLabel,slot:slotLabel,meal:meal.title});
         });
       } else if(meal.title){
-        // Old meal without pull list — check bases inventory for matching proteins
+        // Old meal — match against bases inventory
         A.bases.forEach(b=>{
-          if(b.frozen>0){
-            const titleL=meal.title.toLowerCase();
-            const nameL=b.name.toLowerCase();
-            // Check if meal title contains this protein
-            if(PROTEIN_KEYWORDS.some(kw=>titleL.includes(kw)&&nameL.includes(kw))){
-              const key=b.name;
-              if(!pullToFridge[key])pullToFridge[key]={qty:'1+ quart bag',icon:b.icon||'🥩',meals:[]};
-              pullToFridge[key].meals.push({day:dayLabel,slot,meal:meal.title});
-            }
+          const titleL=meal.title.toLowerCase();
+          const nameL=b.name.toLowerCase();
+          const nameWords=nameL.split(' ');
+          if(nameWords.some(w=>w.length>3&&titleL.includes(w))){
+            const key=b.name;
+            if(!pullToFridge[key])pullToFridge[key]={qty:'check inventory',icon:b.icon||'🥩',meals:[]};
+            pullToFridge[key].meals.push({day:dayLabel,slot:slotLabel,meal:meal.title});
           }
         });
       }
     });
   }
 
-  // Also add emergency build pulls
+  // Add emergency builds to pull list
   (A.emergencyCookList||[]).forEach(c=>{
-    const key=c.protein;
-    if(!pullToFridge[key])pullToFridge[key]={qty:c.bags+' quart bag'+(c.bags!==1?'s':''),icon:'🚨',meals:[]};
-    pullToFridge[key].meals.push({day:'Emergency Build',slot:'',meal:c.mealName||'Emergency Meal'});
+    if(!c.needsCooking){
+      const key=c.protein;
+      if(!pullToFridge[key])pullToFridge[key]={qty:c.bags+' quart bag'+(c.bags!==1?'s':''),icon:'🚨',meals:[]};
+      pullToFridge[key].meals.push({day:'Emergency Build',slot:'',meal:c.mealName||'Emergency Meal'});
+    }
   });
 
   let html=`<div class="page-title">Maintenance Day</div>
@@ -2767,22 +2808,26 @@ function rMaintenance(){
         <div class="cook-list-title">🚨 Emergency Meal Builds</div>
         <div class="cook-list-sub">Protein needed to assemble your gallon bag emergency meals</div>
         ${emergencyItems.map(c=>{
-          const rawLbs=parseFloat(c.rawLbs)||c.bags*1.5*1.43;
+          const rawLbs=c.rawLbs?parseFloat(c.rawLbs):(c.bags*1.5*1.43);
           const cookedLbs=(c.bags*1.5).toFixed(1);
           const form=c.form||'cooked';
           const cookMethod=c.cookMethod||getCookMethod(form);
+          const needsCooking=c.needsCooking;
           return`<div class="cook-item" style="border-bottom:1px solid rgba(255,255,255,.15);padding-bottom:14px;margin-bottom:14px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start">
               <div style="flex:1">
-                <div class="cook-item-name">${c.protein}</div>
-                <div class="cook-item-detail" style="margin-bottom:8px">Buy <strong>${rawLbs.toFixed(1)} lbs raw</strong> → Cook → Yields <strong>${cookedLbs} lbs cooked</strong> · For: ${c.mealName||'Emergency Meal'}</div>
-                <div style="font-size:12px;color:rgba(255,255,255,.8);background:rgba(0,0,0,.2);border-radius:6px;padding:8px 10px;line-height:1.7">
-                  <div>📦 <strong>Form needed:</strong> ${form}</div>
-                  <div>🔥 <strong>How to cook:</strong> ${cookMethod}</div>
-                  <div style="margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,.15)">
-                    <div>⚡ <strong>Building today:</strong> Set aside ${cookedLbs} lbs cooked — go straight into the gallon bag meal, do not freeze separately</div>
-                    <div>📅 <strong>Building later:</strong> Pull ${c.bags} quart bag${c.bags!==1?'s':''} from freezer when ready to assemble</div>
-                  </div>
+                <div class="cook-item-name">${c.mealName||'Emergency Meal'}</div>
+                <div class="cook-item-detail" style="margin-bottom:8px">${c.protein} · ${c.qty||c.bags+' quart bags'}</div>
+                <div style="font-size:12px;color:rgba(255,255,255,.8);background:rgba(0,0,0,.2);border-radius:6px;padding:8px 10px;line-height:1.8">
+                  ${needsCooking?`
+                  <div>🔥 <strong>Need to cook:</strong> Buy ${rawLbs.toFixed(1)} lbs raw → ${cookedLbs} lbs cooked</div>
+                  <div>📦 <strong>How:</strong> ${cookMethod}</div>
+                  <div>⚡ <strong>Building today:</strong> Use cooked protein directly in gallon bag meal</div>
+                  `:`
+                  <div>✅ <strong>Already stocked</strong> — pull from freezer to assemble</div>
+                  `}
+                  <div style="margin-top:4px">📅 <strong>Building today:</strong> Assemble and portion into gallon bags → freeze</div>
+                  <div>📅 <strong>Building later:</strong> Pull ${c.bags} quart bag${c.bags!==1?'s':''} from freezer when ready</div>
                 </div>
               </div>
               <button class="btn btn-sm btn-ghost" onclick="removeCookItem('${c.protein}','emergency')" style="color:#ffaaaa;font-size:18px;padding:4px 8px;margin-left:8px" title="Remove">×</button>
