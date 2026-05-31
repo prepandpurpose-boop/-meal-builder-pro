@@ -1372,7 +1372,7 @@ async function generateRecipe(){
 
   // All other inventory
   const frozenSupList=A.supports.filter(s=>s.storageTypes.includes('frozen')&&(s.frozen||0)>0).map(s=>`${s.name}: ${s.frozen} bags (${s.frozen*3} cups) [FROZEN — add mid-cook, 3-4 min to heat through]`);
-  const cannedList=A.supports.filter(s=>s.storageTypes.includes('canned')&&(s.canned||0)>0).map(s=>`${s.name}: ${s.canned} can${s.canned!==1?'s':''} [drain and add at end — pull by can count, not cups]`);
+  const cannedList=A.supports.filter(s=>s.storageTypes.includes('canned')&&(s.canned||0)>0).map(s=>`${s.name}: ${s.canned} cans [add at end]`);
   const dryList=A.supports.filter(s=>s.storageTypes.includes('dry')&&(s.dry||0)>0).map(s=>`${s.name}: ${s.dry} ${s.dryUnit||'lbs'} [needs full cook time]`);
   const eachList=A.supports.filter(s=>s.storageTypes.includes('each')&&(s.each||0)>0).map(s=>`${s.name}: ${s.each} ${s.eachUnit||'each'} [ready to use — heat through or serve as is]`);
 
@@ -1385,18 +1385,18 @@ async function generateRecipe(){
 
   const systemPrompt=`You are the Meal Builder for Prep & Purpose. ALWAYS build a meal — never refuse.
 
-${weekSelections.length>0?`SELECTED PROTEIN — NON-NEGOTIABLE: Build this meal using ONLY: ${weekSelections.join(', ')}. Do not substitute. Do not switch proteins. The title, pull list, and steps must all use exactly this protein.`:''}
+${weekSelections.length>0?`SELECTED PROTEIN — NON-NEGOTIABLE: Build this meal using ONLY: ${weekSelections.join(', ')}. Do not substitute. Do not switch proteins.`:''}
 
 PROTEIN RULES:
 - Every dinner and lunch MUST contain animal protein. No exceptions unless Vegetarian is selected.
-- Frozen protein = ALREADY COOKED. Say "heat gently 3-4 min over medium heat until warmed through." NEVER say "cook until done."
-- Never use partial bags. 1 quart bag = 1.5 lbs cooked. For ${A.householdSize} people use ${A.householdSize<=4?'1-2':'2-3'} bags.
-- If no protein stocked: pick most seasonal, flag urgency "out" on grocery list, write recipe as if user has it.
-- Dinner/lunch with only beans, grains, or vegetables = wrong. Always add protein or flag it.
+- Frozen protein = ALREADY COOKED. Say "heat gently 3-4 min over medium heat." NEVER say "cook until done."
+- Never partial bags. 1 quart bag = 1.5 lbs cooked. For ${A.householdSize} people use ${A.householdSize<=4?'1-2':'2-3'} bags.
+- If no protein stocked: pick most seasonal, flag urgency "out", write recipe as if user has it.
+- Dinner/lunch with only beans, grains, or vegetables = wrong. Always protein.
 
 MEAL TYPE RULES:
-- Dinner = real dinner. Protein + starch + vegetable. Hearty. NOT breakfast food.
-- Lunch = grab and go. 3 steps max. No scratch cooking. Include PACK IT note in tip.
+- Dinner = real dinner. Protein + starch + vegetable. NOT breakfast food.
+- Lunch = grab and go. 3 steps max. No scratch cooking. PACK IT note in tip.
 - Breakfast = 5 groups, rotate — never same group back to back:
     A(grain): baked oatmeal, oat bars, granola bars, overnight oats
     B(egg savory): scrambled bowl, omelette, frittata, egg muffin cups, breakfast casserole
@@ -1409,34 +1409,36 @@ MEAL TYPE RULES:
 
 ${!includeSoups?'SOUPS OFF: No soups, stews, chili, or broth-based dishes.':''}
 
-${grabAndGo?`GRAB AND GO: Build a batchable item made once, grabbed all week. Rotate formats — last was "${A.lastBuiltBreakfast||'none'}":
+${grabAndGo?`GRAB AND GO: Batchable item, made once, grabbed all week. Rotate formats — last: "${A.lastBuiltBreakfast||'none'}":
 Formats: freezer burritos, egg muffin cups, baked oatmeal bars, granola bars, banana oat muffins, overnight oats jars, yogurt parfait cups, smoothie packs, sheet pan hash, pancakes, waffles, french toast sticks, muffins.
 Stock guidance: sausage→burritos/egg cups · hash browns→hash bake · oats→bars/overnight oats · yogurt→parfait · frozen fruit→smoothie packs · bananas→banana muffins · flour+eggs+butter→pancakes/waffles/muffins.
-Yield in pieces, storage, how long keeps, grab size. Flag missing baking ingredients.
-BATCH FREEZE: cool → freeze flat → quart bags → reheat in tip. Keeps 3 months.
-BAKING SCALE TIP in tip field: "When scaling up, use ~1.4x baking powder/soda/salt — not 2x. Flour, sugar, oats, butter, eggs scale normally."`:''}
+Yield in pieces, storage, how long keeps, grab size. BAKING SCALE TIP in tip: "~1.4x baking powder/soda/salt when scaling up — not 2x. Flour, sugar, butter, eggs scale normally."`:''}
 
-${A.kidFriendly?`KID FRIENDLY: Mild, nut-free, simple formats, kid portions.`:''}
+${A.kidFriendly?`KID FRIENDLY: Mild, nut-free, simple, kid portions.`:''}
 ${A.dietary.length>0?`DIETARY RESTRICTIONS — NEVER VIOLATE: ${A.dietary.join(', ')}`:''}
 ${(A.dietaryGoals||[]).length>0?`DIETARY GOALS: ${(A.dietaryGoals||[]).join(', ')}`:''}
 
-FLAVOR GUIDE: Classic American=meat+potatoes/casseroles · Comfort=creamy/cheesy/hearty · Southern=gravy/cornbread/grits · Tex-Mex=cumin/cheese/tortillas · Mexican=authentic(carnitas/barbacoa/mole) · Italian=tomato/pasta/olive oil · BBQ=smoked/chipotle/slow-cooked · Cajun=holy trinity/bold spice · Asian=soy/ginger/sesame · Mediterranean=olive oil/lemon/feta · Caribbean=allspice/jerk · Surprise Me=rotate freely.
+FLAVOR GUIDE: Classic American=meat+potatoes/casseroles · Comfort=creamy/cheesy/hearty · Southern=gravy/cornbread/grits · Tex-Mex=cumin/cheese/tortillas · Mexican=authentic(carnitas/barbacoa/mole) · Italian=tomato/pasta/olive oil · BBQ=smoked/chipotle · Cajun=holy trinity/bold spice · Asian=soy/ginger/sesame · Mediterranean=olive oil/lemon/feta · Caribbean=allspice/jerk · Surprise Me=rotate freely.
 
 STORAGE FORM HONESTY — match form to actual inventory:
 1. FROZEN bags > 0 → frozen. Step: "add mid-cook, 3-4 min to heat."
-2. FROZEN=0, CANNED > 0 → canned. Pull qty = container count ("2 cans", "1 quart jar") — NEVER cups. Step: "drain, add at end."
-3. FROZEN=0, CANNED=0, DRY > 0 → dry. Step: "cook separately per package directions, then add." NEVER add raw dry ingredients to a baked dish.
+2. FROZEN=0, CANNED > 0 → canned. qty = container count ("2 cans", "1 quart jar") — NEVER cups. Step: "drain, add at end."
+3. FROZEN=0, CANNED=0, DRY > 0 → dry. Step: "cook separately per package directions, then add." NEVER add raw dry to a baked dish.
 4. ALL=0 → omit from recipe, flag on grocery list.
 
-HOME CANNED JARS: qty = jar count and size ("2 pint jars", "1 quart jar") — never cups. Cup equivalent in prepNote only.
-STORE CANNED: qty = can count ("2 cans black beans") — never cups.
+CANNED/JARRED QTY RULES — CRITICAL:
+- Store canned: qty = can count ("2 cans black beans") — never cups
+- Home canned regular jars: qty = EXACT jar size and count as logged by user ("2 pint-and-a-half jars", "1 quart jar") — NEVER convert to a different jar size, NEVER use cups
+- Home canned FREEZE DRIED: these are powders/pieces — measure out exactly what is needed. qty = cup or tbsp ("1/2 cup freeze dried cheese powder"). prepNote = "Measure from jar — no need to pull the whole jar."
+- Mix jar sizes if needed to hit the right quantity
+
 FRESH veg: add early. FROZEN: mid-cook 3-4 min. CANNED/jarred: drain, add at very end. DRY: cook separately first.
 
 MILK POWDER: Pull list shows "X cups powder + Y cups water = Z cups milk". Steps say only "Z cups milk."
 
-BAKING: Safe to scratch: pancakes, waffles, french toast, biscuits, cornbread, muffins, oatmeal bakes. Never scratch: bread, rolls, tortillas, pizza dough — always store-bought, always flag on grocery list.
+BAKING: Safe to scratch: pancakes, waffles, french toast, biscuits, cornbread, muffins, oatmeal bakes. Never scratch: bread, rolls, tortillas, pizza dough — store-bought, flag on grocery list.
 
-GROCERY FLAGS: Include reason. Seasonal proteins: "Typically on sale now — buy extra and freeze." Convenient items: "Store-bought recommended." urgency "out"=needed · "low"=optional.
+GROCERY FLAGS: Include reason. urgency "out"=needed · "low"=optional.
 
 ${(()=>{
   if(buildEmergency)return'';
@@ -1457,7 +1459,7 @@ ${buildEmergency?`EMERGENCY MEAL MODE:
 - Tip pan: "FREEZE IN 9X13 PAN: Cover tightly · Pull night before · Bake covered 375°F [X] min · Keeps 3-6 months"
 - No soggy ingredients. Scale to ${A.householdSize*2} people.`:''}
 
-MISSING INGREDIENTS: Always build anyway. Flag on groceryFlags. Zero stock = omit and flag, never invent frozen bags.
+MISSING INGREDIENTS: Always build anyway. Flag on groceryFlags. Zero stock = omit and flag.
 COOK LIST: When proteins need cooking, include cookList with bags and raw lbs (cooked × 1.43).
 ${ppSpices?'Use P&P Spice Blend names only.':''}
 
@@ -1469,7 +1471,8 @@ RESPOND WITH VALID JSON ONLY:
   "pull": [
     {"icon": "🥩", "item": "Shredded Pork", "qty": "2 bags = 3 lbs cooked", "prepNote": "Already cooked — heat gently 3-4 min"},
     {"icon": "🫘", "item": "Black Beans", "qty": "2 cans", "prepNote": "Drain and rinse"},
-    {"icon": "🫙", "item": "Corn", "qty": "1 quart jar", "prepNote": "Drain well — home canned"},
+    {"icon": "🫙", "item": "Corn", "qty": "2 pint-and-a-half jars", "prepNote": "Drain well — home canned"},
+    {"icon": "🧀", "item": "Freeze Dried Cheese Powder", "qty": "1/2 cup", "prepNote": "Measure from jar — no need to pull whole jar"},
     {"icon": "🧂", "item": "Salt", "qty": "1 tsp", "prepNote": "From pantry"}
   ],
   "steps": ["Step with real measurements and timing"],
@@ -1477,8 +1480,8 @@ RESPOND WITH VALID JSON ONLY:
   "groceryFlags": [{"name": "item", "qty": "exact amount", "urgency": "out", "reason": "why needed"}],
   "cookList": [{"protein": "name", "bags": 2, "rawLbs": "4.3 lbs raw", "note": "cook and bag"}]
 }
-PULL LIST: Every ingredient — frozen bags, canned (by can/jar count), pantry, fridge, spices.
-QUANTITY RULES: Meat=weight only ("2 lbs"). No piece counts. Eggs=whole numbers round up. Bags=whole only. Canned=container count not cups. Spices=tsp/tbsp.`
+PULL LIST: Every ingredient — frozen bags, canned/jarred by container count, pantry, fridge, spices.
+QUANTITY RULES: Meat=weight only. No piece counts. Eggs=whole numbers round up. Bags=whole only. Canned=container count. FD items=cup/tbsp. Spices=tsp/tbsp.`
   const userPrompt=`MEAL TYPE: ${mealType} — build an appropriate ${mealType.toLowerCase()} dish. NOT breakfast food for dinner.
 ${grabAndGo?'GRAB AND GO MODE: ON — build a batchable item with yield, storage instructions, and grab size.':''}
 ${!includeSoups?'SOUPS OFF: No soups, stews, chilis, or broth-based dishes under any circumstances.':''}
@@ -1504,7 +1507,14 @@ Dry: ${dryList.length>0?dryList.join(' | '):'None'}
 Ready to use (each): ${eachList.length>0?eachList.join(' | '):'None'}
 
 FRESH ITEMS (USE FIRST): ${freshList.length>0?freshList.join(' | '):'None'}
-HOME CANNED (use like canned goods — full flavor, already cooked): ${(A.homeCanned||[]).length>0?(A.homeCanned||[]).map(hc=>{const cups={halfPint:1,pint:2,pintHalf:3,quart:4,halfGallon:8}[hc.jarSize]||2;const jarLabel={halfPint:'half-pint jar (1 cup)',pint:'pint jar (2 cups)',pintHalf:'pint-and-a-half jar (3 cups)',quart:'quart jar (4 cups)',halfGallon:'half-gallon jar (8 cups)'}[hc.jarSize]||'pint jar (2 cups)';return`${hc.name}: ${hc.qty} ${jarLabel}${hc.qty!==1?'s':''} = ${hc.qty*cups} cups total — pull by jar count not cups`;}).join(' | '):'None'}
+HOME CANNED: ${(A.homeCanned||[]).length>0?(A.homeCanned||[]).map(hc=>{
+  const cups={halfPint:1,pint:2,pintHalf:3,quart:4,halfGallon:8}[hc.jarSize]||2;
+  const jarLabel={halfPint:'half-pint jar (1 cup)',pint:'pint jar (2 cups)',pintHalf:'pint-and-a-half jar (3 cups)',quart:'quart jar (4 cups)',halfGallon:'half-gallon jar (8 cups)'}[hc.jarSize]||'pint jar (2 cups)';
+  const isFD=/freeze.?dried|freeze dried|FD/i.test(hc.name);
+  const totalCups=hc.qty*cups;
+  if(isFD){return`${hc.name}: ${hc.qty} ${jarLabel}${hc.qty!==1?'s':''} = ${totalCups} cups total — FREEZE DRIED: measure out exact amount needed by cup or tbsp, no need to pull whole jar`;}
+  return`${hc.name}: ${hc.qty} ${jarLabel}${hc.qty!==1?'s':''} = ${totalCups} cups total — pull by jar count, use whole jars`;
+}).join(' | '):'None'}
 FRIDGE: ${fridgeQty.length>0?fridgeQty.join(' | '):'None'}
 PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}
 
