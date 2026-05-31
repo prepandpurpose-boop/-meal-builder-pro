@@ -1574,11 +1574,6 @@ When a recipe uses reconstituted milk from milk powder:
 - Wrong: "Add 8 cups reconstituted milk (1 cup milk powder + 4 cups water — double it)"
 - Correct: "Add 8 cups reconstituted milk"
 
-DRY RICE BAKED IN LIQUID RULE:
-When dry rice cooks directly inside a baking dish with liquid (casserole-style):
-- Add this note in the step where rice is combined: "Rice cooks in the liquid during baking — do not precook."
-- Ensure at least 2 cups of liquid per 1 cup of dry rice
-
 RECIPE CONSISTENCY RULE: Pick ONE format and use it everywhere — title, pull list, steps, and tip must all match.
 - If the recipe is "French Bread Pizza" → pull list says "French bread loaves", steps say "slice French bread", grocery list says "French bread loaves"
 - If the recipe is "Pizza" → pull list says "pizza crust", steps say "spread on pizza crust", grocery list says "store-bought pizza crust"
@@ -1590,10 +1585,26 @@ INGREDIENT COMMON SENSE RULE: Do NOT force inventory items into a recipe just be
 - If an ingredient does not belong in the dish, skip it. Do not invent a reason to use it.
 - Use frozen supports for vegetables and grains in savory dishes. Use frozen fruit only in sweet dishes or breakfast.
 
-VEGETABLE TIMING:
-- FRESH veg: add early, needs cook time, use first
-- FROZEN (quart bags): add mid-cook, 3-4 min to heat
-- CANNED: already cooked, add at very end — just heat
+STORAGE FORM HONESTY RULE — CRITICAL:
+Only use a storage form that is actually stocked. Never call an ingredient "frozen" if only the dry or canned version is on hand. Never call it "canned" if only dry is stocked. The form in the recipe MUST match what is in the inventory lists.
+
+SUPPORT INGREDIENT DECISION TREE — follow this for every support ingredient in the recipe:
+1. If FROZEN bags > 0 → use frozen. Pull list says "[X] bags ([Y] cups)". Steps say "add mid-cook, 3-4 min to heat through."
+2. If FROZEN = 0 but CANNED > 0 → use canned. Pull list says "[X] cans". Steps say "drain and add at the end — already cooked, just heat."
+3. If FROZEN = 0 and CANNED = 0 but DRY > 0 → use dry. Pull list says "[X] cups dry" or "[X] lbs dry". Steps say "cook [ingredient] separately according to package directions, then add to the dish." Dry rice, dry pasta, dry beans — always cooked separately first, never added raw to a casserole, baked dish, or soup. Never call a dry ingredient "frozen."
+4. If ALL forms = 0 → do NOT use that ingredient in the recipe at all. Flag it in groceryFlags with exact quantity needed and urgency "out". Build the recipe without it or substitute something that IS stocked.
+
+EXAMPLES OF CORRECT BEHAVIOR:
+- White Rice: 0 frozen bags, 2 lbs dry → pull list says "White Rice, 2 cups dry", step says "cook rice separately on stovetop according to package directions, then add to the dish." Dry rice is ALWAYS cooked separately first — it is never added raw to a casserole or baked dish.
+- Bell Peppers: 0 frozen bags, 0 canned, 0 fresh → do NOT include bell peppers. Flag on grocery list. Build without them.
+- Black Beans: 0 frozen, 2 cans → pull list says "2 cans black beans, drained". Step says "stir in at the end."
+- Corn: 0 frozen, 3 home canned jars → pull list says "3 jars corn, drained". Step says "stir in at the end."
+
+VEGETABLE TIMING — always matches the form actually used:
+- FRESH veg: add early, needs full cook time, use first
+- FROZEN (quart bags): add mid-cook, 3-4 min to heat through
+- CANNED or home canned: drain, add at the very end — already cooked, just heat
+- DRY (rice, beans, grains): include full cook time in steps — these are not ready to use
 
 DISH VARIETY — rotate every time. Never repeat the same dish type twice in a row:
 Dinner: Tacos, enchiladas, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, pot pie, lo mein, quesadillas, hash, skillet meals, rice bowls, meatloaf, smothered chicken, chicken and gravy, beef and potatoes, loaded baked potatoes
@@ -1614,6 +1625,7 @@ ${buildEmergency?`EMERGENCY MEAL MODE — ON (DINNER ONLY):
 - Scale recipe to feed ${A.householdSize*2} people total (double batch).`:''}
 
 MISSING INGREDIENTS: Always build anyway. Flag missing items in groceryFlags with exact quantities.
+CRITICAL: If a support ingredient shows 0 frozen, 0 canned, 0 dry — it has NO inventory. Do NOT include it in the recipe as if it were stocked. Either substitute with something that IS stocked, or omit it entirely and flag it on the grocery list. Never write "8 bags frozen rice" when rice only exists as dry storage.
 
 COOK LIST: When proteins marked "NEEDS TO BE COOKED" are used, include them in cookList with exact bag count needed for this meal and raw lbs to buy (multiply cooked lbs by 1.43 for 30% shrinkage).
 
@@ -1638,6 +1650,7 @@ RESPOND WITH VALID JSON ONLY — no markdown, no explanation:
 }
 
 PULL LIST RULE — CRITICAL: The pull array must include EVERY ingredient needed for the recipe — not just frozen stock. Include frozen bags, canned items, pantry items, fridge items, spices, everything.
+STORAGE FORM IN PULL LIST: Every support ingredient in the pull list must use the form that is actually stocked. If rice is only in dry storage, the pull list entry says dry rice with weight, NOT frozen bags. If peppers are not stocked in any form, they do NOT appear in the pull list — flag on grocery list instead.
 
 QUANTITY RULES — NO EXCEPTIONS:
 - MEAT qty field: weight only. "2 lbs" or "1.5 lbs". NEVER include piece counts. NEVER write "about X pieces" or "(X pieces)". If you write a piece count the recipe is wrong.
@@ -2046,11 +2059,7 @@ function moveMeal(){
 function removeMeal(dateKey,slot){
   const meal=A.calendarByDate[dateKey]?.[slot];
   if(meal&&typeof meal==='object'){
-    // Restore inventory for all pull items
-    if(meal.pull&&meal.pull.length>0){
-      restoreInventoryFromPull(meal.pull);
-    }
-    // Remove grocery flags that were added when this meal was scheduled
+    if(meal.pull&&meal.pull.length>0)restoreInventoryFromPull(meal.pull);
     if(meal.groceryFlags&&meal.groceryFlags.length>0){
       const flagNames=meal.groceryFlags.map(f=>f.name.toLowerCase());
       A.grocery=A.grocery.filter(g=>!flagNames.includes(g.name.toLowerCase())||g.manualAdd||g.done);
@@ -3347,7 +3356,6 @@ function restoreInventoryFromPull(pull){
     if(item){
       const num=parseInt(p.qty)||1;
       const restore=Math.max(1,num);
-      // Restore to whichever storage type was deducted — match by what the item tracks
       if(item.storageTypes?.includes('frozen'))item.frozen=Math.min((item.frozen||0)+restore,99);
       else if(item.storageTypes?.includes('canned'))item.canned=Math.min((item.canned||0)+restore,99);
       else if(item.storageTypes?.includes('dry'))item.dry=Math.min((item.dry||0)+restore,99);
