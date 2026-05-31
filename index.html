@@ -1247,12 +1247,11 @@ function rBuilderForm(){
   const emergencyCount=A.emergency.reduce((s,m)=>s+m.qty,0);
   const selectedProteins=A.weekProteins||[];
 
-  // Protein chips — frozen first, then need-to-cook
-  let proteinSection=`<div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">What proteins are we working with?</div>`;
-
+  // Clean protein selector — frozen stock chips only
+  let proteinSection='';
   if(frozenBases.length>0){
-    proteinSection+=`<div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">❄️ Already Cooked — In Your Freezer</div>`;
-    proteinSection+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">`;
+    proteinSection+=`<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Build with</div>`;
+    proteinSection+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">`;
     frozenBases.forEach(b=>{
       const sel=selectedProteins.includes(b.name);
       proteinSection+=`<div class="protein-chip has-frozen ${sel?'selected':''}" data-name="${b.name}" onclick="toggleProtein(this.dataset.name)">
@@ -1260,18 +1259,8 @@ function rBuilderForm(){
       </div>`;
     });
     proteinSection+=`</div>`;
+    proteinSection+=`<div style="font-size:11px;color:var(--text-hint);margin-bottom:4px">Tap to pick. Leave blank and the AI chooses from your freezer.</div>`;
   }
-
-  proteinSection+=`<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">🍳 Need to Cook — Pick for This Week</div>`;
-  proteinSection+=`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">`;
-  zeroBases.forEach(b=>{
-    const sel=selectedProteins.includes(b.name);
-    proteinSection+=`<div class="protein-chip ${sel?'selected':''}" data-name="${b.name}" onclick="toggleProtein(this.dataset.name)">
-      ${b.icon} ${b.name}
-    </div>`;
-  });
-  proteinSection+=`</div>`;
-  proteinSection+=`<div style="font-size:11px;color:var(--text-hint);margin-bottom:4px">Tap to select. The AI will build meals around your selections and tell you exactly how many bags to cook.</div>`;
 
   return`<div class="builder-panel">
     <div>
@@ -1337,13 +1326,7 @@ function rBuilderForm(){
       ${selectedProteins.length>0?`
       <div class="alert alert-green" style="margin-bottom:16px"><span>✅</span><div><strong>Building with:</strong> ${selectedProteins.join(', ')}. The AI will use frozen stock first, then calculate what needs to be cooked.</div></div>`:''}
       ${freshItems.length>0?`<div class="alert alert-gold"><span>🌿</span><div><strong>Fresh items on hand — use these first:</strong> ${freshItems.map(f=>`${f.name} (${f.qty} ${f.unit})`).join(', ')}</div></div>`:''}
-      ${frozenBases.length>0?`<div class="card card-pad" style="margin-bottom:16px">
-        <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">❄️ Frozen Stock Ready to Pull</div>
-        ${frozenBases.map(b=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-          <div style="font-size:14px;font-weight:500">${b.icon} ${b.name}</div>
-          <div style="text-align:right"><span class="qty-badge">${b.frozen} bags</span><div style="font-size:11px;color:var(--text-hint);margin-top:2px">= ${(b.frozen*1.5).toFixed(1)} lbs cooked</div></div>
-        </div>`).join('')}
-      </div>`:`<div class="alert alert-blue"><span>🍳</span><div>No frozen protein bases yet. Select proteins above and the app will calculate how many bags to cook this week.</div></div>`}
+      ${frozenBases.length===0?`<div class="alert alert-blue"><span>🍳</span><div>No frozen protein bases yet. Add inventory then come back to build.</div></div>`:''}
       ${availSupports.length>0?`<div class="card card-pad">
         <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Supports Available</div>
         <div style="display:flex;flex-wrap:wrap;gap:5px">${availSupports.slice(0,10).map(s=>`<span class="stock-chip stock-chip-support">${s.icon} ${s.name}</span>`).join('')}${availSupports.length>10?`<span style="font-size:12px;color:var(--text-muted);padding:4px 8px">+${availSupports.length-10} more</span>`:''}</div>
@@ -1380,9 +1363,11 @@ async function generateRecipe(){
   const frozenBases=A.bases.filter(b=>(b.frozen||0)>0);
   const weekSelections=A.weekProteins||[];
 
-  // Build protein context for AI
-  const frozenList=frozenBases.map(b=>`${b.name}: ${b.frozen} quart bags (${(b.frozen*1.5).toFixed(1)} lbs cooked) — ALREADY COOKED, heat through only`);
+  // Only send selected proteins to AI — not the full freezer
+  const frozenListAll=frozenBases.map(b=>`${b.name}: ${b.frozen} quart bags (${(b.frozen*1.5).toFixed(1)} lbs cooked) — ALREADY COOKED, heat through only`);
+  const frozenListSelected=frozenBases.filter(b=>weekSelections.includes(b.name)).map(b=>`${b.name}: ${b.frozen} quart bags (${(b.frozen*1.5).toFixed(1)} lbs cooked) — ALREADY COOKED, heat through only`);
   const cookList=weekSelections.filter(n=>!frozenBases.find(b=>b.name===n)).map(n=>`${n}: 0 bags — NEEDS TO BE COOKED this week`);
+  const frozenList=weekSelections.length>0?frozenListSelected:frozenListAll;
   const allProteins=[...frozenList,...cookList];
 
   // All other inventory
@@ -1400,236 +1385,86 @@ async function generateRecipe(){
 
   const systemPrompt=`You are the Meal Builder for Prep & Purpose. ALWAYS build a meal — never refuse.
 
-ABSOLUTE RULE #1 — PROTEIN REQUIRED FOR DINNER AND LUNCH:
-Every dinner and every lunch MUST contain animal protein — meat, poultry, seafood, eggs, or canned protein (tuna, salmon, chicken). This rule cannot be overridden except when Vegetarian is selected in dietary restrictions.
-- If protein is stocked → use it
-- If no protein is stocked but canned tuna, canned salmon, or eggs are available → build around those
-- If nothing is available → pick the most seasonal protein for this month, flag it on the grocery list as urgency "out", and build the meal assuming the user will buy it. Write the recipe as if the protein IS there.
-- NEVER build a dinner or lunch with only beans, lentils, grits, pasta, rice, or vegetables as the main component. Those are side dishes.
-- Cheesy bean dishes, grits casseroles, vegetable stir fry, pasta primavera — NOT dinner unless Vegetarian is selected.
+${weekSelections.length>0?`SELECTED PROTEIN — NON-NEGOTIABLE: Build this meal using ONLY: ${weekSelections.join(', ')}. Do not substitute. Do not switch proteins. The title, pull list, and steps must all use exactly this protein.`:''}
 
-ABSOLUTE RULE #2 — NO BREAKFAST FOOD FOR DINNER:
-Never serve pancakes, waffles, french toast, oatmeal, egg-forward dishes, or any breakfast item as dinner. Dinner is a real meal with a protein, a starch, and a vegetable.
+PROTEIN RULES:
+- Every dinner and lunch MUST contain animal protein (meat, poultry, seafood, eggs, or canned protein). No exceptions unless Vegetarian is selected.
+- Frozen protein = ALREADY COOKED. Say "heat gently 3-4 min over medium heat until warmed through." NEVER say "cook until done" or "brown the meat."
+- Never use partial bags. Always whole quart bags only. 1 quart bag = 1.5 lbs cooked.
+- For ${A.householdSize} people use ${A.householdSize<=4?'1-2':'2-3'} quart bags per meal.
+- If no protein stocked: pick the most seasonal protein, flag urgency "out" on grocery list, write recipe as if user has it.
+- Dinner/lunch with only beans, grains, or vegetables as main = wrong. Always add protein or flag it.
 
-CRITICAL PROTEIN RULES:
-- Proteins already in the freezer are COOKED. They need to be HEATED, not cooked. Say "heat through gently 3-4 minutes over medium heat" NEVER "cook until done" or "brown the meat"
-- Proteins marked "NEEDS TO BE COOKED" are proteins the user plans to cook on maintenance day — build the recipe assuming they will be cooked and available
-- NEVER use partial bags. Always whole quart bags only.
-- 1 quart bag = 1.5 lbs cooked protein
-- For ${A.householdSize} people use ${A.householdSize<=4?'1-2':'2-3'} quart bags per meal
+MEAL TYPE RULES:
+- Dinner = real dinner. Protein + starch + vegetable. Hearty. NOT breakfast food, NOT egg-forward dishes.
+- Lunch = grab and go. 3 steps max. No scratch cooking. Include PACK IT note in tip (container, hot/cold, how long keeps).
+- Breakfast = 5 groups, rotate — never same group back to back:
+    A(grain): baked oatmeal, oat bars, granola bars, overnight oats
+    B(egg savory): scrambled bowl, omelette, frittata, egg muffin cups, breakfast casserole
+    C(bread/batter): pancakes, french toast, waffles, crepes, biscuits and gravy, muffins
+    D(no-cook): yogurt parfait, smoothie pack, fruit and cheese, overnight oats
+    E(hash/skillet): breakfast hash, potato sausage skillet, sheet pan breakfast, loaded hash browns
+  Last breakfast: "${A.lastBuiltBreakfast||'none'}" — build from a DIFFERENT group. All groups valid, just rotate.
+- Snack = small, light, no cooking. Cheese and crackers, fruit and dip, yogurt, mini quesadilla.
+- Never serve breakfast food for dinner. Never serve shakshuka/frittata for dinner unless eggs are the only protein.
 
-MEAL TYPE RULES — CRITICAL:
-- Dinner = a real dinner. NOT breakfast food. NOT egg-forward dishes. Proteins, grains, vegetables. Hearty, satisfying, feeds the household.
-- Lunch = grab and go. 3 assembly steps max. No scratch cooking. Pull already-cooked protein, assemble, pack. Formats: wraps, hot sandwiches, grilled cheese, chicken melt, loaded baked potato, quesadillas, rice bowls, pasta salad, soup and sandwich combo, leftover remix, lunchbox plates. Always include PACK IT note in tip — container, hot or cold, how long it keeps.
-- Breakfast = exciting and varied. There are 5 format groups — rotate through all of them. Eggs and pancakes are welcome, they just cannot repeat back to back.
-  BREAKFAST FORMAT GROUPS — rotate across all 5, never stay in one group two builds in a row:
-    Group A — Grain-based: baked oatmeal, overnight oats jar, oat bars, granola bars, banana oat bars, oatmeal bake
-    Group B — Egg-based savory: scrambled egg bowl with protein, omelette, frittata slice, egg muffin cups, breakfast casserole, shakshuka (breakfast only), sheet pan eggs with vegetables
-    Group C — Bread/batter: pancake stack, stuffed french toast, waffle board, crepes, biscuits and gravy, muffins, cornbread with honey butter
-    Group D — No-cook or assembly: yogurt parfait cups, smoothie pack, fruit and cheese plate, overnight oats, cottage cheese bowl with toppings
-    Group E — Hash/skillet: breakfast hash, potato and sausage skillet, sheet pan breakfast, loaded hash browns, breakfast bowl
-  INVENTORY GUIDANCE — let stock shape the format pick:
-    - Breakfast Sausage stocked → lean toward Group B or E
-    - Hash Browns stocked → lean toward Group E
-    - Oats stocked → lean toward Group A
-    - Yogurt stocked → lean toward Group D
-    - Frozen fruit stocked → lean toward Group D or A
-  LAST BREAKFAST BUILT: "${A.lastBuiltBreakfast||'none'}" — identify which group that belongs to, then build from any OTHER group this time. Pancakes (Group C) and eggs (Group B) are fully valid — just not two times in a row.
-- Snack = small and light. No cooking. Cheese and crackers, fruit and dip, yogurt parfait, ants on a log, mini quesadilla, frozen fruit. NOT a meal.
-- NEVER serve shakshuka, frittata, or egg-based dishes for Dinner unless eggs are the ONLY protein available.
-- PROTEIN RULE FOR DINNER AND LUNCH: Every dinner and every lunch must contain a meaningful protein source — meat, poultry, seafood, eggs, or canned protein. Beans, lentils, and grits alone do not count as a complete dinner protein unless Vegetarian is selected in dietary restrictions. If no protein is available, flag it on the grocery list and build the best possible meal noting that protein should be added.
-- Cheesy grits, bean casseroles, pasta without protein, rice without protein — these are SIDE DISHES not dinners. Always add a protein or flag that one is needed.
+${!includeSoups?'SOUPS OFF: No soups, stews, chili, or broth-based dishes.':`SOUPS ON: Soups, stews, and chili are valid dinner formats.`}
 
-SEASONAL & BUDGET BUYING GUIDE — This is critical to the Prep & Purpose philosophy. Empty inventory does not limit what can be built. It means the person needs to shop smart. Always build the best possible meal and flag everything needed on the grocery list. Prioritize what is in season and on sale in America right now. The current month is ${new Date().toLocaleString('en-US',{month:'long'})}.
+${grabAndGo?`GRAB AND GO: Build a batchable item made once, grabbed all week. Rotate formats — last was "${A.lastBuiltBreakfast||'none'}":
+Formats: freezer burritos, egg muffin cups, baked oatmeal bars, granola bars, banana oat muffins, overnight oats jars, yogurt parfait cups, smoothie packs, sheet pan hash, pancakes, waffles, french toast sticks, muffins.
+Stock guidance: sausage→burritos/egg cups · hash browns→hash bake · oats→bars/overnight oats · yogurt→parfait · frozen fruit→smoothie packs · bananas→banana muffins · flour+eggs+butter→pancakes/waffles/muffins.
+Always specify: yield in pieces, storage, how long keeps, grab size. Flag missing baking ingredients.
+BATCH FREEZE: cool → freeze flat → quart bags → reheat in tip. Keeps 3 months. French toast: flag bread, build egg custard only. Waffles: note waffle iron needed.
+BAKING SCALE TIP in tip field for any baked item: "When scaling up, use ~1.4x baking powder/soda/salt — not 2x. Flour, sugar, oats, butter, eggs scale normally."`:''}
 
-PROTEINS BY MONTH (what is typically on sale):
-- January: whole chickens, pork roasts, ground beef (post-holiday clearance), canned tuna
-- February: chicken thighs, ground turkey, pork chops
-- March: whole chickens, corned beef, ground beef
-- April: ham (Easter — best time to buy and freeze), lamb, chicken breasts
-- May: ground beef (grilling season starts), chicken breasts, hot dogs, sausage
-- June: ground beef, chicken, ribs, sausage, hot dogs (peak grilling season)
-- July: ground beef, chicken, ribs, hot dogs (peak grilling — best prices of the year)
-- August: chicken, ground beef, back to school ground turkey deals
-- September: chicken thighs, ground beef, pork shoulder
-- October: whole turkeys start appearing, pork, chicken thighs
-- November: turkey (best time to buy and freeze extras), ham, chicken
-- December: ham, turkey (post-Thanksgiving clearance), prime rib, shrimp
-- Year-round deals: canned tuna, canned salmon, chicken thighs, eggs, ground turkey
-
-PRODUCE BY SEASON (what is cheap and abundant):
-- Winter (Dec-Feb): citrus (oranges, lemons, limes, grapefruit), sweet potatoes, potatoes, carrots, cabbage, onions, winter squash, apples, pears, broccoli, cauliflower, kale, collard greens
-- Spring (Mar-May): asparagus, peas, spinach, lettuce, radishes, strawberries, artichokes, broccoli, green onions
-- Summer (Jun-Aug): tomatoes, zucchini, corn, cucumbers, bell peppers, eggplant, peaches, berries, watermelon, green beans, summer squash
-- Fall (Sep-Nov): butternut squash, sweet potatoes, apples, pears, Brussels sprouts, cauliflower, broccoli, kale, pumpkin, beets, turnips
-
-SCRATCH BAKING RULES:
-- SAFE TO BUILD FROM SCRATCH (simple ratios): Pancakes, waffles, french toast, biscuits, cornbread, muffins, oatmeal bakes, egg casseroles, cookies, brownies, crepes.
-- BAKING SCALE TIP — include in tip field for ANY baked item using baking powder, baking soda, salt, or vanilla: "When scaling this recipe up, leaveners and salt do not scale 1:1. For a double batch use about 1.4x the baking powder, baking soda, and salt — not 2x. Flour, sugar, oats, butter, eggs, and wet ingredients scale normally." 
-- NEVER BUILD FROM SCRATCH (yeast dough, unreliable scaling): Sandwich bread, dinner rolls, pizza dough, cinnamon rolls, hamburger buns, hot dog buns, pie crust, tortillas. Always flag as store-bought.
-- For french toast specifically: buy the bread (flag on grocery list), build only the egg custard mixture recipe.
-- For waffles: always note in tip that a waffle iron is required.
-
-CONVENIENT ITEMS — always flag these on the grocery list when a recipe needs them, never omit:
-- Bread, sandwich bread, dinner rolls, hamburger buns, hot dog buns — flag exact quantity needed
-- Tortillas (flour or corn) — flag pack size needed
-- Pizza crust, pre-made pie crust, puff pastry — flag as needed
-- The app NEVER builds scratch recipes for these items. Scaling bread and dough recipes is unreliable.
-- If relevant, add ONE short note in the tip field only: "Tortillas/bread/crust can be made from scratch if you prefer" — nothing more. No recipe, no instructions, no ingredients list for the dough.
-- Always flag as store-bought on the grocery list with reason: "Store-bought recommended — or make from scratch if you prefer"
-- Never block a meal build because a bread or crust item is not in inventory. Flag it and move on.
-
-GROCERY FLAG RULES:
-- Always include the reason field explaining WHY the item is needed
-- For seasonal items add: "In season now — typically lower price at the store"
-- For proteins add: "Typically on sale this time of year — buy extra and freeze"
-- For convenient items add: "Store-bought works great — or can be made from scratch"
-- For any item that can be bought in bulk to freeze add: "Consider buying extra — freezes well"
-- urgency "out" = needed to make this meal · urgency "low" = optional upgrade or restock
-
-When flagging a protein on the grocery list with no inventory, always note in the reason field: "Typically on sale this time of year — check store sales and buy extra to freeze."
-
-${!includeSoups?`SOUPS OFF — CRITICAL: User has turned off soups and stews. NEVER suggest soup, stew, chili, broth-based dishes, gumbo, or any liquid-heavy meal. Build around skillet meals, casseroles, baked dishes, rice bowls, and dry-heat formats only.`:''}
-
-${grabAndGo?`GRAB AND GO MODE — ON:
-- Build a BATCHABLE item that can be made once and grabbed all week.
-
-VARIETY RULE: Last grab-and-go built was "${A.lastBuiltBreakfast||'none'}". Rotate — build from a different format category this time. All formats are equally valid; the goal is variety across builds.
-
-FULL FORMAT POOL — rotate through all, let inventory guide which fits best:
-- Freezer burritos: eggs + protein + veg in tortilla, wrap in foil, freeze, reheat from frozen
-- Egg muffin cups: eggs + protein + veg baked in muffin tin, fridge 5 days or freeze 3 months
-- Baked oatmeal bars: oats + banana or fruit + honey, cut into bars, fridge 7 days or freeze 3 months
-- Granola bars: oats + honey + add-ins, no-bake or baked
-- Banana oat muffins: ripe bananas + oats + flour, counter 3 days or fridge 7 days
-- Overnight oats jars: oats + milk + fruit, no cooking, assemble night before, fridge 5 days
-- Yogurt parfait cups: layered in mason jars, fridge 5 days
-- Smoothie packs: fruit + oats portioned into quart bags, freeze flat, blend with milk in morning
-- Sheet pan breakfast hash: potatoes + sausage + peppers, portioned into containers, fridge 5 days
-- Pancakes: batch-made, fully valid rotation item, freeze flat then bag, reheat in toaster
-- Waffles: requires waffle iron (always note in tip), freeze flat then bag, reheat in toaster
-- French toast sticks: buy bread (flag on list), dip in egg custard, bake, freeze, reheat in toaster
-- Muffins: any flavor, bake once, grab all week
-
-INVENTORY SUGGESTIONS — let stock shape the pick:
-- Breakfast Sausage stocked → burritos or egg muffin cups are a natural fit
-- Hash Browns stocked → sheet pan hash bake is a natural fit
-- Oats stocked → oat bars, granola bars, or overnight oats are a natural fit
-- Yogurt stocked → parfait cups are a natural fit
-- Frozen fruit stocked → smoothie packs or fruit oat bars are a natural fit
-- Bananas stocked → banana oat muffins or banana bars are a natural fit
-- Flour + butter + eggs stocked → pancakes, waffles, muffins, or french toast all work great
-
-- Always specify: yield in individual pieces (12 burritos, 24 muffin cups, 16 bars, 24 pancakes), storage (fridge or freezer), and how long it keeps.
-- Individual grab size in description: "grab 1 burrito" or "grab 2 bars and a banana."
-- Flag any missing baking ingredients in groceryFlags with exact amounts.
-- Include bake temp and time in steps where applicable.
-- BATCH FREEZE RULES (pancakes, waffles, french toast, burritos, bars):
-  * Cool completely before freezing
-  * Freeze flat on a baking sheet first, then transfer to quart bags (prevents sticking)
-  * Reheat pancakes/waffles in toaster 2-3 min or microwave 45-60 seconds
-  * Reheat burritos in oven 375°F 15-20 min from frozen or microwave 2-3 min
-  * Keeps in freezer up to 3 months
-  * Always include freeze and reheat instructions in the tip field
-  * For french toast: buy bread from store (flag on grocery list), build the egg mixture recipe only
-  * For waffles: note in tip that a waffle iron is needed`:''}
-
-${dietaryGoals.length>0?`DIETARY GOALS — optimize toward these targets (do not violate, build meals that genuinely hit these):
-${dietaryGoals.includes('High Protein')?'- HIGH PROTEIN: minimum 35g protein per serving. Lead with protein. Use 2+ bags of protein base. Add eggs, beans, or cheese to boost further.':''}
-${dietaryGoals.includes('Low Carb')?'- LOW CARB: under 20g net carbs per serving. No pasta, rice, bread, or starchy vegetables as the base. Use cauliflower rice, zucchini, leafy greens, or just protein and veg.':''}
-${dietaryGoals.includes('Low Fat')?'- LOW FAT: under 10g fat per serving. Lean proteins only — chicken, turkey, tuna, shrimp. No butter, cream, full-fat cheese. Use broth, lemon, herbs for flavor.':''}
-${dietaryGoals.includes('Mediterranean Diet')?'- MEDITERRANEAN DIET (not just flavor — actual diet rules): olive oil as the primary fat, abundant vegetables and legumes, fish and chicken over red meat, whole grains, limited dairy, no processed foods. Flag olive oil and fish on grocery list if not stocked.':''}`:''}
-
-${A.kidFriendly?`KID FRIENDLY MODE — ON (applies to ALL meal types):
-- Mild flavors only — no spicy, no strong heat, no bitter, no strong cheeses
-- Nut-free always — never suggest peanuts, tree nuts, or nut butters
-- Simple presentation — kids won't eat complicated dishes
-- Portions sized for kids — note in description, user adjusts servings count
-- Breakfast: pancake shapes, french toast sticks, fun waffle toppings, scrambled eggs with mild cheese, mini omelettes
-- Lunch: roll-ups, pinwheels, mini quesadillas, pasta salad, lunchbox plates — eats well cold
-- Dinner: taco bowls, pasta with mild sauce, chicken and rice, mild stir fry, pizza casserole, mac and cheese with protein
-- Snack: cheese and crackers, fruit with yogurt dip, ants on a log, mini quesadillas, frozen fruit
-- Flag fun optional toppings in groceryFlags as urgency "low": shredded cheese, mild salsa, sour cream, ranch, ketchup`:''}
-
-FLAVOR DIRECTION GUIDE — build dishes that genuinely represent these cuisines:
-- Classic American: meat and potatoes, casseroles, pot roast, meatloaf, chicken and gravy, simple proteins with a starch and vegetable
-- Comfort Food: creamy, cheesy, hearty — mac and cheese, pot pie, creamy pasta, smothered chicken, loaded anything
-- Southern & Soul Food: fried concepts (use oil), gravy, cornbread, collard greens, black-eyed peas, smothered pork chops, grits, biscuits
-- Tex-Mex: cumin, chili powder, cheese, tortillas, salsa, beans, ground beef or chicken — American-style Mexican food
-- Mexican: authentic Mexican flavors — chile verde, carnitas, barbacoa, pozole, enchiladas verdes, mole, al pastor, caldo, tamale-inspired dishes, epazote, dried chiles, tomatillos, Mexican oregano, cotija cheese, crema. Deeper and more complex than Tex-Mex.
-- Italian: tomato sauce, pasta, olive oil, basil, oregano, parmesan, garlic
-- BBQ & Smoky: smoked paprika, chipotle, BBQ sauce, slow-cooked concepts, smoky rubs
-- Cajun: holy trinity (onion, celery, bell pepper), bold spice, Louisiana-style, rice
-- Asian-Style: soy sauce, ginger, garlic, sesame, rice or noodles, stir fry
-- Mediterranean: olive oil, lemon, herbs, tomatoes, feta, chickpeas — FLAVOR ONLY unless Mediterranean Diet goal is selected
-- Caribbean: allspice, thyme, scotch bonnet direction, rice and beans, jerk-style
-- Surprise Me: rotate freely through ALL flavor directions including garlic butter, lemon herb, Indian-inspired, Chinese-American, Mexican, Middle Eastern, Greek, teriyaki, savory — anything goes
-
-BREAD AND CRUST RULE — CRITICAL: If a recipe uses bread, rolls, buns, pie crust, pizza dough, or tortillas that are not already in inventory, ALWAYS flag them in groceryFlags with exact quantity. Never silently omit a recipe because bread is hard to track. Build the recipe and let the user decide whether to buy or make from scratch.
-
-MILK POWDER RULE — CRITICAL:
-When a recipe uses reconstituted milk from milk powder:
-- Pull list entry: icon 🥛, item "Milk Powder", qty "X cups milk powder + Y cups water = Z cups reconstituted milk", prepNote "Stir together until dissolved before using"
-- Steps: only say "Z cups reconstituted milk" — NEVER show the math inside a cooking step
-- Wrong: "Add 8 cups reconstituted milk (1 cup milk powder + 4 cups water — double it)"
-- Correct: "Add 8 cups reconstituted milk"
-
-RECIPE CONSISTENCY RULE: Pick ONE format and use it everywhere — title, pull list, steps, and tip must all match.
-- If the recipe is "French Bread Pizza" → pull list says "French bread loaves", steps say "slice French bread", grocery list says "French bread loaves"
-- If the recipe is "Pizza" → pull list says "pizza crust", steps say "spread on pizza crust", grocery list says "store-bought pizza crust"
-- NEVER mix formats — do not name it French Bread Pizza and list pizza crust in the pull list
-
-INGREDIENT COMMON SENSE RULE: Do NOT force inventory items into a recipe just because they are available. Only use ingredients that actually belong in the dish.
-- NEVER put fruit on savory dishes unless it is a known classic combination (mango salsa, pineapple on Hawaiian pizza, cranberry with turkey, apple with pork)
-- Bananas, blueberries, strawberries, peaches, frozen fruit — these belong in breakfast, desserts, and smoothies. NEVER in savory dinners or on pizzas.
-- If an ingredient does not belong in the dish, skip it. Do not invent a reason to use it.
-- Use frozen supports for vegetables and grains in savory dishes. Use frozen fruit only in sweet dishes or breakfast.
-
-STORAGE FORM HONESTY RULE — CRITICAL:
-Only use a storage form that is actually stocked. Never call an ingredient "frozen" if only the dry or canned version is on hand. Never call it "canned" if only dry is stocked. The form in the recipe MUST match what is in the inventory lists.
-
-SUPPORT INGREDIENT DECISION TREE — follow this for every support ingredient in the recipe:
-1. If FROZEN bags > 0 → use frozen. Pull list says "[X] bags ([Y] cups)". Steps say "add mid-cook, 3-4 min to heat through."
-2. If FROZEN = 0 but CANNED > 0 → use canned. Pull list says "[X] cans". Steps say "drain and add at the end — already cooked, just heat."
-3. If FROZEN = 0 and CANNED = 0 but DRY > 0 → use dry. Pull list says "[X] cups dry" or "[X] lbs dry". Steps say "cook [ingredient] separately according to package directions, then add to the dish." Dry rice, dry pasta, dry beans — always cooked separately first, never added raw to a casserole, baked dish, or soup. Never call a dry ingredient "frozen."
-4. If ALL forms = 0 → do NOT use that ingredient in the recipe at all. Flag it in groceryFlags with exact quantity needed and urgency "out". Build the recipe without it or substitute something that IS stocked.
-
-EXAMPLES OF CORRECT BEHAVIOR:
-- White Rice: 0 frozen bags, 2 lbs dry → pull list says "White Rice, 2 cups dry", step says "cook rice separately on stovetop according to package directions, then add to the dish." Dry rice is ALWAYS cooked separately first — it is never added raw to a casserole or baked dish.
-- Bell Peppers: 0 frozen bags, 0 canned, 0 fresh → do NOT include bell peppers. Flag on grocery list. Build without them.
-- Black Beans: 0 frozen, 2 cans → pull list says "2 cans black beans, drained". Step says "stir in at the end."
-- Corn: 0 frozen, 3 home canned jars → pull list says "3 jars corn, drained". Step says "stir in at the end."
-
-VEGETABLE TIMING — always matches the form actually used:
-- FRESH veg: add early, needs full cook time, use first
-- FROZEN (quart bags): add mid-cook, 3-4 min to heat through
-- CANNED or home canned: drain, add at the very end — already cooked, just heat
-- DRY (rice, beans, grains): include full cook time in steps — these are not ready to use
-
-DISH VARIETY — rotate every time. Never repeat the same dish type twice in a row:
-Dinner: Tacos, enchiladas, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, pot pie, lo mein, quesadillas, hash, skillet meals, rice bowls, meatloaf, smothered chicken, chicken and gravy, beef and potatoes, loaded baked potatoes
-Lunch: Wraps, hot sandwiches, grilled cheese combo, chicken melt, loaded baked potato, quesadillas, rice bowls, pasta salad, soup and sandwich, leftover remix, lunchbox plates, tuna salad, chicken salad
-Breakfast: Pancake stacks, stuffed french toast, waffle boards, breakfast burritos, egg scrambles, biscuits and gravy, breakfast hash, omelettes, breakfast casserole, oatmeal bake, overnight oats, yogurt parfait
-
-${buildEmergency?`EMERGENCY MEAL MODE — ON (DINNER ONLY):
-- Complete dinner meal — protein + starch + vegetable all in one. BOTH portions go straight to the freezer. There is no "eat one now" — both freeze. Always.
-- Double batch automatically — makes exactly 2 full portions for the emergency layer.
-- STORAGE FORMAT — pick based on the dish. Both options are valid emergency layer storage:
-  * Soups, stews, chili, gumbo = GALLON BAGS (lay flat to freeze)
-  * Casseroles, baked pasta, rice bakes, stuffed peppers = 9X13 BAKING PAN (cover with plastic wrap then foil, freeze in the pan)
-  * Thick rice bowls or protein + grain combos = GALLON BAGS or FREEZER-SAFE CONTAINERS
-- NEVER use "FOR NOW" language. Both portions freeze. No exceptions.
-- Tip for BAG meals: "FREEZE IN GALLON BAGS: [reheating instructions] · Pull night before to thaw in fridge · Keeps 3-6 months"
-- Tip for PAN meals: "FREEZE IN 9X13 PAN: Cover tightly with plastic wrap then foil · Pull night before to thaw · Bake covered at 375°F for [X] min until hot and bubbly · Keeps 3-6 months"
-- NO soggy ingredients: no fresh lettuce, no crispy toppings, no uncooked pasta in liquid.
-- Scale recipe to feed ${A.householdSize*2} people total (double batch).`:''}
-
-MISSING INGREDIENTS: Always build anyway. Flag missing items in groceryFlags with exact quantities.
-CRITICAL: If a support ingredient shows 0 frozen, 0 canned, 0 dry — it has NO inventory. Do NOT include it in the recipe as if it were stocked. Either substitute with something that IS stocked, or omit it entirely and flag it on the grocery list. Never write "8 bags frozen rice" when rice only exists as dry storage.
-
-COOK LIST: When proteins marked "NEEDS TO BE COOKED" are used, include them in cookList with exact bag count needed for this meal and raw lbs to buy (multiply cooked lbs by 1.43 for 30% shrinkage).
+${A.kidFriendly?`KID FRIENDLY: Mild flavors, nut-free, simple formats, kid portions. Breakfast: fun shapes, scrambled eggs, french toast sticks. Lunch: roll-ups, pinwheels, pasta salad. Dinner: taco bowls, mild pasta, chicken and rice. Flag optional toppings as urgency "low".`:''}
 
 ${A.dietary.length>0?`DIETARY RESTRICTIONS — NEVER VIOLATE: ${A.dietary.join(', ')}`:''}
+
+${(A.dietaryGoals||[]).length>0?`DIETARY GOALS — optimize toward: ${(A.dietaryGoals||[]).join(', ')}. ${(A.dietaryGoals||[]).includes('High Protein')?'Min 35g protein/serving. Use 2+ bags protein base.':''} ${(A.dietaryGoals||[]).includes('Low Carb')?'Under 20g net carbs. No pasta/rice/bread as base.':''} ${(A.dietaryGoals||[]).includes('Low Fat')?'Under 10g fat. Lean proteins, no butter/cream.':''} ${(A.dietaryGoals||[]).includes('Mediterranean Diet')?'Olive oil as primary fat, fish/chicken over red meat, whole grains, abundant vegetables.':''}`:''}
+
+FLAVOR GUIDE: Classic American=meat+potatoes/casseroles · Comfort Food=creamy/cheesy/hearty · Southern=gravy/cornbread/grits/smothered · Tex-Mex=cumin/cheese/tortillas/salsa · Mexican=authentic (carnitas/barbacoa/mole/pozole/chiles) · Italian=tomato/pasta/olive oil/basil · BBQ=smoked paprika/chipotle/slow-cooked · Cajun=holy trinity/bold spice/rice · Asian=soy/ginger/garlic/sesame · Mediterranean=olive oil/lemon/herbs/feta · Caribbean=allspice/thyme/jerk/rice and beans · Surprise Me=rotate all directions freely.
+
+STORAGE FORM HONESTY — match form to actual inventory:
+1. FROZEN bags > 0 → frozen. Step: "add mid-cook, 3-4 min to heat."
+2. FROZEN=0, CANNED > 0 → canned. Step: "drain, add at end."
+3. FROZEN=0, CANNED=0, DRY > 0 → dry. Step: "cook separately per package directions, then add." NEVER add raw dry ingredients to a casserole or baked dish.
+4. ALL=0 → omit from recipe, flag on grocery list.
+
+FRESH veg: add early, needs full cook time. FROZEN bags: mid-cook 3-4 min. CANNED/home canned: drain, add at very end. DRY: cook separately first.
+
+MILK POWDER: Pull list shows "X cups powder + Y cups water = Z cups milk". Steps say only "Z cups milk" — never show math in a step.
+
+BAKING RULES:
+- Safe to scratch: pancakes, waffles, french toast, biscuits, cornbread, muffins, oatmeal bakes, cookies, brownies.
+- Never scratch: sandwich bread, dinner rolls, pizza dough, tortillas, pie crust. Always flag as store-bought.
+- Convenient items (bread, tortillas, buns, pizza crust): always flag exact quantity on grocery list. Never block a build because these are missing.
+
+GROCERY FLAGS: Always include reason field. For seasonal proteins: "Typically on sale now — buy extra and freeze." For convenient items: "Store-bought recommended." urgency "out" = needed for this meal · urgency "low" = optional/restock.
+
+${(()=>{
+  if(buildEmergency)return'';
+  const mo=new Date().getMonth();
+  const proteins=['whole chickens, pork roasts, ground beef','chicken thighs, ground turkey, pork chops','whole chickens, corned beef, ground beef','ham (buy extra — freeze), lamb, chicken breasts','ground beef, chicken breasts, hot dogs, sausage','ground beef, chicken, ribs, sausage (peak grilling)','ground beef, chicken, ribs, hot dogs (best prices of year)','chicken, ground beef, ground turkey','chicken thighs, ground beef, pork shoulder','whole turkeys appearing, pork, chicken thighs','turkey (buy extra — freeze), ham, chicken','ham, turkey clearance, prime rib, shrimp'][mo];
+  const produce=['citrus, sweet potatoes, potatoes, carrots, cabbage, onions, apples','citrus, sweet potatoes, carrots, cabbage, broccoli, cauliflower','broccoli, cauliflower, cabbage, carrots, potatoes, citrus','asparagus, peas, spinach, lettuce, strawberries, broccoli','asparagus, peas, spinach, strawberries, green onions','tomatoes, zucchini, corn, cucumbers, bell peppers, berries','tomatoes, zucchini, corn, cucumbers, bell peppers, peaches, berries','tomatoes, zucchini, corn, bell peppers, eggplant, summer squash','butternut squash, sweet potatoes, apples, broccoli, kale','sweet potatoes, apples, pears, Brussels sprouts, cauliflower, pumpkin','sweet potatoes, apples, pears, Brussels sprouts, kale, turnips','citrus, sweet potatoes, potatoes, carrots, cabbage, winter squash'][mo];
+  return`SEASONAL (this month): Proteins on sale: ${proteins}. Produce abundant: ${produce}. Year-round: canned tuna, salmon, chicken thighs, eggs, ground turkey.`;
+})()}
+
+DISH VARIETY — never repeat same format twice in a row. Rotate across: tacos, enchiladas, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, pot pie, skillet meals, rice bowls, smothered chicken, soups, stews, chili, sandwiches, wraps, hash, quesadillas.
+
+INGREDIENT COMMON SENSE: Never put fruit on savory dishes unless a known classic (mango salsa, pineapple on Hawaiian, cranberry with turkey, apple with pork). Frozen fruit belongs in breakfast/desserts only.
+
+${buildEmergency?`EMERGENCY MEAL MODE:
+- Complete dinner: protein + starch + veg. BOTH portions freeze. No "eat one now." Always.
+- Storage: soups/stews/chili = GALLON BAGS · casseroles/baked dishes = 9X13 PAN (cover with plastic wrap then foil) · rice bowls = GALLON BAGS or FREEZER CONTAINERS.
+- Tip for bags: "FREEZE IN GALLON BAGS: [reheat] · Pull night before · Keeps 3-6 months"
+- Tip for pan: "FREEZE IN 9X13 PAN: Cover tightly · Pull night before to thaw · Bake covered 375°F [X] min · Keeps 3-6 months"
+- No soggy ingredients. Scale to ${A.householdSize*2} people total.`:''}
+
+MISSING INGREDIENTS: Always build anyway. Flag missing items in groceryFlags. Zero inventory = omit from recipe and flag — never invent frozen bags that don't exist.
+
+COOK LIST: When proteins need to be cooked, include cookList array with bags needed and raw lbs (multiply cooked lbs × 1.43).
+
 ${ppSpices?'Use P&P Spice Blend names only.':''}
 
 RESPOND WITH VALID JSON ONLY — no markdown, no explanation:
@@ -1638,30 +1473,21 @@ RESPOND WITH VALID JSON ONLY — no markdown, no explanation:
   "description": "One line that makes them want to make it",
   "macros": {"cal": 450, "protein": 38, "carbs": 35, "fat": 16},
   "pull": [
-    {"icon": "🥩", "item": "Shredded Chicken", "qty": "1 bag = 1.5 lbs cooked", "prepNote": "Already cooked — heat gently 3-4 min over medium heat until warmed through"},
-    {"icon": "🍗", "item": "Chicken Thighs", "qty": "2 lbs", "prepNote": "Pat dry, season both sides — weight only, never write piece counts"},
-    {"icon": "🥛", "item": "Yogurt", "qty": "3 cups", "prepNote": "From fridge"},
+    {"icon": "🥩", "item": "Shredded Chicken", "qty": "1 bag = 1.5 lbs cooked", "prepNote": "Already cooked — heat gently 3-4 min"},
     {"icon": "🧂", "item": "Salt", "qty": "1 tsp", "prepNote": "From pantry"}
   ],
-  "steps": ["Step 1 with real measurements and timing"],
+  "steps": ["Step with real measurements and timing"],
   "tip": "One specific useful tip",
-  "groceryFlags": [{"name": "item name", "qty": "exact amount needed", "urgency": "out", "reason": "why needed for this meal"}],
-  "cookList": [{"protein": "name", "bags": 2, "rawLbs": "4.3 lbs raw", "note": "cook and bag on maintenance day"}]
+  "groceryFlags": [{"name": "item", "qty": "exact amount", "urgency": "out", "reason": "why needed"}],
+  "cookList": [{"protein": "name", "bags": 2, "rawLbs": "4.3 lbs raw", "note": "cook and bag"}]
 }
 
-PULL LIST RULE — CRITICAL: The pull array must include EVERY ingredient needed for the recipe — not just frozen stock. Include frozen bags, canned items, pantry items, fridge items, spices, everything.
-STORAGE FORM IN PULL LIST: Every support ingredient in the pull list must use the form that is actually stocked. If rice is only in dry storage, the pull list entry says dry rice with weight, NOT frozen bags. If peppers are not stocked in any form, they do NOT appear in the pull list — flag on grocery list instead.
-
-QUANTITY RULES — NO EXCEPTIONS:
-- MEAT qty field: weight only. "2 lbs" or "1.5 lbs". NEVER include piece counts. NEVER write "about X pieces" or "(X pieces)". If you write a piece count the recipe is wrong.
-- EGGS: whole numbers only. Round UP. Never "3/4 eggs". Never "1.5 eggs".
-- BAGS: whole quart bags only. Never partial.
-- SPICES: tsp or tbsp. Over 3 tsp → use tbsp. Over 16 tbsp → use cups.`;
-
+PULL LIST: Include EVERY ingredient — frozen bags, canned, pantry, fridge, spices, everything.
+QUANTITY RULES: Meat = weight only ("2 lbs"). Never piece counts. Eggs = whole numbers, round up. Bags = whole only. Spices = tsp/tbsp (3+ tsp → tbsp, 16+ tbsp → cup).`
   const userPrompt=`MEAL TYPE: ${mealType} — build an appropriate ${mealType.toLowerCase()} dish. NOT breakfast food for dinner.
 ${grabAndGo?'GRAB AND GO MODE: ON — build a batchable item with yield, storage instructions, and grab size.':''}
 ${!includeSoups?'SOUPS OFF: No soups, stews, chilis, or broth-based dishes under any circumstances.':''}
-${mealType==='Breakfast'?`BREAKFAST VARIETY RULE: Breakfast has 5 format groups — A (grain-based), B (egg savory), C (bread/batter including pancakes), D (no-cook/assembly), E (hash/skillet). Last breakfast built was "${A.lastBuiltBreakfast||'none'}". Identify its group and build from a DIFFERENT group this time. All groups are equally valid — this is about rotation, not restriction. Eggs and pancakes are welcome, just not back to back.`:''}
+${mealType==='Breakfast'?`BREAKFAST VARIETY RULE: Last breakfast built was "${A.lastBuiltBreakfast||'none'}". Build something COMPLETELY DIFFERENT.`:''}
 ${mealType!=='Breakfast'?`LAST MEAL BUILT: "${A.lastBuiltMeal||'none'}" — build something completely different.`:''}
 ${A.lastBuiltProtein&&mealType!=='Breakfast'?`LAST PROTEIN USED: "${A.lastBuiltProtein}" — use a DIFFERENT protein this time. Rotate.`:''}
 ${buildEmergency?'EMERGENCY MEAL MODE: ON — dinner only, double batch, gallon bags or freezer containers, complete meal, reheats perfectly':''}
@@ -1703,11 +1529,28 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
     const data=await r.json();
     A.generating=false;
     if(!r.ok){
-      alert('Generation failed: '+(data.error||'Unknown error — check Vercel logs'));
-      showPage('builder');return;
+      const status=r.status;
+      let msg='Something went wrong. Please try again.';
+      if(status===429)msg='The kitchen is busy right now — too many requests. Wait a moment and try again.';
+      else if(status===503||status===504)msg='The meal builder timed out. Try a simpler flavor or fewer ingredients, then build again.';
+      else if(status===402||status===400)msg='Service is temporarily unavailable. Please check back shortly or contact support at prepandpurpose.com.';
+      A.generating=false;
+      showPage('builder');
+      setTimeout(()=>openModal(`<div class="modal-header"><div class="modal-title">Unable to Build Meal</div><button class="modal-close" onclick="closeModal()">×</button></div>
+        <div style="font-size:15px;line-height:1.7;margin-bottom:16px">${msg}</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">If this keeps happening, contact us at <a href="mailto:support@prepandpurpose.com" style="color:var(--green)">support@prepandpurpose.com</a></div>
+        <button class="btn btn-primary btn-full" onclick="closeModal()">Got It</button>`),100);
+      return;
     }
     let raw=data.content?.[0]?.text||'';
-    if(!raw){alert('The AI returned an empty response. Try again.');showPage('builder');return;}
+    if(!raw){
+      A.generating=false;
+      showPage('builder');
+      setTimeout(()=>openModal(`<div class="modal-header"><div class="modal-title">Empty Response</div><button class="modal-close" onclick="closeModal()">×</button></div>
+        <div style="font-size:15px;line-height:1.7;margin-bottom:16px">The meal builder didn't return a recipe. This sometimes happens with very specific combinations — try a different flavor or use the Anchor field to guide it.</div>
+        <button class="btn btn-primary btn-full" onclick="closeModal()">Try Again</button>`),100);
+      return;
+    }
     // Clean up any markdown fences
     raw=raw.replace(/```json|```/g,'').trim();
     // Ensure it starts with {
@@ -1742,7 +1585,7 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
     // Store cookList on recipe so placeOnCal can save it with the meal and recalc properly
     A.recipe.cookList=recipe.cookList||null;
 
-    // Grocery flags are added when the meal is placed on the calendar — not before
+    // Grocery flags added only when meal is placed on calendar
     save();
     showPage('builder');
   }catch(e){
@@ -1797,7 +1640,7 @@ function rRecipe(){
     <div class="card card-pad">
       ${isEmergency?`
       <div class="section-head">🚨 Log This Emergency Meal</div>
-      <div class="alert alert-green" style="margin-bottom:14px"><span>✅</span><div>Both portions go straight to the freezer — not the dinner calendar. Inventory deducted for 2 full batches.</div></div>
+      <div class="alert alert-green" style="margin-bottom:14px"><span>✅</span><div>This goes straight to your Emergency supply — not on the dinner calendar. Deducts inventory for 2 full batches.</div></div>
       <div class="fg"><label class="lbl">Date Made</label><input class="inp" type="date" id="em-made-date" value="${new Date().toISOString().slice(0,10)}" style="cursor:pointer"></div>
       <div class="fg"><label class="lbl">Gallon Bags</label><input class="inp" type="number" id="em-made-qty" value="2" min="1" max="10"></div>
       <button class="btn btn-primary btn-full btn-lg" style="margin-bottom:8px" onclick="logEmergencyMeal()">🚨 Log Emergency Meals & Deduct Inventory</button>
@@ -2274,7 +2117,6 @@ function placeOnCal(){
   // Store recipe WITH its cookList so recalc can use it
   A.calendarByDate[dateVal][slot]={...A.recipe,cookList:A.recipe.cookList||null};
   deductInventory(A.recipe.pull);
-  // Add grocery flags now that the meal is confirmed on the calendar
   if(A.recipe.groceryFlags?.length>0){
     A.recipe.groceryFlags.forEach(flag=>{
       if(!A.grocery.find(g=>g.name===flag.name)){
@@ -2282,7 +2124,6 @@ function placeOnCal(){
       }
     });
   }
-  // Recalculate cook list from all scheduled meals
   recalcCookListFromCalendar();
   save();
   A.recipe=null;
@@ -2424,34 +2265,29 @@ function cleanQty(qty){
 function scaleQty(qtyStr, factor){
   if(!qtyStr||factor===1)return qtyStr;
 
-  // ── BAKING CHEMISTRY — do not scale linearly ─────────────────────────────
+  // ── BAKING CHEMISTRY ─────────────────────────────────────────────────────
   const LEAVENER_RE=/baking\s+(powder|soda)/i;
   const CONSERVATIVE_RE=/\b(salt|vanilla(\s+extract)?|cream\s+of\s+tartar)\b/i;
   if(LEAVENER_RE.test(qtyStr)||CONSERVATIVE_RE.test(qtyStr)){
-    const conservativeFactor=Math.sqrt(factor);
-    const numMatch=qtyStr.match(/^(\d+(?:\/\d+)?(?:\.\d+)?(?:\s+\d+\/\d+)?)\s*([a-zA-Z]*)/);
-    if(numMatch){
-      const numStr=numMatch[1].trim();
-      let num;
-      if(numStr.includes('/')){const p=numStr.split('/');num=parseInt(p[0])/parseInt(p[1]);}
-      else if(numStr.includes(' ')){const p=numStr.split(' ');const f=p[1].split('/');num=parseInt(p[0])+parseInt(f[0])/parseInt(f[1]);}
-      else{num=parseFloat(numStr);}
-      let scaled=num*conservativeFactor;
-      const unit=numMatch[2].toLowerCase();
-      let newUnit=unit;
-      if(unit==='tsp'&&scaled>=3){scaled=scaled/3;newUnit='tbsp';}
-      if((unit==='tbsp'||newUnit==='tbsp')&&scaled>=16){scaled=scaled/16;newUnit='cup';}
-      const rounded=Math.round(scaled*8)/8;
-      const whole=Math.floor(rounded);const dec=rounded-whole;
-      let display;
-      if(dec<0.01)display=String(whole||'1/8');
-      else if(Math.abs(dec-0.125)<0.01)display=whole>0?`${whole} 1/8`:'1/8';
-      else if(Math.abs(dec-0.25)<0.01)display=whole>0?`${whole} 1/4`:'1/4';
-      else if(Math.abs(dec-0.5)<0.01)display=whole>0?`${whole} 1/2`:'1/2';
-      else if(Math.abs(dec-0.75)<0.01)display=whole>0?`${whole} 3/4`:'3/4';
-      else display=rounded.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
-      return newUnit!==unit?`${display} ${newUnit}${qtyStr.slice(numMatch[0].length)}`
-        :qtyStr.replace(numMatch[0].trimEnd(),`${display}${unit?' '+unit:''}`).trimEnd()+qtyStr.slice(numMatch[0].length);
+    const cf=Math.sqrt(factor);
+    const nm=qtyStr.match(/^(\d+(?:\/\d+)?(?:\.\d+)?(?:\s+\d+\/\d+)?)\s*([a-zA-Z]*)/);
+    if(nm){
+      const ns=nm[1].trim();let num;
+      if(ns.includes('/')){const p=ns.split('/');num=parseInt(p[0])/parseInt(p[1]);}
+      else if(ns.includes(' ')){const p=ns.split(' ');const f=p[1].split('/');num=parseInt(p[0])+parseInt(f[0])/parseInt(f[1]);}
+      else{num=parseFloat(ns);}
+      let scaled=num*cf;const unit=nm[2].toLowerCase();let nu=unit;
+      if(unit==='tsp'&&scaled>=3){scaled/=3;nu='tbsp';}
+      if((unit==='tbsp'||nu==='tbsp')&&scaled>=16){scaled/=16;nu='cup';}
+      const r=Math.round(scaled*8)/8;const w=Math.floor(r);const d=r-w;
+      let disp;
+      if(d<0.01)disp=String(w||'1/8');
+      else if(Math.abs(d-0.25)<0.01)disp=w>0?`${w} 1/4`:'1/4';
+      else if(Math.abs(d-0.5)<0.01)disp=w>0?`${w} 1/2`:'1/2';
+      else if(Math.abs(d-0.75)<0.01)disp=w>0?`${w} 3/4`:'3/4';
+      else disp=r.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+      return nu!==unit?`${disp} ${nu}${qtyStr.slice(nm[0].length)}`
+        :qtyStr.replace(nm[0].trimEnd(),`${disp}${unit?' '+unit:''}`).trimEnd()+qtyStr.slice(nm[0].length);
     }
   }
   // ── END BAKING CHEMISTRY ──────────────────────────────────────────────────
@@ -2561,21 +2397,16 @@ function rebuildFavorite(idx){
     qty:scaleQty(p.qty,factor)
   }));
 
-  const _bakingStepRE=/\b(baking\s+(?:powder|soda)|salt|vanilla(?:\s+extract)?|cream\s+of\s+tartar)\b/i;
-  const _conserveFactor=Math.sqrt(factor);
-  const scaledSteps=(fav.steps||[]).map(step=>{
-    return step.replace(/(\d+(?:\.\d+)?)\s*(bag[s]?|quart bag[s]?|cup[s]?|tbsp|tsp|oz|lb[s]?|pound[s]?|egg[s]?|can[s]?|tortilla[s]?|each|piece[s]?)/gi,(match,num,unit)=>{
-      const matchIdx=step.indexOf(match);
-      const surrounding=step.slice(Math.max(0,matchIdx-50),matchIdx+match.length+50);
-      const isBakingChem=_bakingStepRE.test(surrounding);
-      const effectiveFactor=isBakingChem?_conserveFactor:factor;
-      let scaled=parseFloat(num)*effectiveFactor;
-      if(/egg/i.test(unit))scaled=Math.ceil(scaled);
-      const rounded=Math.round(scaled*4)/4;
-      const display=rounded===Math.floor(rounded)?Math.floor(rounded).toString():rounded.toFixed(1).replace(/\.0$/,'');
-      return`${display} ${unit}`;
-    });
-  });
+  const _bRE=/\b(baking\s+(?:powder|soda)|salt|vanilla(?:\s+extract)?|cream\s+of\s+tartar)\b/i;
+  const _cf=Math.sqrt(factor);
+  const scaledSteps=(fav.steps||[]).map(step=>step.replace(/(\d+(?:\.\d+)?)\s*(bag[s]?|quart bag[s]?|cup[s]?|tbsp|tsp|oz|lb[s]?|pound[s]?|egg[s]?|can[s]?|tortilla[s]?|each|piece[s]?)/gi,(match,num,unit)=>{
+    const mi=step.indexOf(match);
+    const isBaking=_bRE.test(step.slice(Math.max(0,mi-50),mi+match.length+50));
+    let scaled=parseFloat(num)*(isBaking?_cf:factor);
+    if(/egg/i.test(unit))scaled=Math.ceil(scaled);
+    const r=Math.round(scaled*4)/4;
+    return`${r===Math.floor(r)?Math.floor(r):r.toFixed(1).replace(/\.0$/,'')} ${unit}`;
+  }));
 
   const scaledMacros={
     cal:fav.macros?.cal||0,
@@ -3345,7 +3176,6 @@ function confirmDeleteEmergency(id,restoreInventory){
 }
 
 function restoreInventoryFromPull(pull){
-  // Full mirror of deductInventory — restores frozen, canned, dry, and each counts
   if(!pull||!pull.length)return;
   pull.forEach(p=>{
     if(!p.qty||!p.item)return;
@@ -3354,8 +3184,7 @@ function restoreInventoryFromPull(pull){
     const support=!base&&A.supports.find(s=>s.name.toLowerCase()===pName||pName.includes(s.name.toLowerCase())||s.name.toLowerCase().includes(pName));
     const item=base||support;
     if(item){
-      const num=parseInt(p.qty)||1;
-      const restore=Math.max(1,num);
+      const num=parseInt(p.qty)||1;const restore=Math.max(1,num);
       if(item.storageTypes?.includes('frozen'))item.frozen=Math.min((item.frozen||0)+restore,99);
       else if(item.storageTypes?.includes('canned'))item.canned=Math.min((item.canned||0)+restore,99);
       else if(item.storageTypes?.includes('dry'))item.dry=Math.min((item.dry||0)+restore,99);
@@ -3394,7 +3223,12 @@ function openSettings(){
       <div class="tog ${A.ppSpices?'on':''}" id="st-spices" onclick="this.classList.toggle('on')"><div class="tog-th"></div></div>
     </div>
     <button class="btn btn-primary btn-full" style="margin-bottom:8px" onclick="saveSettings()">Save Settings</button>
-    <button class="btn btn-danger btn-full" onclick="signOut()">Sign Out</button>`);
+    <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="signOut()">Sign Out</button>
+    <div style="border-top:1px solid var(--border);margin:16px 0"></div>
+    <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Subscription</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6">Manage or cancel your subscription through the Stripe customer portal. Your data stays saved and you can resubscribe any time.</div>
+    <a href="https://billing.stripe.com/p/login/cNi14mewfb3083J2xIffy01" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;text-decoration:none">Manage Subscription →</a>
+    <div style="font-size:11px;color:var(--text-hint);text-align:center">Need help? <a href="mailto:support@prepandpurpose.com" style="color:var(--green)">support@prepandpurpose.com</a></div>`);
 }
 function toggleDietChip(el){
   el.classList.toggle('selected');
