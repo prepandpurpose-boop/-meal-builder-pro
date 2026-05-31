@@ -757,6 +757,8 @@ async function loadUserData(email){
     A.bases=mergeWithDefaults(remote.bases,DEF_BASES);
     A.supports=mergeWithDefaults(remote.supports,DEF_SUPPORTS);
     A.pantry=mergePantryWithDefaults(remote.pantry,DEF_PANTRY);
+    // Migration: remove any eggs logged in Kitchen Staples fridge — eggs belong only in Inventory (Canned & Dry)
+    if(A.pantry.fridge)A.pantry.fridge=A.pantry.fridge.filter(i=>i.name.toLowerCase()!=='eggs'&&i.name.toLowerCase()!=='egg');
     A.emergency=remote.emergency||[];
     A.calendarByDate=remote.calendar_by_date||{};
     A.grocery=remote.grocery||[];
@@ -783,6 +785,8 @@ async function loadUserData(email){
       A.bases=mergeWithDefaults(d.bases,DEF_BASES);
       A.supports=mergeWithDefaults(d.supports,DEF_SUPPORTS);
       A.pantry=mergePantryWithDefaults(d.pantry,DEF_PANTRY);
+      // Migration: remove any eggs logged in Kitchen Staples fridge — eggs belong only in Inventory (Canned & Dry)
+      if(A.pantry.fridge)A.pantry.fridge=A.pantry.fridge.filter(i=>i.name.toLowerCase()!=='eggs'&&i.name.toLowerCase()!=='egg');
       A.emergency=d.emergency||[];
       A.calendarByDate=d.calendar_by_date||{};
       A.grocery=d.grocery||[];
@@ -1140,7 +1144,7 @@ function getPantryFlat(){
 function rPantry(){
   const catConfig={
     baking:{label:'🍞 Baking',type:'qty'},
-    fridge:{label:'🥚 Fridge & Dairy',type:'qty'},
+    fridge:{label:'🧈 Fridge & Dairy',type:'qty',note:'Eggs are tracked in Inventory → Canned & Dry'},
     fresh:{label:'🌿 Fresh Produce (use first)',type:'qty'},
     oils:{label:'🫙 Oils & Acids',type:'toggle'},
     condiments:{label:'🥫 Condiments & Sauces',type:'toggle'},
@@ -1152,7 +1156,7 @@ function rPantry(){
     const items=A.pantry[cat]||[];
     html+=`<div class="card" style="margin-bottom:16px">
       <div class="card-header">
-        <div class="card-title">${label}</div>
+        <div><div class="card-title">${label}</div>${catConfig[cat].note?`<div style="font-size:11px;color:var(--text-muted);margin-top:2px">📦 ${catConfig[cat].note}</div>`:''}</div>
         <button class="btn btn-sm btn-outline" data-cat="${cat}" onclick="openAddPantryItem(this.dataset.cat)">+ Add</button>
       </div>
       <div>`;
@@ -1391,7 +1395,7 @@ async function generateRecipe(){
 
   const pantryFlat=getPantryFlat().filter(p=>p.have);
   const freshList=pantryFlat.filter(p=>p.fresh&&(p.qty||0)>0).map(p=>`${p.name}: ${p.qty} ${p.unit} [FRESH — USE FIRST]`);
-  const fridgeQty=pantryFlat.filter(p=>!p.fresh&&(p.qty||0)>0&&p.unit).map(p=>`${p.name}: ${p.qty} ${p.unit}`);
+  const fridgeQty=pantryFlat.filter(p=>!p.fresh&&(p.qty||0)>0&&p.unit&&p.name.toLowerCase()!=='eggs'&&p.name.toLowerCase()!=='egg').map(p=>`${p.name}: ${p.qty} ${p.unit}`);// eggs tracked in eachList only
   const toggles=pantryFlat.filter(p=>!(p.qty||0)&&p.have).map(p=>p.name);
 
   const hasNoProteins=allProteins.length===0;
@@ -3395,7 +3399,7 @@ function showOnboarding(){
   }
   const pantrySetup=document.getElementById('ob-pantry-setup');
   if(pantrySetup){
-    const cats={baking:{label:'🍞 Baking',type:'qty'},fridge:{label:'🥚 Fridge & Dairy',type:'qty'},fresh:{label:'🌿 Fresh Produce',type:'qty'},oils:{label:'🫙 Oils & Acids',type:'toggle'},condiments:{label:'🥫 Condiments',type:'toggle'},spices:{label:'🧂 Spices',type:'toggle'}};
+    const cats={baking:{label:'🍞 Baking',type:'qty'},fridge:{label:'🧈 Fridge & Dairy',type:'qty'},fresh:{label:'🌿 Fresh Produce',type:'qty'},oils:{label:'🫙 Oils & Acids',type:'toggle'},condiments:{label:'🥫 Condiments',type:'toggle'},spices:{label:'🧂 Spices',type:'toggle'}};
     let html='';
     Object.keys(cats).forEach(cat=>{
       const {label,type}=cats[cat];
