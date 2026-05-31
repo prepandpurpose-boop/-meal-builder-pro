@@ -1452,7 +1452,8 @@ PRODUCE BY SEASON (what is cheap and abundant):
 - Fall (Sep-Nov): butternut squash, sweet potatoes, apples, pears, Brussels sprouts, cauliflower, broccoli, kale, pumpkin, beets, turnips
 
 SCRATCH BAKING RULES:
-- SAFE TO BUILD FROM SCRATCH (simple ratios, scale cleanly): Pancakes, waffles, french toast, biscuits, cornbread, muffins, oatmeal bakes, egg casseroles, cookies, brownies, crepes. These use baking powder or baking soda and scale perfectly.
+- SAFE TO BUILD FROM SCRATCH (simple ratios): Pancakes, waffles, french toast, biscuits, cornbread, muffins, oatmeal bakes, egg casseroles, cookies, brownies, crepes. These use baking powder or baking soda.
+- BAKING CHEMISTRY NOTE — always include in tip field for any baked item that uses baking powder, baking soda, salt, or vanilla: "When scaling this recipe up, use the square root rule for leaveners and salt — they do not scale 1:1. For double batch use about 1.4x the baking powder, soda, and salt, not 2x. Flour, sugar, eggs, butter, and wet ingredients scale normally." This protects people from wasting food on a failed bake.
 - NEVER BUILD FROM SCRATCH (yeast dough, unreliable scaling): Sandwich bread, dinner rolls, pizza dough, cinnamon rolls, hamburger buns, hot dog buns, pie crust, tortillas. Always flag as store-bought.
 - For french toast specifically: buy the bread (flag on grocery list), build only the egg custard mixture recipe.
 - For waffles: always note in tip that a waffle iron is required.
@@ -2345,6 +2346,46 @@ function cleanQty(qty){
 function scaleQty(qtyStr, factor){
   if(!qtyStr||factor===1)return qtyStr;
 
+  // ── BAKING CHEMISTRY — these ingredients do not scale linearly ──────────────
+  // Leaveners (baking powder, baking soda): scale by sqrt of factor, max 2.5x original
+  // Salt, vanilla, spices: scale conservatively — sqrt of factor
+  // This prevents over-leavened, over-salted, or chemically off baked goods
+  const LEAVENER_RE=/baking\s+(powder|soda)/i;
+  const CONSERVATIVE_RE=/(salt|vanilla(\s+extract)?|cream\s+of\s+tartar)/i;
+  if(LEAVENER_RE.test(qtyStr)||CONSERVATIVE_RE.test(qtyStr)){
+    // Use square root scaling — much safer for baking chemistry
+    const conservativeFactor=Math.sqrt(factor);
+    const numMatch=qtyStr.match(/^(\d+(?:\/\d+)?(?:\.\d+)?(?:\s+\d+\/\d+)?)\s*([a-zA-Z]*)/);
+    if(numMatch){
+      const numStr=numMatch[1].trim();
+      let num;
+      if(numStr.includes('/')){const p=numStr.split('/');num=parseInt(p[0])/parseInt(p[1]);}
+      else if(numStr.includes(' ')){const p=numStr.split(' ');const f=p[1].split('/');num=parseInt(p[0])+parseInt(f[0])/parseInt(f[1]);}
+      else{num=parseFloat(numStr);}
+      let scaled=num*conservativeFactor;
+      const unit=numMatch[2].toLowerCase();
+      // Convert tsp→tbsp if needed
+      let newUnit=unit;
+      if(unit==='tsp'&&scaled>=3){scaled=scaled/3;newUnit='tbsp';}
+      if((unit==='tbsp'||newUnit==='tbsp')&&scaled>=16){scaled=scaled/16;newUnit='cup';}
+      const rounded=Math.round(scaled*8)/8; // round to nearest 1/8 for small amounts
+      const whole=Math.floor(rounded);const dec=rounded-whole;
+      let display;
+      if(dec<0.01)display=String(whole||'1/8');
+      else if(Math.abs(dec-0.125)<0.01)display=whole>0?`${whole} 1/8`:'1/8';
+      else if(Math.abs(dec-0.25)<0.01)display=whole>0?`${whole} 1/4`:'1/4';
+      else if(Math.abs(dec-0.375)<0.01)display=whole>0?`${whole} 3/8`:'3/8';
+      else if(Math.abs(dec-0.5)<0.01)display=whole>0?`${whole} 1/2`:'1/2';
+      else if(Math.abs(dec-0.625)<0.01)display=whole>0?`${whole} 5/8`:'5/8';
+      else if(Math.abs(dec-0.75)<0.01)display=whole>0?`${whole} 3/4`:'3/4';
+      else if(Math.abs(dec-0.875)<0.01)display=whole>0?`${whole} 7/8`:'7/8';
+      else display=rounded.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
+      return newUnit!==unit?`${display} ${newUnit}${qtyStr.slice(numMatch[0].length)}`
+        :qtyStr.replace(numMatch[0].trimEnd(),`${display}${unit?' '+unit:''}`).trimEnd()+qtyStr.slice(numMatch[0].length);
+    }
+  }
+  // ── END BAKING CHEMISTRY ────────────────────────────────────────────────────
+
   // Eggs must always be whole numbers — round up
   if(qtyStr.match(/egg/i)){
     const numMatch=qtyStr.match(/^(\d+(?:\.\d+)?)/);
@@ -2450,14 +2491,25 @@ function rebuildFavorite(idx){
     qty:scaleQty(p.qty,factor)
   }));
 
-  const scaledSteps=(fav.steps||[]).map(step=>
-    step.replace(/(\d+(?:\.\d+)?)\s*(bag[s]?|quart bag[s]?|cup[s]?|tbsp|tsp|oz|lb[s]?|pound[s]?|egg[s]?|can[s]?|tortilla[s]?|each|piece[s]?)/gi,(match,num,unit)=>{
-      const scaled=parseFloat(num)*factor;
+  // Baking chemistry items in step text — conservative scaling
+  const BAKING_STEP_RE=/\b(baking\s+(?:powder|soda)|salt|vanilla(?:\s+extract)?|cream\s+of\s+tartar)\b/i;
+  const conservativeFactor=Math.sqrt(factor);
+  const scaledSteps=(fav.steps||[]).map(step=>{
+    // Split step into segments so we can apply different scaling to baking chemistry mentions
+    return step.replace(/(\d+(?:\.\d+)?)\s*(bag[s]?|quart bag[s]?|cup[s]?|tbsp|tsp|oz|lb[s]?|pound[s]?|egg[s]?|can[s]?|tortilla[s]?|each|piece[s]?)/gi,(match,num,unit)=>{
+      // Check if this number appears near a baking chemistry word
+      const matchIdx=step.indexOf(match);
+      const surroundingText=step.slice(Math.max(0,matchIdx-40),matchIdx+match.length+40);
+      const isBakingChem=BAKING_STEP_RE.test(surroundingText);
+      const effectiveFactor=isBakingChem?conservativeFactor:factor;
+      let scaled=parseFloat(num)*effectiveFactor;
+      // Eggs always whole numbers
+      if(/egg/i.test(unit))scaled=Math.ceil(scaled);
       const rounded=Math.round(scaled*4)/4;
       const display=rounded===Math.floor(rounded)?Math.floor(rounded).toString():rounded.toFixed(1).replace(/\.0$/,'');
       return`${display} ${unit}`;
-    })
-  );
+    });
+  });
 
   const scaledMacros={
     cal:fav.macros?.cal||0,
