@@ -757,7 +757,6 @@ async function loadUserData(email){
     A.bases=mergeWithDefaults(remote.bases,DEF_BASES);
     A.supports=mergeWithDefaults(remote.supports,DEF_SUPPORTS);
     A.pantry=mergePantryWithDefaults(remote.pantry,DEF_PANTRY);
-    // Migration: remove any eggs logged in Kitchen Staples fridge — eggs belong only in Inventory (Canned & Dry)
     if(A.pantry.fridge)A.pantry.fridge=A.pantry.fridge.filter(i=>i.name.toLowerCase()!=='eggs'&&i.name.toLowerCase()!=='egg');
     A.emergency=remote.emergency||[];
     A.calendarByDate=remote.calendar_by_date||{};
@@ -785,7 +784,6 @@ async function loadUserData(email){
       A.bases=mergeWithDefaults(d.bases,DEF_BASES);
       A.supports=mergeWithDefaults(d.supports,DEF_SUPPORTS);
       A.pantry=mergePantryWithDefaults(d.pantry,DEF_PANTRY);
-      // Migration: remove any eggs logged in Kitchen Staples fridge — eggs belong only in Inventory (Canned & Dry)
       if(A.pantry.fridge)A.pantry.fridge=A.pantry.fridge.filter(i=>i.name.toLowerCase()!=='eggs'&&i.name.toLowerCase()!=='egg');
       A.emergency=d.emergency||[];
       A.calendarByDate=d.calendar_by_date||{};
@@ -1395,7 +1393,7 @@ async function generateRecipe(){
 
   const pantryFlat=getPantryFlat().filter(p=>p.have);
   const freshList=pantryFlat.filter(p=>p.fresh&&(p.qty||0)>0).map(p=>`${p.name}: ${p.qty} ${p.unit} [FRESH — USE FIRST]`);
-  const fridgeQty=pantryFlat.filter(p=>!p.fresh&&(p.qty||0)>0&&p.unit&&p.name.toLowerCase()!=='eggs'&&p.name.toLowerCase()!=='egg').map(p=>`${p.name}: ${p.qty} ${p.unit}`);// eggs tracked in eachList only
+  const fridgeQty=pantryFlat.filter(p=>!p.fresh&&(p.qty||0)>0&&p.unit&&p.name.toLowerCase()!=='eggs'&&p.name.toLowerCase()!=='egg').map(p=>`${p.name}: ${p.qty} ${p.unit}`);
   const toggles=pantryFlat.filter(p=>!(p.qty||0)&&p.have).map(p=>p.name);
 
   const hasNoProteins=allProteins.length===0;
@@ -1467,7 +1465,7 @@ PRODUCE BY SEASON (what is cheap and abundant):
 
 SCRATCH BAKING RULES:
 - SAFE TO BUILD FROM SCRATCH (simple ratios): Pancakes, waffles, french toast, biscuits, cornbread, muffins, oatmeal bakes, egg casseroles, cookies, brownies, crepes.
-- BAKING SCALE TIP — include in tip field for ANY baked item using baking powder, baking soda, salt, or vanilla: "When scaling this recipe up, leaveners and salt do not scale 1:1. For a double batch use about 1.4x the baking powder, baking soda, and salt — not 2x. Flour, sugar, oats, butter, eggs, and wet ingredients scale normally." This protects people from wasting food on a failed bake.
+- BAKING SCALE TIP — include in tip field for ANY baked item using baking powder, baking soda, salt, or vanilla: "When scaling this recipe up, leaveners and salt do not scale 1:1. For a double batch use about 1.4x the baking powder, baking soda, and salt — not 2x. Flour, sugar, oats, butter, eggs, and wet ingredients scale normally." 
 - NEVER BUILD FROM SCRATCH (yeast dough, unreliable scaling): Sandwich bread, dinner rolls, pizza dough, cinnamon rolls, hamburger buns, hot dog buns, pie crust, tortillas. Always flag as store-bought.
 - For french toast specifically: buy the bread (flag on grocery list), build only the egg custard mixture recipe.
 - For waffles: always note in tip that a waffle iron is required.
@@ -1573,8 +1571,8 @@ MILK POWDER RULE — CRITICAL:
 When a recipe uses reconstituted milk from milk powder:
 - Pull list entry: icon 🥛, item "Milk Powder", qty "X cups milk powder + Y cups water = Z cups reconstituted milk", prepNote "Stir together until dissolved before using"
 - Steps: only say "Z cups reconstituted milk" — NEVER show the math inside a cooking step
-- Wrong step: "Add 8 cups reconstituted milk (1 cup milk powder + 4 cups water — double it)"
-- Correct step: "Add 8 cups reconstituted milk"
+- Wrong: "Add 8 cups reconstituted milk (1 cup milk powder + 4 cups water — double it)"
+- Correct: "Add 8 cups reconstituted milk"
 
 DRY RICE BAKED IN LIQUID RULE:
 When dry rice cooks directly inside a baking dish with liquid (casserole-style):
@@ -1607,7 +1605,7 @@ ${buildEmergency?`EMERGENCY MEAL MODE — ON (DINNER ONLY):
 - Double batch automatically — makes exactly 2 full portions for the emergency layer.
 - STORAGE FORMAT — pick based on the dish. Both options are valid emergency layer storage:
   * Soups, stews, chili, gumbo = GALLON BAGS (lay flat to freeze)
-  * Casseroles, baked pasta, rice bakes, stuffed peppers = 9X13 BAKING PAN (cover with plastic wrap then foil, freeze in the pan — completely fine)
+  * Casseroles, baked pasta, rice bakes, stuffed peppers = 9X13 BAKING PAN (cover with plastic wrap then foil, freeze in the pan)
   * Thick rice bowls or protein + grain combos = GALLON BAGS or FREEZER-SAFE CONTAINERS
 - NEVER use "FOR NOW" language. Both portions freeze. No exceptions.
 - Tip for BAG meals: "FREEZE IN GALLON BAGS: [reheating instructions] · Pull night before to thaw in fridge · Keeps 3-6 months"
@@ -1731,14 +1729,7 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
     // Store cookList on recipe so placeOnCal can save it with the meal and recalc properly
     A.recipe.cookList=recipe.cookList||null;
 
-    // Auto-add grocery flags
-    if(recipe.groceryFlags?.length>0){
-      recipe.groceryFlags.forEach(flag=>{
-        if(!A.grocery.find(g=>g.name===flag.name)){
-          A.grocery.push({id:Date.now()+Math.random()*1000|0,name:flag.name,urgency:flag.urgency||'low',qty:flag.qty,reason:flag.reason,done:false});
-        }
-      });
-    }
+    // Grocery flags are added when the meal is placed on the calendar — not before
     save();
     showPage('builder');
   }catch(e){
@@ -2053,6 +2044,18 @@ function moveMeal(){
   save();closeModal();render();
 }
 function removeMeal(dateKey,slot){
+  const meal=A.calendarByDate[dateKey]?.[slot];
+  if(meal&&typeof meal==='object'){
+    // Restore inventory for all pull items
+    if(meal.pull&&meal.pull.length>0){
+      restoreInventoryFromPull(meal.pull);
+    }
+    // Remove grocery flags that were added when this meal was scheduled
+    if(meal.groceryFlags&&meal.groceryFlags.length>0){
+      const flagNames=meal.groceryFlags.map(f=>f.name.toLowerCase());
+      A.grocery=A.grocery.filter(g=>!flagNames.includes(g.name.toLowerCase())||g.manualAdd||g.done);
+    }
+  }
   if(A.calendarByDate[dateKey])delete A.calendarByDate[dateKey][slot];
   recalcCookListFromCalendar();
   save();closeModal();render();
@@ -2262,6 +2265,14 @@ function placeOnCal(){
   // Store recipe WITH its cookList so recalc can use it
   A.calendarByDate[dateVal][slot]={...A.recipe,cookList:A.recipe.cookList||null};
   deductInventory(A.recipe.pull);
+  // Add grocery flags now that the meal is confirmed on the calendar
+  if(A.recipe.groceryFlags?.length>0){
+    A.recipe.groceryFlags.forEach(flag=>{
+      if(!A.grocery.find(g=>g.name===flag.name)){
+        A.grocery.push({id:Date.now()+Math.random()*1000|0,name:flag.name,urgency:flag.urgency||'low',qty:flag.qty,reason:flag.reason,done:false});
+      }
+    });
+  }
   // Recalculate cook list from all scheduled meals
   recalcCookListFromCalendar();
   save();
@@ -2405,8 +2416,6 @@ function scaleQty(qtyStr, factor){
   if(!qtyStr||factor===1)return qtyStr;
 
   // ── BAKING CHEMISTRY — do not scale linearly ─────────────────────────────
-  // Baking powder, baking soda, salt, vanilla: use square root of factor
-  // Flour, sugar, oats, butter, milk, fruit: scale normally (handled below)
   const LEAVENER_RE=/baking\s+(powder|soda)/i;
   const CONSERVATIVE_RE=/\b(salt|vanilla(\s+extract)?|cream\s+of\s+tartar)\b/i;
   if(LEAVENER_RE.test(qtyStr)||CONSERVATIVE_RE.test(qtyStr)){
@@ -3327,18 +3336,23 @@ function confirmDeleteEmergency(id,restoreInventory){
 }
 
 function restoreInventoryFromPull(pull){
-  if(!pull)return;
+  // Full mirror of deductInventory — restores frozen, canned, dry, and each counts
+  if(!pull||!pull.length)return;
   pull.forEach(p=>{
     if(!p.qty||!p.item)return;
-    const bagMatch=p.qty.match(/^(\d+)\s*bag/i);
-    if(!bagMatch)return;
-    const bags=parseInt(bagMatch[1]);
-    // Find matching base
-    const base=A.bases.find(b=>b.name.toLowerCase()===p.item.toLowerCase());
-    if(base){base.frozen=Math.min((base.frozen||0)+bags,99);return;}
-    // Find matching support
-    const support=A.supports.find(s=>s.name.toLowerCase()===p.item.toLowerCase());
-    if(support)support.frozen=Math.min((support.frozen||0)+bags,99);
+    const pName=p.item.toLowerCase().trim();
+    const base=A.bases.find(b=>b.name.toLowerCase()===pName||pName.includes(b.name.toLowerCase())||b.name.toLowerCase().includes(pName));
+    const support=!base&&A.supports.find(s=>s.name.toLowerCase()===pName||pName.includes(s.name.toLowerCase())||s.name.toLowerCase().includes(pName));
+    const item=base||support;
+    if(item){
+      const num=parseInt(p.qty)||1;
+      const restore=Math.max(1,num);
+      // Restore to whichever storage type was deducted — match by what the item tracks
+      if(item.storageTypes?.includes('frozen'))item.frozen=Math.min((item.frozen||0)+restore,99);
+      else if(item.storageTypes?.includes('canned'))item.canned=Math.min((item.canned||0)+restore,99);
+      else if(item.storageTypes?.includes('dry'))item.dry=Math.min((item.dry||0)+restore,99);
+      else if(item.storageTypes?.includes('each'))item.each=Math.min((item.each||0)+restore,99);
+    }
   });
 }
 
