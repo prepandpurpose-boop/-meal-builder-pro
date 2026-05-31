@@ -719,7 +719,7 @@ function save(){
       emergency_cook_list:A.emergencyCookList||[],
       last_meal_type:A.lastMealType,
       onboarded:A.onboarded,
-      // weekProteins session-only — never persisted
+      // weekProteins session-only
     };
     sbSave(A.email,data);
     localStorage.setItem('pp_data',JSON.stringify(data));
@@ -1336,14 +1336,12 @@ function rBuilderForm(){
 }
 
 function captureBuilderFields(){
-  // Save current builder form values to state so they survive a re-render
   const fl=document.getElementById('fl');if(fl)A.flavor=fl.value;
   const sv=document.getElementById('sv');if(sv&&sv.value)A.householdSize=parseInt(sv.value)||A.householdSize;
   const anchor=document.getElementById('anchor');if(anchor)A.anchorIngredient=anchor.value;
   const mt=document.getElementById('mealType');if(mt)A.mealType=mt.value;
 }
 function toggleBuilderOption(opt){
-  // Capture form fields first, flip the toggle, then re-render
   captureBuilderFields();
   A[opt]=!A[opt];
   save();render();
@@ -1442,12 +1440,19 @@ STORAGE FORM HONESTY — match form to actual inventory:
 
 CANNED/JARRED QTY RULES:
 - Store canned: qty = can count ("2 cans black beans") — never cups
-- Home canned regular jars: qty = EXACT jar size and count as logged ("2 pint-and-a-half jars", "1 quart jar") — NEVER convert sizes, NEVER use cups. Mix jar sizes if needed.
+- Home canned regular jars: qty = EXACT jar size and count as logged ("2 pint-and-a-half jars", "1 quart jar") — NEVER convert sizes, NEVER cups. Mix jar sizes if needed.
 - Home canned FREEZE DRIED: measure out what is needed. qty = cup or tbsp ("1/2 cup freeze dried cheese powder"). prepNote = "Measure from jar — no need to pull the whole jar."
+
+BREAD & BUN RULE — buy or make, ALWAYS with a count in the pull list:
+- Put the bread/bun in the PULL LIST with exact count and the CORRECT type for the dish: sliders→"slider buns" (small, never hamburger buns) · burgers→"hamburger buns" · hot dogs→"hot dog buns" · sandwiches→"sandwich bread" · dinner→"dinner rolls" · subs→"sub rolls".
+- Count: sliders 3/person · burgers/sandwiches 1-2/person · hot dogs 1-2/person · rolls 1-2/person.
+- prepNote: "Buy at the store, or use your favorite recipe — you need [X]."
+- ALSO flag on groceryFlags with same count, reason "Buy — or make from scratch if you prefer."
+- Do NOT write a scratch dough recipe inside the meal. Never omit buns if a step mentions them.
+- NEVER-SCRATCH (store-bought, prepNote "Store-bought"): tortillas, pizza crust, pie crust, puff pastry.
 
 FRESH veg: add early. FROZEN: mid-cook 3-4 min. CANNED/jarred: drain, add at very end. DRY: cook separately first.
 MILK POWDER: Pull list "X cups powder + Y cups water = Z cups milk". Steps say only "Z cups milk."
-BAKING: Safe to scratch: pancakes, waffles, french toast, biscuits, cornbread, muffins, oatmeal bakes. Never scratch: bread, rolls, tortillas, pizza dough — store-bought, flag on list.
 GROCERY FLAGS: Include reason. urgency "out"=needed · "low"=optional.
 
 ${(()=>{
@@ -1458,8 +1463,9 @@ ${(()=>{
   return`SEASONAL (this month): Proteins on sale: ${proteins}. Produce abundant: ${produce}. Year-round: canned tuna, salmon, chicken thighs, eggs, ground turkey.`;
 })()}
 
-DISH VARIETY — never repeat same format twice in a row. Rotate: tacos, enchiladas, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, pot pie, skillet meals, rice bowls, smothered chicken, soups, stews, sandwiches, wraps, hash, quesadillas.
+DISH VARIETY — never repeat same format twice in a row. Rotate: tacos, enchiladas, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, pot pie, skillet meals, rice bowls, smothered chicken, soups, stews, sandwiches, sliders, wraps, hash, quesadillas.
 INGREDIENT COMMON SENSE: Never put fruit on savory dishes unless a known classic. Frozen fruit = breakfast/desserts only.
+BAKING SCALE: For baked items, leaveners and salt scale ~1.4x on a double batch, not 2x. Flour, sugar, butter, eggs scale normally.
 
 ${buildEmergency?`EMERGENCY MEAL MODE:
 - BOTH portions freeze. No "eat one now." Always.
@@ -1479,18 +1485,17 @@ RESPOND WITH VALID JSON ONLY:
   "macros": {"cal": 450, "protein": 38, "carbs": 35, "fat": 16},
   "pull": [
     {"icon": "🥩", "item": "Shredded Pork", "qty": "2 bags = 3 lbs cooked", "prepNote": "Already cooked — heat gently 3-4 min"},
-    {"icon": "🫘", "item": "Black Beans", "qty": "2 cans", "prepNote": "Drain and rinse"},
+    {"icon": "🍔", "item": "Slider Buns", "qty": "18 slider buns", "prepNote": "Buy at the store, or use your favorite recipe — you need 18"},
     {"icon": "🫙", "item": "Corn", "qty": "2 pint-and-a-half jars", "prepNote": "Drain well — home canned"},
-    {"icon": "🧀", "item": "Freeze Dried Cheese Powder", "qty": "1/2 cup", "prepNote": "Measure from jar — no need to pull whole jar"},
     {"icon": "🧂", "item": "Salt", "qty": "1 tsp", "prepNote": "From pantry"}
   ],
   "steps": ["Step with real measurements and timing"],
   "tip": "One specific useful tip",
-  "groceryFlags": [{"name": "item", "qty": "exact amount", "urgency": "out", "reason": "why needed"}],
+  "groceryFlags": [{"name": "Slider Buns", "qty": "18", "urgency": "out", "reason": "Buy — or make from scratch if you prefer"}],
   "cookList": [{"protein": "name", "bags": 2, "rawLbs": "4.3 lbs raw", "note": "cook and bag"}]
 }
-PULL LIST: Every ingredient — frozen bags, canned/jarred by container count, pantry, fridge, spices.
-QUANTITY RULES: Meat=weight only. No piece counts. Eggs=whole numbers round up. Bags=whole only. Canned=container count. FD items=cup/tbsp. Spices=tsp/tbsp.`
+PULL LIST: Every ingredient — frozen bags, canned/jarred by container count, buns/bread by count, pantry, fridge, spices.
+QUANTITY RULES: Meat=weight only. No piece counts. Eggs=whole numbers round up. Bags=whole only. Canned=container count. Buns/bread=count. FD items=cup/tbsp. Spices=tsp/tbsp.`
   const userPrompt=`MEAL TYPE: ${mealType} — build an appropriate ${mealType.toLowerCase()} dish. NOT breakfast food for dinner.
 ${grabAndGo?'GRAB AND GO MODE: ON — build a batchable item with yield, storage instructions, and grab size.':''}
 ${!includeSoups?'SOUPS OFF: No soups, stews, chilis, or broth-based dishes under any circumstances.':''}
@@ -2271,8 +2276,6 @@ function cleanQty(qty){
 
 function scaleQty(qtyStr, factor){
   if(!qtyStr||factor===1)return qtyStr;
-
-  // ── BAKING CHEMISTRY ─────────────────────────────────────────────────────
   const LEAVENER_RE=/baking\s+(powder|soda)/i;
   const CONSERVATIVE_RE=/\b(salt|vanilla(\s+extract)?|cream\s+of\s+tartar)\b/i;
   if(LEAVENER_RE.test(qtyStr)||CONSERVATIVE_RE.test(qtyStr)){
@@ -2293,12 +2296,9 @@ function scaleQty(qtyStr, factor){
       else if(Math.abs(d-0.5)<0.01)disp=w>0?`${w} 1/2`:'1/2';
       else if(Math.abs(d-0.75)<0.01)disp=w>0?`${w} 3/4`:'3/4';
       else disp=r.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
-      return nu!==unit?`${disp} ${nu}${qtyStr.slice(nm[0].length)}`
-        :qtyStr.replace(nm[0].trimEnd(),`${disp}${unit?' '+unit:''}`).trimEnd()+qtyStr.slice(nm[0].length);
+      return nu!==unit?`${disp} ${nu}${qtyStr.slice(nm[0].length)}`:qtyStr.replace(nm[0].trimEnd(),`${disp}${unit?' '+unit:''}`).trimEnd()+qtyStr.slice(nm[0].length);
     }
   }
-  // ── END BAKING CHEMISTRY ──────────────────────────────────────────────────
-
   // Eggs must always be whole numbers — round up
   if(qtyStr.match(/egg/i)){
     const numMatch=qtyStr.match(/^(\d+(?:\.\d+)?)/);
