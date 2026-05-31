@@ -431,7 +431,6 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
       <button class="nav-item" id="nav-favorites" onclick="showPage('favorites')"><span class="nav-icon">⭐</span>Favorites</button>
       <button class="nav-item" id="nav-calendar" onclick="showPage('calendar')"><span class="nav-icon">📅</span>Calendar</button>
       <div class="nav-section">Shopping</div>
-      <button class="nav-item" id="nav-maintenance" onclick="showPage('maintenance')"><span class="nav-icon">🍳</span>Maintenance Day</button>
       <button class="nav-item" id="nav-grocery" onclick="showPage('grocery')"><span class="nav-icon">🛒</span>Grocery List <span class="nav-badge gold" id="groc-badge" style="display:none">0</span></button>
     </div>
     <div class="sidebar-footer">
@@ -859,15 +858,13 @@ window.addEventListener('load',async()=>{
 });
 
 // ─── NAV ───────────────────────────────────────────────────────────────────────
-const PAGE_TITLES={dashboard:'Dashboard',inventory:'Inventory — Bases & Supports',pantry:'Kitchen Staples',builder:'Meal Builder',favorites:'Favorites',calendar:'Calendar',grocery:'Grocery List',maintenance:'Maintenance Day'};
+const PAGE_TITLES={dashboard:'Dashboard',inventory:'Inventory — Bases & Supports',pantry:'Kitchen Staples',builder:'Meal Builder',favorites:'Favorites',calendar:'Calendar',grocery:'Grocery List'};
 function showPage(p){
   A.page=p;
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   const nb=document.getElementById('nav-'+p);if(nb)nb.classList.add('active');
   document.getElementById('topbar-title').textContent=PAGE_TITLES[p]||p;
   document.getElementById('topbar-actions').innerHTML='';
-  // Always recalc cook list when visiting maintenance day
-  if(p==='maintenance')recalcCookListFromCalendar();
   render();
   document.getElementById('sidebar').classList.remove('open');
 }
@@ -881,7 +878,6 @@ function render(){
   else if(A.page==='calendar')m.innerHTML=rCalendar();
   else if(A.page==='grocery')m.innerHTML=rGrocery();
   else if(A.page==='favorites')m.innerHTML=rFavorites();
-  else if(A.page==='maintenance')m.innerHTML=rMaintenance();
   updateBadges();
 }
 function updateBadges(){
@@ -923,7 +919,8 @@ function rDashboard(){
 
   // Cook list nudge — just a button, details live on Maintenance Day page
   if(A.cookList&&A.cookList.length>0){
-    html+=`<div class="alert alert-green" style="margin-bottom:16px"><span>🍳</span><div><strong>You have a cook list ready.</strong> <button onclick="showPage('maintenance')" style="background:none;border:none;color:var(--green);font-weight:700;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;font-size:13px;padding:0">Go to Maintenance Day →</button></div></div>`;
+    const _ckSummary=A.cookList.map(c=>c.protein+(c.bags?' ('+c.bags+' bags)':'')).join(', ');
+    html+=`<div class="alert alert-green" style="margin-bottom:16px"><span>🍳</span><div><strong>Cook list:</strong> ${_ckSummary}. <button onclick="showPage('grocery')" style="background:none;border:none;color:var(--green);font-weight:700;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;font-size:13px;padding:0">View Grocery List →</button></div></div>`;
   }
 
   html+=`<div class="grid-2">
@@ -1422,7 +1419,20 @@ CRITICAL PROTEIN RULES:
 MEAL TYPE RULES — CRITICAL:
 - Dinner = a real dinner. NOT breakfast food. NOT egg-forward dishes. Proteins, grains, vegetables. Hearty, satisfying, feeds the household.
 - Lunch = grab and go. 3 assembly steps max. No scratch cooking. Pull already-cooked protein, assemble, pack. Formats: wraps, hot sandwiches, grilled cheese, chicken melt, loaded baked potato, quesadillas, rice bowls, pasta salad, soup and sandwich combo, leftover remix, lunchbox plates. Always include PACK IT note in tip — container, hot or cold, how long it keeps.
-- Breakfast = exciting and varied. Rotate: stuffed french toast, pancake stacks, waffle boards, breakfast burritos, egg scrambles with protein, biscuits and gravy, breakfast hash, omelettes, breakfast casserole, oatmeal bake, overnight oats, yogurt parfait. Build from scratch if flour/butter/eggs on hand.
+- Breakfast = exciting and varied. There are 5 format groups — rotate through all of them. Eggs and pancakes are welcome, they just cannot repeat back to back.
+  BREAKFAST FORMAT GROUPS — rotate across all 5, never stay in one group two builds in a row:
+    Group A — Grain-based: baked oatmeal, overnight oats jar, oat bars, granola bars, banana oat bars, oatmeal bake
+    Group B — Egg-based savory: scrambled egg bowl with protein, omelette, frittata slice, egg muffin cups, breakfast casserole, shakshuka (breakfast only), sheet pan eggs with vegetables
+    Group C — Bread/batter: pancake stack, stuffed french toast, waffle board, crepes, biscuits and gravy, muffins, cornbread with honey butter
+    Group D — No-cook or assembly: yogurt parfait cups, smoothie pack, fruit and cheese plate, overnight oats, cottage cheese bowl with toppings
+    Group E — Hash/skillet: breakfast hash, potato and sausage skillet, sheet pan breakfast, loaded hash browns, breakfast bowl
+  INVENTORY GUIDANCE — let stock shape the format pick:
+    - Breakfast Sausage stocked → lean toward Group B or E
+    - Hash Browns stocked → lean toward Group E
+    - Oats stocked → lean toward Group A
+    - Yogurt stocked → lean toward Group D
+    - Frozen fruit stocked → lean toward Group D or A
+  LAST BREAKFAST BUILT: "${A.lastBuiltBreakfast||'none'}" — identify which group that belongs to, then build from any OTHER group this time. Pancakes (Group C) and eggs (Group B) are fully valid — just not two times in a row.
 - Snack = small and light. No cooking. Cheese and crackers, fruit and dip, yogurt parfait, ants on a log, mini quesadilla, frozen fruit. NOT a meal.
 - NEVER serve shakshuka, frittata, or egg-based dishes for Dinner unless eggs are the ONLY protein available.
 - PROTEIN RULE FOR DINNER AND LUNCH: Every dinner and every lunch must contain a meaningful protein source — meat, poultry, seafood, eggs, or canned protein. Beans, lentils, and grits alone do not count as a complete dinner protein unless Vegetarian is selected in dietary restrictions. If no protein is available, flag it on the grocery list and build the best possible meal noting that protein should be added.
@@ -1452,8 +1462,8 @@ PRODUCE BY SEASON (what is cheap and abundant):
 - Fall (Sep-Nov): butternut squash, sweet potatoes, apples, pears, Brussels sprouts, cauliflower, broccoli, kale, pumpkin, beets, turnips
 
 SCRATCH BAKING RULES:
-- SAFE TO BUILD FROM SCRATCH (simple ratios): Pancakes, waffles, french toast, biscuits, cornbread, muffins, oatmeal bakes, egg casseroles, cookies, brownies, crepes. These use baking powder or baking soda.
-- BAKING CHEMISTRY NOTE — always include in tip field for any baked item that uses baking powder, baking soda, salt, or vanilla: "When scaling this recipe up, use the square root rule for leaveners and salt — they do not scale 1:1. For double batch use about 1.4x the baking powder, soda, and salt, not 2x. Flour, sugar, eggs, butter, and wet ingredients scale normally." This protects people from wasting food on a failed bake.
+- SAFE TO BUILD FROM SCRATCH (simple ratios): Pancakes, waffles, french toast, biscuits, cornbread, muffins, oatmeal bakes, egg casseroles, cookies, brownies, crepes.
+- BAKING SCALE TIP — include in tip field for ANY baked item using baking powder, baking soda, salt, or vanilla: "When scaling this recipe up, leaveners and salt do not scale 1:1. For a double batch use about 1.4x the baking powder, baking soda, and salt — not 2x. Flour, sugar, oats, butter, eggs, and wet ingredients scale normally." This protects people from wasting food on a failed bake.
 - NEVER BUILD FROM SCRATCH (yeast dough, unreliable scaling): Sandwich bread, dinner rolls, pizza dough, cinnamon rolls, hamburger buns, hot dog buns, pie crust, tortillas. Always flag as store-bought.
 - For french toast specifically: buy the bread (flag on grocery list), build only the egg custard mixture recipe.
 - For waffles: always note in tip that a waffle iron is required.
@@ -1481,18 +1491,44 @@ ${!includeSoups?`SOUPS OFF — CRITICAL: User has turned off soups and stews. NE
 
 ${grabAndGo?`GRAB AND GO MODE — ON:
 - Build a BATCHABLE item that can be made once and grabbed all week.
-- Best formats: muffins, baked oatmeal bars, granola bars, energy balls, egg muffin cups, breakfast burritos (wrap in foil and freeze), baked egg casserole, overnight oats jars, pancakes, waffles, french toast.
-- Always specify: yield in individual pieces (makes 24 pancakes, 12 muffins, 9 bars), storage (fridge or freezer), and how long it keeps.
-- Individual grab size in the description — "grab 2 pancakes and a piece of fruit" or "grab 1 bar."
+
+VARIETY RULE: Last grab-and-go built was "${A.lastBuiltBreakfast||'none'}". Rotate — build from a different format category this time. All formats are equally valid; the goal is variety across builds.
+
+FULL FORMAT POOL — rotate through all, let inventory guide which fits best:
+- Freezer burritos: eggs + protein + veg in tortilla, wrap in foil, freeze, reheat from frozen
+- Egg muffin cups: eggs + protein + veg baked in muffin tin, fridge 5 days or freeze 3 months
+- Baked oatmeal bars: oats + banana or fruit + honey, cut into bars, fridge 7 days or freeze 3 months
+- Granola bars: oats + honey + add-ins, no-bake or baked
+- Banana oat muffins: ripe bananas + oats + flour, counter 3 days or fridge 7 days
+- Overnight oats jars: oats + milk + fruit, no cooking, assemble night before, fridge 5 days
+- Yogurt parfait cups: layered in mason jars, fridge 5 days
+- Smoothie packs: fruit + oats portioned into quart bags, freeze flat, blend with milk in morning
+- Sheet pan breakfast hash: potatoes + sausage + peppers, portioned into containers, fridge 5 days
+- Pancakes: batch-made, fully valid rotation item, freeze flat then bag, reheat in toaster
+- Waffles: requires waffle iron (always note in tip), freeze flat then bag, reheat in toaster
+- French toast sticks: buy bread (flag on list), dip in egg custard, bake, freeze, reheat in toaster
+- Muffins: any flavor, bake once, grab all week
+
+INVENTORY SUGGESTIONS — let stock shape the pick:
+- Breakfast Sausage stocked → burritos or egg muffin cups are a natural fit
+- Hash Browns stocked → sheet pan hash bake is a natural fit
+- Oats stocked → oat bars, granola bars, or overnight oats are a natural fit
+- Yogurt stocked → parfait cups are a natural fit
+- Frozen fruit stocked → smoothie packs or fruit oat bars are a natural fit
+- Bananas stocked → banana oat muffins or banana bars are a natural fit
+- Flour + butter + eggs stocked → pancakes, waffles, muffins, or french toast all work great
+
+- Always specify: yield in individual pieces (12 burritos, 24 muffin cups, 16 bars, 24 pancakes), storage (fridge or freezer), and how long it keeps.
+- Individual grab size in description: "grab 1 burrito" or "grab 2 bars and a banana."
 - Flag any missing baking ingredients in groceryFlags with exact amounts.
-- Include baking time and temperature in steps where applicable.
-- PANCAKES, WAFFLES, FRENCH TOAST BATCH RULES:
-  * Scale up to the serving size selected — if 24 servings, make 24 pieces
+- Include bake temp and time in steps where applicable.
+- BATCH FREEZE RULES (pancakes, waffles, french toast, burritos, bars):
   * Cool completely before freezing
   * Freeze flat on a baking sheet first, then transfer to quart bags (prevents sticking)
-  * Reheat in toaster 2-3 minutes or microwave 45-60 seconds
+  * Reheat pancakes/waffles in toaster 2-3 min or microwave 45-60 seconds
+  * Reheat burritos in oven 375°F 15-20 min from frozen or microwave 2-3 min
   * Keeps in freezer up to 3 months
-  * Always include these freeze instructions in the tip field
+  * Always include freeze and reheat instructions in the tip field
   * For french toast: buy bread from store (flag on grocery list), build the egg mixture recipe only
   * For waffles: note in tip that a waffle iron is needed`:''}
 
@@ -1529,6 +1565,18 @@ FLAVOR DIRECTION GUIDE — build dishes that genuinely represent these cuisines:
 
 BREAD AND CRUST RULE — CRITICAL: If a recipe uses bread, rolls, buns, pie crust, pizza dough, or tortillas that are not already in inventory, ALWAYS flag them in groceryFlags with exact quantity. Never silently omit a recipe because bread is hard to track. Build the recipe and let the user decide whether to buy or make from scratch.
 
+MILK POWDER RULE — CRITICAL:
+When a recipe uses reconstituted milk from milk powder:
+- Pull list entry: icon 🥛, item "Milk Powder", qty "X cups milk powder + Y cups water = Z cups reconstituted milk", prepNote "Stir together until dissolved before using"
+- Steps: only say "Z cups reconstituted milk" — NEVER show the math inside a cooking step
+- Wrong step: "Add 8 cups reconstituted milk (1 cup milk powder + 4 cups water — double it)"
+- Correct step: "Add 8 cups reconstituted milk"
+
+DRY RICE BAKED IN LIQUID RULE:
+When dry rice cooks directly inside a baking dish with liquid (casserole-style):
+- Add this note in the step where rice is combined: "Rice cooks in the liquid during baking — do not precook."
+- Ensure at least 2 cups of liquid per 1 cup of dry rice
+
 RECIPE CONSISTENCY RULE: Pick ONE format and use it everywhere — title, pull list, steps, and tip must all match.
 - If the recipe is "French Bread Pizza" → pull list says "French bread loaves", steps say "slice French bread", grocery list says "French bread loaves"
 - If the recipe is "Pizza" → pull list says "pizza crust", steps say "spread on pizza crust", grocery list says "store-bought pizza crust"
@@ -1551,12 +1599,16 @@ Lunch: Wraps, hot sandwiches, grilled cheese combo, chicken melt, loaded baked p
 Breakfast: Pancake stacks, stuffed french toast, waffle boards, breakfast burritos, egg scrambles, biscuits and gravy, breakfast hash, omelettes, breakfast casserole, oatmeal bake, overnight oats, yogurt parfait
 
 ${buildEmergency?`EMERGENCY MEAL MODE — ON (DINNER ONLY):
-- Complete dinner meal — protein + starch + vegetable all in one. Freezer-ready.
-- Double batch automatically — makes exactly 2 portions for the emergency layer.
-- Best formats: casseroles, thick stews, rice bowls, pasta bakes, stuffed peppers, thick chili. All freeze and reheat perfectly.
-- LIQUID MEALS: use FREEZER-SAFE CONTAINERS not gallon bags — bags leak. Flag containers in groceryFlags.
-- NO soggy ingredients: no fresh lettuce, no crispy toppings, no pre-cooked pasta in liquid.
-- Tip field: "FREEZE IN [GALLON BAGS or FREEZER-SAFE CONTAINERS]: [reheating instructions] · Keeps 3-6 months · Pull night before to thaw"
+- Complete dinner meal — protein + starch + vegetable all in one. BOTH portions go straight to the freezer. There is no "eat one now" — both freeze. Always.
+- Double batch automatically — makes exactly 2 full portions for the emergency layer.
+- STORAGE FORMAT — pick based on the dish. Both options are valid emergency layer storage:
+  * Soups, stews, chili, gumbo = GALLON BAGS (lay flat to freeze)
+  * Casseroles, baked pasta, rice bakes, stuffed peppers = 9X13 BAKING PAN (cover with plastic wrap then foil, freeze in the pan — completely fine)
+  * Thick rice bowls or protein + grain combos = GALLON BAGS or FREEZER-SAFE CONTAINERS
+- NEVER use "FOR NOW" language. Both portions freeze. No exceptions.
+- Tip for BAG meals: "FREEZE IN GALLON BAGS: [reheating instructions] · Pull night before to thaw in fridge · Keeps 3-6 months"
+- Tip for PAN meals: "FREEZE IN 9X13 PAN: Cover tightly with plastic wrap then foil · Pull night before to thaw · Bake covered at 375°F for [X] min until hot and bubbly · Keeps 3-6 months"
+- NO soggy ingredients: no fresh lettuce, no crispy toppings, no uncooked pasta in liquid.
 - Scale recipe to feed ${A.householdSize*2} people total (double batch).`:''}
 
 MISSING INGREDIENTS: Always build anyway. Flag missing items in groceryFlags with exact quantities.
@@ -1594,7 +1646,7 @@ QUANTITY RULES — NO EXCEPTIONS:
   const userPrompt=`MEAL TYPE: ${mealType} — build an appropriate ${mealType.toLowerCase()} dish. NOT breakfast food for dinner.
 ${grabAndGo?'GRAB AND GO MODE: ON — build a batchable item with yield, storage instructions, and grab size.':''}
 ${!includeSoups?'SOUPS OFF: No soups, stews, chilis, or broth-based dishes under any circumstances.':''}
-${mealType==='Breakfast'?`BREAKFAST VARIETY RULE: Last breakfast built was "${A.lastBuiltBreakfast||'none'}". Build something COMPLETELY DIFFERENT.`:''}
+${mealType==='Breakfast'?`BREAKFAST VARIETY RULE: Breakfast has 5 format groups — A (grain-based), B (egg savory), C (bread/batter including pancakes), D (no-cook/assembly), E (hash/skillet). Last breakfast built was "${A.lastBuiltBreakfast||'none'}". Identify its group and build from a DIFFERENT group this time. All groups are equally valid — this is about rotation, not restriction. Eggs and pancakes are welcome, just not back to back.`:''}
 ${mealType!=='Breakfast'?`LAST MEAL BUILT: "${A.lastBuiltMeal||'none'}" — build something completely different.`:''}
 ${A.lastBuiltProtein&&mealType!=='Breakfast'?`LAST PROTEIN USED: "${A.lastBuiltProtein}" — use a DIFFERENT protein this time. Rotate.`:''}
 ${buildEmergency?'EMERGENCY MEAL MODE: ON — dinner only, double batch, gallon bags or freezer containers, complete meal, reheats perfectly':''}
@@ -1737,7 +1789,7 @@ function rRecipe(){
     <div class="card card-pad">
       ${isEmergency?`
       <div class="section-head">🚨 Log This Emergency Meal</div>
-      <div class="alert alert-green" style="margin-bottom:14px"><span>✅</span><div>This goes straight to your Emergency supply — not on the dinner calendar. Deducts inventory for 2 full batches.</div></div>
+      <div class="alert alert-green" style="margin-bottom:14px"><span>✅</span><div>Both portions go straight to the freezer — not the dinner calendar. Inventory deducted for 2 full batches.</div></div>
       <div class="fg"><label class="lbl">Date Made</label><input class="inp" type="date" id="em-made-date" value="${new Date().toISOString().slice(0,10)}" style="cursor:pointer"></div>
       <div class="fg"><label class="lbl">Gallon Bags</label><input class="inp" type="number" id="em-made-qty" value="2" min="1" max="10"></div>
       <button class="btn btn-primary btn-full btn-lg" style="margin-bottom:8px" onclick="logEmergencyMeal()">🚨 Log Emergency Meals & Deduct Inventory</button>
@@ -1874,16 +1926,18 @@ function rCalendar(){
   const selDay=days.find(d=>dateKey(d)===selKey)||days[0];
   const dayCal=A.calendarByDate[selKey]||{};
   const todayKey=dateKey(new Date());
-  const weekLabel=weekOffset===0?'This Week':weekOffset===1?'Next Week':weekOffset===2?'In 2 Weeks':weekOffset===3?'In 3 Weeks':'In 4 Weeks';
+  const weekLabel=weekOffset===0?'This Week'
+    :weekOffset>0?(weekOffset===1?'Next Week':weekOffset===2?'In 2 Weeks':`In ${weekOffset} Weeks`)
+    :(weekOffset===-1?'Last Week':weekOffset===-2?'2 Weeks Ago':weekOffset===-3?'3 Weeks Ago':`${Math.abs(weekOffset)} Weeks Ago`);
   const slots=['breakfast','lunch','dinner','snack'];
   const slotIcons={breakfast:'🌅',lunch:'☀️',dinner:'🌙',snack:'🍎'};
 
   let html=`<div class="cal-layout">
     <div style="min-width:260px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <button class="btn btn-outline btn-sm" onclick="A.weekOffset=Math.max(0,(A.weekOffset||0)-1);A.calSelDate=null;render()" ${weekOffset===0?'disabled':''}>‹</button>
+        <button class="btn btn-outline btn-sm" onclick="A.weekOffset=(A.weekOffset||0)-1;A.calSelDate=null;render()">‹</button>
         <span style="font-size:13px;font-weight:600;color:var(--green)">${weekLabel}</span>
-        <button class="btn btn-outline btn-sm" onclick="A.weekOffset=Math.min(4,(A.weekOffset||0)+1);A.calSelDate=null;render()" ${weekOffset===4?'disabled':''}>›</button>
+        <button class="btn btn-outline btn-sm" onclick="A.weekOffset=(A.weekOffset||0)+1;A.calSelDate=null;render()">›</button>
       </div>
       <div style="display:flex;gap:6px;margin-bottom:10px">
         <button class="btn btn-outline btn-sm" style="flex:1;font-size:11px" onclick="printWeekCalendar()">🖨️ Print Week</button>
@@ -1990,7 +2044,7 @@ function moveMeal(){
   const today=new Date();today.setHours(0,0,0,0);
   const todaySun=new Date(today);todaySun.setDate(today.getDate()-today.getDay());
   const dateSun=new Date(d);dateSun.setDate(d.getDate()-d.getDay());
-  A.weekOffset=Math.max(0,Math.min(4,Math.round((dateSun-todaySun)/(7*24*60*60*1000))));
+  A.weekOffset=Math.round((dateSun-todaySun)/(7*24*60*60*1000));
   A.calSelDate=toDate;A._moveFrom=null;
   save();closeModal();render();
 }
@@ -2212,7 +2266,7 @@ function placeOnCal(){
   const today=new Date();today.setHours(0,0,0,0);
   const todaySun=new Date(today);todaySun.setDate(today.getDate()-today.getDay());
   const dateSun=new Date(d);dateSun.setDate(d.getDate()-d.getDay());
-  A.weekOffset=Math.max(0,Math.min(4,Math.round((dateSun-todaySun)/(7*24*60*60*1000))));
+  A.weekOffset=Math.round((dateSun-todaySun)/(7*24*60*60*1000));
   A.calSelDate=dateVal;
   alert('✅ Scheduled! Inventory updated.');
   showPage('calendar');
@@ -2346,14 +2400,12 @@ function cleanQty(qty){
 function scaleQty(qtyStr, factor){
   if(!qtyStr||factor===1)return qtyStr;
 
-  // ── BAKING CHEMISTRY — these ingredients do not scale linearly ──────────────
-  // Leaveners (baking powder, baking soda): scale by sqrt of factor, max 2.5x original
-  // Salt, vanilla, spices: scale conservatively — sqrt of factor
-  // This prevents over-leavened, over-salted, or chemically off baked goods
+  // ── BAKING CHEMISTRY — do not scale linearly ─────────────────────────────
+  // Baking powder, baking soda, salt, vanilla: use square root of factor
+  // Flour, sugar, oats, butter, milk, fruit: scale normally (handled below)
   const LEAVENER_RE=/baking\s+(powder|soda)/i;
-  const CONSERVATIVE_RE=/(salt|vanilla(\s+extract)?|cream\s+of\s+tartar)/i;
+  const CONSERVATIVE_RE=/\b(salt|vanilla(\s+extract)?|cream\s+of\s+tartar)\b/i;
   if(LEAVENER_RE.test(qtyStr)||CONSERVATIVE_RE.test(qtyStr)){
-    // Use square root scaling — much safer for baking chemistry
     const conservativeFactor=Math.sqrt(factor);
     const numMatch=qtyStr.match(/^(\d+(?:\/\d+)?(?:\.\d+)?(?:\s+\d+\/\d+)?)\s*([a-zA-Z]*)/);
     if(numMatch){
@@ -2364,27 +2416,23 @@ function scaleQty(qtyStr, factor){
       else{num=parseFloat(numStr);}
       let scaled=num*conservativeFactor;
       const unit=numMatch[2].toLowerCase();
-      // Convert tsp→tbsp if needed
       let newUnit=unit;
       if(unit==='tsp'&&scaled>=3){scaled=scaled/3;newUnit='tbsp';}
       if((unit==='tbsp'||newUnit==='tbsp')&&scaled>=16){scaled=scaled/16;newUnit='cup';}
-      const rounded=Math.round(scaled*8)/8; // round to nearest 1/8 for small amounts
+      const rounded=Math.round(scaled*8)/8;
       const whole=Math.floor(rounded);const dec=rounded-whole;
       let display;
       if(dec<0.01)display=String(whole||'1/8');
       else if(Math.abs(dec-0.125)<0.01)display=whole>0?`${whole} 1/8`:'1/8';
       else if(Math.abs(dec-0.25)<0.01)display=whole>0?`${whole} 1/4`:'1/4';
-      else if(Math.abs(dec-0.375)<0.01)display=whole>0?`${whole} 3/8`:'3/8';
       else if(Math.abs(dec-0.5)<0.01)display=whole>0?`${whole} 1/2`:'1/2';
-      else if(Math.abs(dec-0.625)<0.01)display=whole>0?`${whole} 5/8`:'5/8';
       else if(Math.abs(dec-0.75)<0.01)display=whole>0?`${whole} 3/4`:'3/4';
-      else if(Math.abs(dec-0.875)<0.01)display=whole>0?`${whole} 7/8`:'7/8';
       else display=rounded.toFixed(2).replace(/0+$/,'').replace(/\.$/,'');
       return newUnit!==unit?`${display} ${newUnit}${qtyStr.slice(numMatch[0].length)}`
         :qtyStr.replace(numMatch[0].trimEnd(),`${display}${unit?' '+unit:''}`).trimEnd()+qtyStr.slice(numMatch[0].length);
     }
   }
-  // ── END BAKING CHEMISTRY ────────────────────────────────────────────────────
+  // ── END BAKING CHEMISTRY ──────────────────────────────────────────────────
 
   // Eggs must always be whole numbers — round up
   if(qtyStr.match(/egg/i)){
@@ -2491,19 +2539,15 @@ function rebuildFavorite(idx){
     qty:scaleQty(p.qty,factor)
   }));
 
-  // Baking chemistry items in step text — conservative scaling
-  const BAKING_STEP_RE=/\b(baking\s+(?:powder|soda)|salt|vanilla(?:\s+extract)?|cream\s+of\s+tartar)\b/i;
-  const conservativeFactor=Math.sqrt(factor);
+  const _bakingStepRE=/\b(baking\s+(?:powder|soda)|salt|vanilla(?:\s+extract)?|cream\s+of\s+tartar)\b/i;
+  const _conserveFactor=Math.sqrt(factor);
   const scaledSteps=(fav.steps||[]).map(step=>{
-    // Split step into segments so we can apply different scaling to baking chemistry mentions
     return step.replace(/(\d+(?:\.\d+)?)\s*(bag[s]?|quart bag[s]?|cup[s]?|tbsp|tsp|oz|lb[s]?|pound[s]?|egg[s]?|can[s]?|tortilla[s]?|each|piece[s]?)/gi,(match,num,unit)=>{
-      // Check if this number appears near a baking chemistry word
       const matchIdx=step.indexOf(match);
-      const surroundingText=step.slice(Math.max(0,matchIdx-40),matchIdx+match.length+40);
-      const isBakingChem=BAKING_STEP_RE.test(surroundingText);
-      const effectiveFactor=isBakingChem?conservativeFactor:factor;
+      const surrounding=step.slice(Math.max(0,matchIdx-50),matchIdx+match.length+50);
+      const isBakingChem=_bakingStepRE.test(surrounding);
+      const effectiveFactor=isBakingChem?_conserveFactor:factor;
       let scaled=parseFloat(num)*effectiveFactor;
-      // Eggs always whole numbers
       if(/egg/i.test(unit))scaled=Math.ceil(scaled);
       const rounded=Math.round(scaled*4)/4;
       const display=rounded===Math.floor(rounded)?Math.floor(rounded).toString():rounded.toFixed(1).replace(/\.0$/,'');
