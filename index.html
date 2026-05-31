@@ -719,7 +719,7 @@ function save(){
       emergency_cook_list:A.emergencyCookList||[],
       last_meal_type:A.lastMealType,
       onboarded:A.onboarded,
-      week_proteins:A.weekProteins,
+      // weekProteins session-only — never persisted
     };
     sbSave(A.email,data);
     localStorage.setItem('pp_data',JSON.stringify(data));
@@ -773,7 +773,7 @@ async function loadUserData(email){
     A.dietaryGoals=remote.dietary_goals||[];
     A.lastMealType=remote.last_meal_type||'Dinner';
     A.onboarded=remote.onboarded||false;
-    A.weekProteins=remote.week_proteins||[];
+    A.weekProteins=[];// session-only
     // Cook list is always recalculated from calendar — never loaded from storage
     return;
   }
@@ -800,7 +800,7 @@ async function loadUserData(email){
       A.dietaryGoals=d.dietary_goals||[];
       A.lastMealType=d.last_meal_type||'Dinner';
       A.onboarded=d.onboarded||false;
-      A.weekProteins=d.week_proteins||[];
+      A.weekProteins=[];// session-only
       // Cook list always recalculated — never loaded from storage
     }catch(e){}
   }
@@ -1288,33 +1288,33 @@ function rBuilderForm(){
           </div>
           <div class="fg"><label class="lbl">Flavor</label>
             <select class="sel" id="fl">
-              <option>Surprise Me</option><option>Classic American</option><option>Comfort Food</option><option>Southern & Soul Food</option><option>Tex-Mex</option><option>Mexican</option><option>Italian</option><option>BBQ & Smoky</option><option>Cajun</option><option>Asian-Style</option><option>Mediterranean</option><option>Caribbean</option>
+              ${['Surprise Me','Classic American','Comfort Food','Southern & Soul Food','Tex-Mex','Mexican','Italian','BBQ & Smoky','Cajun','Asian-Style','Mediterranean','Caribbean'].map(f=>`<option ${(A.flavor||'Surprise Me')===f?'selected':''}>${f}</option>`).join('')}
             </select>
           </div>
         </div>
         <div class="fg">
           <label class="lbl">Anchor Ingredient (optional)</label>
-          <input class="inp" id="anchor" placeholder="Override — build around this specifically">
+          <input class="inp" id="anchor" placeholder="Override — build around this specifically" value="${A.anchorIngredient||''}">
         </div>
         <div class="mode-row">
           <div><div style="font-size:14px;font-weight:600">P&P Spice Blends</div><div style="font-size:12px;color:var(--text-muted)">I have the Prep & Purpose spice kit</div></div>
-          <div class="tog ${A.ppSpices?'on':''}" onclick="A.ppSpices=!A.ppSpices;render()"><div class="tog-th"></div></div>
+          <div class="tog ${A.ppSpices?'on':''}" onclick="toggleBuilderOption('ppSpices')"><div class="tog-th"></div></div>
         </div>
         <div class="mode-row">
           <div><div style="font-size:14px;font-weight:600">👶 Kid Friendly</div><div style="font-size:12px;color:var(--text-muted)">${A.kidFriendly?'All meals — mild, nut-free, fun formats, kid portions':'Toggle on for kid-friendly meals across all types'}</div></div>
-          <div class="tog ${A.kidFriendly?'on':''}" onclick="A.kidFriendly=!A.kidFriendly;save();render()"><div class="tog-th"></div></div>
+          <div class="tog ${A.kidFriendly?'on':''}" onclick="toggleBuilderOption('kidFriendly')"><div class="tog-th"></div></div>
         </div>
         <div class="mode-row">
           <div><div style="font-size:14px;font-weight:600">🥡 Grab & Go</div><div style="font-size:12px;color:var(--text-muted)">${A.grabAndGo?'Batchable items — muffins, bars, egg cups, burritos':'Toggle on for batch-prep grab and go items'}</div></div>
-          <div class="tog ${A.grabAndGo?'on':''}" onclick="A.grabAndGo=!A.grabAndGo;save();render()"><div class="tog-th"></div></div>
+          <div class="tog ${A.grabAndGo?'on':''}" onclick="toggleBuilderOption('grabAndGo')"><div class="tog-th"></div></div>
         </div>
         <div class="mode-row">
           <div><div style="font-size:14px;font-weight:600">🍲 Soups & Stews</div><div style="font-size:12px;color:var(--text-muted)">${A.includeSoups?'Soups and stews included':'Off — no soups, stews, or chilis'}</div></div>
-          <div class="tog ${A.includeSoups?'on':''}" onclick="A.includeSoups=!A.includeSoups;save();render()"><div class="tog-th"></div></div>
+          <div class="tog ${A.includeSoups?'on':''}" onclick="toggleBuilderOption('includeSoups')"><div class="tog-th"></div></div>
         </div>
         <div class="mode-row">
           <div><div style="font-size:14px;font-weight:600">🚨 Emergency Meal Mode</div><div style="font-size:12px;color:var(--text-muted)">${A.buildEmergency?'Building for gallon bags — double batch, freezer ready':'Toggle on to build an emergency meal'}</div></div>
-          <div class="tog ${A.buildEmergency?'on':''}" onclick="A.buildEmergency=!A.buildEmergency;save();render()"><div class="tog-th"></div></div>
+          <div class="tog ${A.buildEmergency?'on':''}" onclick="toggleBuilderOption('buildEmergency')"><div class="tog-th"></div></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
           <button class="btn btn-primary btn-lg btn-full" onclick="generateRecipe()">🤖 Build My Meal</button>
@@ -1335,7 +1335,21 @@ function rBuilderForm(){
   </div>`;
 }
 
+function captureBuilderFields(){
+  // Save current builder form values to state so they survive a re-render
+  const fl=document.getElementById('fl');if(fl)A.flavor=fl.value;
+  const sv=document.getElementById('sv');if(sv&&sv.value)A.householdSize=parseInt(sv.value)||A.householdSize;
+  const anchor=document.getElementById('anchor');if(anchor)A.anchorIngredient=anchor.value;
+  const mt=document.getElementById('mealType');if(mt)A.mealType=mt.value;
+}
+function toggleBuilderOption(opt){
+  // Capture form fields first, flip the toggle, then re-render
+  captureBuilderFields();
+  A[opt]=!A[opt];
+  save();render();
+}
 function toggleProtein(name){
+  captureBuilderFields();
   const idx=A.weekProteins.indexOf(name);
   if(idx>=0)A.weekProteins.splice(idx,1);
   else A.weekProteins.push(name);
@@ -1372,7 +1386,7 @@ async function generateRecipe(){
 
   // All other inventory
   const frozenSupList=A.supports.filter(s=>s.storageTypes.includes('frozen')&&(s.frozen||0)>0).map(s=>`${s.name}: ${s.frozen} bags (${s.frozen*3} cups) [FROZEN — add mid-cook, 3-4 min to heat through]`);
-  const cannedList=A.supports.filter(s=>s.storageTypes.includes('canned')&&(s.canned||0)>0).map(s=>`${s.name}: ${s.canned} cans [add at end]`);
+  const cannedList=A.supports.filter(s=>s.storageTypes.includes('canned')&&(s.canned||0)>0).map(s=>`${s.name}: ${s.canned} can${s.canned!==1?'s':''} [drain and add at end — pull by can count not cups]`);
   const dryList=A.supports.filter(s=>s.storageTypes.includes('dry')&&(s.dry||0)>0).map(s=>`${s.name}: ${s.dry} ${s.dryUnit||'lbs'} [needs full cook time]`);
   const eachList=A.supports.filter(s=>s.storageTypes.includes('each')&&(s.each||0)>0).map(s=>`${s.name}: ${s.each} ${s.eachUnit||'each'} [ready to use — heat through or serve as is]`);
 
@@ -1412,7 +1426,7 @@ ${!includeSoups?'SOUPS OFF: No soups, stews, chili, or broth-based dishes.':''}
 ${grabAndGo?`GRAB AND GO: Batchable item, made once, grabbed all week. Rotate formats — last: "${A.lastBuiltBreakfast||'none'}":
 Formats: freezer burritos, egg muffin cups, baked oatmeal bars, granola bars, banana oat muffins, overnight oats jars, yogurt parfait cups, smoothie packs, sheet pan hash, pancakes, waffles, french toast sticks, muffins.
 Stock guidance: sausage→burritos/egg cups · hash browns→hash bake · oats→bars/overnight oats · yogurt→parfait · frozen fruit→smoothie packs · bananas→banana muffins · flour+eggs+butter→pancakes/waffles/muffins.
-Yield in pieces, storage, how long keeps, grab size. BAKING SCALE TIP in tip: "~1.4x baking powder/soda/salt when scaling up — not 2x. Flour, sugar, butter, eggs scale normally."`:''}
+Yield in pieces, storage, how long keeps, grab size. BAKING SCALE TIP in tip: "~1.4x baking powder/soda/salt when scaling up — not 2x."`:''}
 
 ${A.kidFriendly?`KID FRIENDLY: Mild, nut-free, simple, kid portions.`:''}
 ${A.dietary.length>0?`DIETARY RESTRICTIONS — NEVER VIOLATE: ${A.dietary.join(', ')}`:''}
@@ -1423,21 +1437,17 @@ FLAVOR GUIDE: Classic American=meat+potatoes/casseroles · Comfort=creamy/cheesy
 STORAGE FORM HONESTY — match form to actual inventory:
 1. FROZEN bags > 0 → frozen. Step: "add mid-cook, 3-4 min to heat."
 2. FROZEN=0, CANNED > 0 → canned. qty = container count ("2 cans", "1 quart jar") — NEVER cups. Step: "drain, add at end."
-3. FROZEN=0, CANNED=0, DRY > 0 → dry. Step: "cook separately per package directions, then add." NEVER add raw dry to a baked dish.
+3. FROZEN=0, CANNED=0, DRY > 0 → dry. Step: "cook separately per package, then add." NEVER add raw dry to a baked dish.
 4. ALL=0 → omit from recipe, flag on grocery list.
 
-CANNED/JARRED QTY RULES — CRITICAL:
+CANNED/JARRED QTY RULES:
 - Store canned: qty = can count ("2 cans black beans") — never cups
-- Home canned regular jars: qty = EXACT jar size and count as logged by user ("2 pint-and-a-half jars", "1 quart jar") — NEVER convert to a different jar size, NEVER use cups
-- Home canned FREEZE DRIED: these are powders/pieces — measure out exactly what is needed. qty = cup or tbsp ("1/2 cup freeze dried cheese powder"). prepNote = "Measure from jar — no need to pull the whole jar."
-- Mix jar sizes if needed to hit the right quantity
+- Home canned regular jars: qty = EXACT jar size and count as logged ("2 pint-and-a-half jars", "1 quart jar") — NEVER convert sizes, NEVER use cups. Mix jar sizes if needed.
+- Home canned FREEZE DRIED: measure out what is needed. qty = cup or tbsp ("1/2 cup freeze dried cheese powder"). prepNote = "Measure from jar — no need to pull the whole jar."
 
 FRESH veg: add early. FROZEN: mid-cook 3-4 min. CANNED/jarred: drain, add at very end. DRY: cook separately first.
-
-MILK POWDER: Pull list shows "X cups powder + Y cups water = Z cups milk". Steps say only "Z cups milk."
-
-BAKING: Safe to scratch: pancakes, waffles, french toast, biscuits, cornbread, muffins, oatmeal bakes. Never scratch: bread, rolls, tortillas, pizza dough — store-bought, flag on grocery list.
-
+MILK POWDER: Pull list "X cups powder + Y cups water = Z cups milk". Steps say only "Z cups milk."
+BAKING: Safe to scratch: pancakes, waffles, french toast, biscuits, cornbread, muffins, oatmeal bakes. Never scratch: bread, rolls, tortillas, pizza dough — store-bought, flag on list.
 GROCERY FLAGS: Include reason. urgency "out"=needed · "low"=optional.
 
 ${(()=>{
@@ -1449,7 +1459,6 @@ ${(()=>{
 })()}
 
 DISH VARIETY — never repeat same format twice in a row. Rotate: tacos, enchiladas, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, pot pie, skillet meals, rice bowls, smothered chicken, soups, stews, sandwiches, wraps, hash, quesadillas.
-
 INGREDIENT COMMON SENSE: Never put fruit on savory dishes unless a known classic. Frozen fruit = breakfast/desserts only.
 
 ${buildEmergency?`EMERGENCY MEAL MODE:
@@ -1507,14 +1516,7 @@ Dry: ${dryList.length>0?dryList.join(' | '):'None'}
 Ready to use (each): ${eachList.length>0?eachList.join(' | '):'None'}
 
 FRESH ITEMS (USE FIRST): ${freshList.length>0?freshList.join(' | '):'None'}
-HOME CANNED: ${(A.homeCanned||[]).length>0?(A.homeCanned||[]).map(hc=>{
-  const cups={halfPint:1,pint:2,pintHalf:3,quart:4,halfGallon:8}[hc.jarSize]||2;
-  const jarLabel={halfPint:'half-pint jar (1 cup)',pint:'pint jar (2 cups)',pintHalf:'pint-and-a-half jar (3 cups)',quart:'quart jar (4 cups)',halfGallon:'half-gallon jar (8 cups)'}[hc.jarSize]||'pint jar (2 cups)';
-  const isFD=/freeze.?dried|freeze dried|FD/i.test(hc.name);
-  const totalCups=hc.qty*cups;
-  if(isFD){return`${hc.name}: ${hc.qty} ${jarLabel}${hc.qty!==1?'s':''} = ${totalCups} cups total — FREEZE DRIED: measure out exact amount needed by cup or tbsp, no need to pull whole jar`;}
-  return`${hc.name}: ${hc.qty} ${jarLabel}${hc.qty!==1?'s':''} = ${totalCups} cups total — pull by jar count, use whole jars`;
-}).join(' | '):'None'}
+HOME CANNED: ${(A.homeCanned||[]).length>0?(A.homeCanned||[]).map(hc=>{const cups={halfPint:1,pint:2,pintHalf:3,quart:4,halfGallon:8}[hc.jarSize]||2;const jarLabel={halfPint:'half-pint jar (1 cup)',pint:'pint jar (2 cups)',pintHalf:'pint-and-a-half jar (3 cups)',quart:'quart jar (4 cups)',halfGallon:'half-gallon jar (8 cups)'}[hc.jarSize]||'pint jar (2 cups)';const isFD=/freeze.?dried|freeze dried|FD/i.test(hc.name);const totalCups=hc.qty*cups;if(isFD){return`${hc.name}: ${hc.qty} ${jarLabel}${hc.qty!==1?'s':''} = ${totalCups} cups total — FREEZE DRIED: measure out exact amount by cup/tbsp, no need to pull whole jar`;}return`${hc.name}: ${hc.qty} ${jarLabel}${hc.qty!==1?'s':''} = ${totalCups} cups — pull by jar count, use whole jars`;}).join(' | '):'None'}
 FRIDGE: ${fridgeQty.length>0?fridgeQty.join(' | '):'None'}
 PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}
 
