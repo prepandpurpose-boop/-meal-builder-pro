@@ -1151,7 +1151,11 @@ function rPantry(){
     condiments:{label:'🥫 Condiments & Sauces',type:'toggle'},
     spices:{label:'🧂 Spices',type:'toggle'},
   };
-  let html=`<div class="page-sub">Track what is in your kitchen. Fresh items are prioritized — the AI uses them first so nothing goes to waste.</div>`;
+  let html=`<div class="page-sub">Track what is in your kitchen. Fresh items are prioritized — the AI uses them first so nothing goes to waste.</div>
+    <div style="font-size:11px;color:var(--text-muted);background:white;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:16px;line-height:1.5">
+      📦 <strong>What deducts automatically:</strong> Frozen bases, frozen/canned/dry supports, home canned jars, and measured kitchen items (butter, flour, sugar, fresh produce, milk, eggs) all deduct when you schedule a meal.<br>
+      🧂 <strong>What does not deduct:</strong> Spices, oils, and condiments are tracked as "have it" or "don't have it" — they don't decrease per recipe. Check these when you notice you're running low.
+    </div>`;
   Object.keys(catConfig).forEach(cat=>{
     const {label,type}=catConfig[cat];
     const items=A.pantry[cat]||[];
@@ -2042,6 +2046,145 @@ function checkConflict(){
   if(existing){const title=typeof existing==='object'?existing.title:existing;msg.style.display='block';msg.innerHTML='⚠️ <strong>'+title+'</strong> is already in this slot.';}
   else{msg.style.display='none';}
 }
+// ── PANTRY DEDUCTION ─────────────────────────────────────────────────────
+// Conversion: how many recipe-units fit in one storage-unit
+const PANTRY_CONV={
+  'all purpose flour':{unit:'lbs',cup:3.5,tbsp:56},
+  'sugar':{unit:'lbs',cup:2.25,tbsp:36},
+  'brown sugar':{unit:'lbs',cup:2.33,tbsp:37},
+  'cornmeal':{unit:'lbs',cup:3,tbsp:48},
+  'oats':{unit:'lbs',cup:5,tbsp:80},
+  'oats (rolled)':{unit:'lbs',cup:5,tbsp:80},
+  'butter':{unit:'sticks',tbsp:8,cup:0.5},
+  'baking powder':{unit:'oz',tsp:6,tbsp:2},
+  'baking soda':{unit:'oz',tsp:6,tbsp:2},
+  'cornstarch':{unit:'oz',tbsp:2,tsp:6},
+  'vanilla extract':{unit:'oz',tsp:6},
+  'heavy cream':{unit:'oz',cup:0.125,tbsp:0.0625},
+  'sour cream':{unit:'oz',cup:0.125,tbsp:0.0625},
+  'shredded cheese':{unit:'oz',cup:0.25},
+  'block cheese':{unit:'oz',cup:0.25},
+  'cream cheese':{unit:'oz',oz:1},
+  'milk':{unit:'cups',cup:1},
+  'yogurt':{unit:'cups',cup:1},
+  'buttermilk':{unit:'cups',cup:1},
+};
+
+function deductPantryItems(pull){
+  if(!pull||!pull.length)return;
+  // Flatten all pantry qty items
+  const allPantry=[];
+  Object.keys(A.pantry||{}).forEach(cat=>{
+    (A.pantry[cat]||[]).forEach(item=>{
+      if((item.qty||0)>0&&item.unit)allPantry.push(item);
+    });
+  });
+  if(!allPantry.length)return;
+
+  pull.forEach(p=>{
+    if(!p.item||!p.qty)return;
+    const pName=p.item.toLowerCase().trim();
+
+    // Match pantry item by name
+    const pantryItem=allPantry.find(pi=>
+      pi.name.toLowerCase()===pName||
+      pName.includes(pi.name.toLowerCase())||
+      pi.name.toLowerCase().includes(pName)
+    );
+    if(!pantryItem)return;
+
+    // Parse recipe qty: "4 tbsp", "2 cups", "5 lbs", "1/2 cup", "3 each", "1 medium (1/2 lb)"
+    const qtyMatch=p.qty.match(/^(\d+(?:\.\d+)?(?:\s+\d+\/\d+)?|\d+\/\d+)\s*(tsp|tbsp|cup|cups|oz|lb|lbs|each|sticks?|medium|heads?)/i);
+    if(!qtyMatch)return;
+
+    let amount;
+    const rawNum=qtyMatch[1].trim();
+    if(rawNum.includes('/')){
+      if(rawNum.includes(' ')){
+        const parts=rawNum.split(' ');
+        const frac=parts[1].split('/');
+        amount=parseInt(parts[0])+parseInt(frac[0])/parseInt(frac[1]);
+      }else{
+        const frac=rawNum.split('/');
+        amount=parseInt(frac[0])/parseInt(frac[1]);
+      }
+    }else{
+      amount=parseFloat(rawNum);
+    }
+    if(!amount||amount<=0)return;
+
+    let recipeUnit=qtyMatch[2].toLowerCase().replace(/s$/,'');
+    if(recipeUnit==='lb')recipeUnit='lbs';
+    if(recipeUnit==='stick')recipeUnit='sticks';
+
+    const storageUnit=pantryItem.unit.toLowerCase();
+
+    // Direct match — same unit
+    if(recipeUnit===storageUnit||(recipeUnit==='cup'&&storageUnit==='cups')||(recipeUnit==='lbs'&&storageUnit==='lbs')||(recipeUnit==='each'&&storageUnit==='each')){
+      pantryItem.qty=Math.max(0,+(pantryItem.qty-amount).toFixed(2));
+      return;
+    }
+
+    // Conversion lookup
+    const conv=PANTRY_CONV[pantryItem.name.toLowerCase()];
+    if(!conv)return;
+
+    // Convert recipe amount to storage units
+    const convFactor=conv[recipeUnit];// how many storage-units per 1 recipe-unit
+    if(convFactor){
+      const deduct=amount/convFactor;// if 4 tbsp butter and 8 tbsp/stick → 0.5 sticks
+      pantryItem.qty=Math.max(0,+(pantryItem.qty-deduct).toFixed(2));
+    }
+  });
+}
+
+function restorePantryItems(pull){
+  if(!pull||!pull.length)return;
+  const allPantry=[];
+  Object.keys(A.pantry||{}).forEach(cat=>{
+    (A.pantry[cat]||[]).forEach(item=>{
+      if(item.unit)allPantry.push(item);
+    });
+  });
+  if(!allPantry.length)return;
+
+  pull.forEach(p=>{
+    if(!p.item||!p.qty)return;
+    const pName=p.item.toLowerCase().trim();
+    const pantryItem=allPantry.find(pi=>
+      pi.name.toLowerCase()===pName||
+      pName.includes(pi.name.toLowerCase())||
+      pi.name.toLowerCase().includes(pName)
+    );
+    if(!pantryItem)return;
+
+    const qtyMatch=p.qty.match(/^(\d+(?:\.\d+)?(?:\s+\d+\/\d+)?|\d+\/\d+)\s*(tsp|tbsp|cup|cups|oz|lb|lbs|each|sticks?|medium|heads?)/i);
+    if(!qtyMatch)return;
+
+    let amount;
+    const rawNum=qtyMatch[1].trim();
+    if(rawNum.includes('/')){
+      if(rawNum.includes(' ')){const parts=rawNum.split(' ');const frac=parts[1].split('/');amount=parseInt(parts[0])+parseInt(frac[0])/parseInt(frac[1]);}
+      else{const frac=rawNum.split('/');amount=parseInt(frac[0])/parseInt(frac[1]);}
+    }else{amount=parseFloat(rawNum);}
+    if(!amount||amount<=0)return;
+
+    let recipeUnit=qtyMatch[2].toLowerCase().replace(/s$/,'');
+    if(recipeUnit==='lb')recipeUnit='lbs';
+    if(recipeUnit==='stick')recipeUnit='sticks';
+
+    const storageUnit=pantryItem.unit.toLowerCase();
+    if(recipeUnit===storageUnit||(recipeUnit==='cup'&&storageUnit==='cups')||(recipeUnit==='lbs'&&storageUnit==='lbs')||(recipeUnit==='each'&&storageUnit==='each')){
+      pantryItem.qty=+(pantryItem.qty+amount).toFixed(2);
+      return;
+    }
+    const conv=PANTRY_CONV[pantryItem.name.toLowerCase()];
+    if(!conv)return;
+    const convFactor=conv[recipeUnit];
+    if(convFactor){pantryItem.qty=+(pantryItem.qty+amount/convFactor).toFixed(2);}
+  });
+}
+
 function deductInventory(pull){
   if(!pull||!pull.length)return;
   // Deduct home canned jars
@@ -2074,6 +2217,8 @@ function deductInventory(pull){
       else if((item.each||0)>0)item.each=Math.max(0,item.each-deduct);
     }
   });
+  // Deduct pantry qty items (butter, flour, fresh produce, etc.)
+  deductPantryItems(pull);
 }
 
 function logEmergencyMeal(){
@@ -3260,6 +3405,8 @@ function restoreInventoryFromPull(pull){
       else if(item.storageTypes?.includes('each'))item.each=Math.min((item.each||0)+restore,99);
     }
   });
+  // Restore pantry qty items
+  restorePantryItems(pull);
 }
 
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
@@ -3425,6 +3572,8 @@ function rGuide(){
 
   <div class="card" style="margin-bottom:8px;padding:14px 16px">
     <div style="font-size:13px;line-height:1.8">
+      <strong>Auto-deducts:</strong> frozen bags, supports, home canned jars, butter, flour, sugar, fresh produce, milk, eggs<br>
+      <strong>Does NOT deduct:</strong> spices, oils, condiments (toggle-tracked — check manually)<br>
       <strong>1 quart bag protein</strong> = 1.5 lbs cooked<br>
       <strong>1 quart bag vegetables</strong> = 3 cups<br>
       <strong>Emergency meals</strong> = gallon bags or 9x13 pans<br>
