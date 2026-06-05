@@ -2424,10 +2424,22 @@ function rebuildFavorite(idx){
     fat:fav.macros?.fat||0
   };
 
+  // Scale the tip — same number replacement as steps
+  const scaledTip=fav.tip?fav.tip.replace(/(\d+(?:\.\d+)?)\s*(bag[s]?|quart bag[s]?|cup[s]?|tbsp|tsp|oz|lb[s]?|pound[s]?|egg[s]?|can[s]?|tortilla[s]?|each|piece[s]?|slider[s]?|bun[s]?|roll[s]?|serving[s]?|pancake[s]?|muffin[s]?|bar[s]?|burrito[s]?|people|person[s]?)/gi,(match,num,unit)=>{
+    const scaled=parseFloat(num)*factor;
+    const r=Math.round(scaled*4)/4;
+    return`${r===Math.floor(r)?Math.floor(r):r.toFixed(1).replace(/\.0$/,'')} ${unit}`;
+  }):(fav.tip||'');
+
+  // Scale groceryFlags quantities
+  const scaledFlags=(fav.groceryFlags||[]).map(f=>({...f,qty:f.qty?f.qty.replace(/(\d+(?:\.\d+)?)/,(m,num)=>{const s=Math.round(parseFloat(num)*factor);return String(s||1);}):f.qty}));
+
   A.recipe={
     ...fav,
     pull:scaledPull,
     steps:scaledSteps,
+    tip:scaledTip,
+    groceryFlags:scaledFlags,
     macros:scaledMacros,
     servings:newServings,
     description:`${fav.description||''} (scaled to ${newServings} servings)`,
