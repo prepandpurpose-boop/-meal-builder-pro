@@ -351,7 +351,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     <div id="ob-0">
       <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:16px">How the system works</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
-        <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f9f7f4;border-radius:10px"><div style="font-size:22px;width:34px;flex-shrink:0">🥩</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Layer 2 — Bases</div><div style="font-size:13px;color:#666">Cooked proteins stored in quart bags. 1 bag = 1.5 lbs cooked. Log what's in your freezer. On maintenance day cook what the week needs.</div></div></div>
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f9f7f4;border-radius:10px"><div style="font-size:22px;width:34px;flex-shrink:0">🥩</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Layer 2 — Bases</div><div style="font-size:13px;color:#666">Cooked proteins stored in quart bags. 1 bag = 1.5 lbs cooked. Log what's in your freezer and the app tracks what you use.</div></div></div>
         <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f9f7f4;border-radius:10px"><div style="font-size:22px;width:34px;flex-shrink:0">📦</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Layer 3 — Supports</div><div style="font-size:13px;color:#666">Cooked grains, vegetables, and beans in quart bags (1 bag = 3 cups), plus canned, dry, and fresh pantry items.</div></div></div>
         <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f9f7f4;border-radius:10px"><div style="font-size:22px;width:34px;flex-shrink:0">🚨</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Layer 4 — Emergency Meals</div><div style="font-size:13px;color:#666">Complete cooked meals in gallon bags. Pull, heat, eat. Magic number is 6. Always.</div></div></div>
       </div>
@@ -432,6 +432,8 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
       <button class="nav-item" id="nav-calendar" onclick="showPage('calendar')"><span class="nav-icon">📅</span>Calendar</button>
       <div class="nav-section">Shopping</div>
       <button class="nav-item" id="nav-grocery" onclick="showPage('grocery')"><span class="nav-icon">🛒</span>Grocery List <span class="nav-badge gold" id="groc-badge" style="display:none">0</span></button>
+      <div class="nav-section">Help</div>
+      <button class="nav-item" id="nav-guide" onclick="showPage('guide')"><span class="nav-icon">📖</span>How to Use</button>
     </div>
     <div class="sidebar-footer">
       <div class="sidebar-user" onclick="openSettings()">
@@ -860,7 +862,7 @@ window.addEventListener('load',async()=>{
 });
 
 // ─── NAV ───────────────────────────────────────────────────────────────────────
-const PAGE_TITLES={dashboard:'Dashboard',inventory:'Inventory — Bases & Supports',pantry:'Kitchen Staples',builder:'Meal Builder',favorites:'Favorites',calendar:'Calendar',grocery:'Grocery List'};
+const PAGE_TITLES={dashboard:'Dashboard',inventory:'Inventory — Bases & Supports',pantry:'Kitchen Staples',builder:'Meal Builder',favorites:'Favorites',calendar:'Calendar',grocery:'Grocery List',guide:'How to Use'};
 function showPage(p){
   A.page=p;
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
@@ -879,6 +881,7 @@ function render(){
   else if(A.page==='builder')m.innerHTML=rBuilder();
   else if(A.page==='calendar')m.innerHTML=rCalendar();
   else if(A.page==='grocery')m.innerHTML=rGrocery();
+  else if(A.page==='guide')m.innerHTML=rGuide();
   else if(A.page==='favorites')m.innerHTML=rFavorites();
   updateBadges();
 }
@@ -903,7 +906,7 @@ function rDashboard(){
   <div class="page-sub">Here is where your kitchen stands today.</div>`;
 
   if(emergencyCount<6){
-    html+=`<div class="alert alert-red"><span>🚨</span><div>You have <strong>${emergencyCount} emergency meals</strong>. Rebuild to 6 on your next maintenance day.</div></div>`;
+    html+=`<div class="alert alert-red"><span>🚨</span><div>You have <strong>${emergencyCount} emergency meal${emergencyCount!==1?"s":""}</strong> — ${emergencyCount<6?`build ${6-emergencyCount} more to reach your safety net of 6`:"you\'re at your target of 6"}.</div></div>`;
   }
   if(freshItems.length>0){
     html+=`<div class="alert alert-gold"><span>⚡</span><div><strong>Use these first</strong> — fresh items on hand: ${freshItems.slice(0,4).map(f=>f.name).join(', ')}${freshItems.length>4?' and more':''}.</div></div>`;
@@ -984,7 +987,7 @@ function rInventory(){
 
 function rBases(){
   const stocked=A.bases.filter(b=>hasAny(b)).length;
-  let html=`<div class="alert alert-green" style="margin-bottom:16px"><span>📏</span><div><strong>System Standard:</strong> 1 quart bag = 1.5 lbs cooked · Count all bags whether in freezer or thawed in fridge · Replenish what you used on maintenance day</div></div>`;
+  let html=`<div class="alert alert-green" style="margin-bottom:16px"><span>📏</span><div><strong>System Standard:</strong> 1 quart bag = 1.5 lbs cooked · Count all bags whether in freezer or thawed in fridge · Replenish bags as you use them</div></div>`;
   html+=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
     <div><div class="page-title" style="font-size:18px">Protein Bases</div><div style="font-size:13px;color:var(--text-muted)">${stocked} of ${A.bases.length} stocked — cooked, lightly seasoned, ready to heat</div></div>
     <button class="btn btn-outline btn-sm" onclick="openAddBase()">+ Add Custom</button>
@@ -1097,7 +1100,7 @@ function rEmergency(){
       <div style="font-size:36px">${total>=6?'✅':total>=4?'⚠️':'🚨'}</div>
     </div>
     <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:4px;transition:width .3s"></div></div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:8px">${total>=MAGIC?'You are stocked. Eat oldest first.':total>0?`Build ${needed} more on your next maintenance day.`:'Emergency supply is empty. Build 6 meals on maintenance day.'}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:8px">${total>=MAGIC?'You are stocked. Eat oldest first.':total>0?`Build ${needed} more to reach your safety net of 6.`:'Emergency supply is empty. Build 6 meals to start your safety net.'}</div>
   </div>
   <div class="alert alert-gold" style="margin-bottom:16px"><span>📏</span><div>Emergency Meals = <strong>GALLON bags</strong> only. Fully cooked, portioned, ready to heat. Always build 2 of the same meal per batch. Magic number is 6.</div></div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -1266,7 +1269,7 @@ function rBuilderForm(){
     <div>
       <div class="card card-pad" style="margin-bottom:16px">
         <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:600;margin-bottom:14px">Build Your Meal</div>
-        ${emergencyCount<6?`<div class="alert alert-red" style="margin-bottom:12px"><span>🚨</span><div>${emergencyCount} emergency meals — rebuild to 6 on maintenance day</div></div>`:''}
+        ${emergencyCount<6?`<div class="alert alert-red" style="margin-bottom:12px"><span>🚨</span><div>${emergencyCount} emergency meal${emergencyCount!==1?'s':''} — build ${6-emergencyCount} more to reach 6</div></div>`:''}
         ${A.buildEmergency?`<div class="alert alert-red" style="margin-bottom:12px"><span>🚨</span><div><strong>Emergency Meal Mode ON</strong> — AI will build a complete double-batch meal for 2 gallon bags. Inventory deducts for both batches. You will be prompted to log it when scheduled.</div></div>`:''}
 
         ${proteinSection}
@@ -1452,6 +1455,24 @@ BREAD & BUN RULE — buy or make, ALWAYS with a count in the pull list:
 - NEVER-SCRATCH (store-bought, prepNote "Store-bought"): tortillas, pizza crust, pie crust, puff pastry.
 
 FRESH veg: add early. FROZEN: mid-cook 3-4 min. CANNED/jarred: drain, add at very end. DRY: cook separately first.
+
+FROZEN MOISTURE RULE: Frozen vegetables and especially frozen fruit release water as they heat. Account for this:
+- Baked dishes (casseroles, bars, bakes): reduce added liquid by ~1/4 cup per 2 cups of frozen items, OR add 1-2 tbsp extra flour/oats to absorb
+- Stir-fry/skillet: cook frozen items separately first to release and drain moisture before combining
+- Bars and baked goods with frozen fruit: toss frozen fruit in 1 tbsp flour before folding in to prevent soggy spots
+- Never dump frozen items into a batter without adjusting — the water will ruin the texture
+
+BAKED GOODS TEXTURE — match the format:
+- BARS (oat bars, granola bars, energy bars): MUST hold their shape when cut. Use binding ratio: butter/honey/peanut butter as binder, pressed firmly into pan, chilled before cutting. Dense, firm, sliceable. NOT the same as baked oatmeal.
+- BAKED OATMEAL: soft, scoopable, casserole-style. More liquid, eggs, served with a spoon. This is a different dish than bars.
+- MUFFINS: individual portions, rise in the oven, tender crumb. Standard muffin ratios.
+- Never call something "bars" if the recipe produces something soft and scoopable — that's baked oatmeal.
+
+FLAVOR INTENSITY — every recipe must have personality:
+- Never produce a flat, basic version of any dish. Southern cornbread is NOT plain cornmeal + milk + egg. It's bacon drippings or butter in a cast iron, honey butter on top, maybe jalapeño or cheese or crumbled sausage.
+- Every dish needs at least one "that sounds good" element — a glaze, a topping, a spice combination, a finishing touch.
+- Use the flavor direction aggressively: if someone picks Southern, go deep — smothered, peppered, honey-butter, cast iron. If Tex-Mex, go bold — chipotle crema, charred corn, lime, cilantro.
+- Bland food is a recipe failure. Build flavor in layers: fat + aromatics + spice + acid + finish.
 MILK POWDER: Pull list "X cups powder + Y cups water = Z cups milk". Steps say only "Z cups milk."
 GROCERY FLAGS: Include reason. urgency "out"=needed · "low"=optional.
 
@@ -2023,6 +2044,20 @@ function checkConflict(){
 }
 function deductInventory(pull){
   if(!pull||!pull.length)return;
+  // Deduct home canned jars
+  pull.forEach(p=>{
+    if(!p.item||!p.qty)return;
+    const pName=p.item.toLowerCase().trim();
+    const hc=(A.homeCanned||[]).find(h=>h.name.toLowerCase()===pName||pName.includes(h.name.toLowerCase())||h.name.toLowerCase().includes(pName));
+    if(hc){
+      // Extract jar count from qty string like "2 pint-and-a-half jars" or "1 quart jar"
+      const jarMatch=p.qty.match(/^(\d+)/);
+      if(jarMatch){
+        const jarsUsed=parseInt(jarMatch[1])||1;
+        hc.qty=Math.max(0,(hc.qty||0)-jarsUsed);
+      }
+    }
+  });
   pull.forEach(p=>{
     // Fuzzy match — normalize both sides to lowercase, try contains match
     const pName=p.item.toLowerCase().trim();
@@ -2522,7 +2557,7 @@ function printWeekCalendar(){
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>
-  <p style="margin-top:16px;font-size:11px;color:#999">Printed from Meal Builder Pro · Prep & Purpose · Reduce decisions. Install structure.</p>
+  <p style="margin-top:16px;font-size:11px;color:#999">Printed from Meal Builder Pro · Prep & Purpose · Reduce decisions. Install structure. And as always — steward what you have, serve where you are.</p>
   </body></html>`;
 
   const w=window.open('','_blank');w.document.write(html);w.document.close();w.print();
@@ -2926,7 +2961,7 @@ function rGrocery(){
     ${[1,2,3,4].map(w=>`<button class="btn btn-sm ${grocWindow===w?'btn-primary':'btn-outline'}" onclick="A.grocWindow=${w};save();render()">${windowLabels[w]}</button>`).join('')}
   </div>
   <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Showing meals planned for: <strong>${grocWindow===1?weekLabel:grocWindow===2?'next 2 weeks':grocWindow===3?'next 3 weeks':'next 4 weeks'}</strong></div>
-  <div class="alert alert-gold" style="margin-bottom:16px"><span>🏠</span><div><strong>Check long term storage first</strong> — chest freezer, pantry overflow, bulk storage — before purchasing anything. <button onclick="showPage('maintenance')" style="background:none;border:none;color:#6b5100;font-weight:700;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;font-size:13px;padding:0">View Cook List →</button></div></div>`;
+  <div class="alert alert-gold" style="margin-bottom:16px"><span>🏠</span><div><strong>Check long term storage first</strong> — chest freezer, pantry overflow, bulk storage — before purchasing anything.</div></div>`;
 
   if(out.length===0&&low.length===0&&done.length===0){
     html+=`<div class="empty"><div style="font-size:48px;margin-bottom:10px">✅</div><div style="font-size:15px;font-weight:600;margin-bottom:6px">Your list is empty</div><div>Items are added automatically when the Meal Builder flags missing ingredients.</div></div>`;
@@ -3198,6 +3233,19 @@ function confirmDeleteEmergency(id,restoreInventory){
 
 function restoreInventoryFromPull(pull){
   if(!pull||!pull.length)return;
+  // Restore home canned jars
+  pull.forEach(p=>{
+    if(!p.item||!p.qty)return;
+    const pName=p.item.toLowerCase().trim();
+    const hc=(A.homeCanned||[]).find(h=>h.name.toLowerCase()===pName||pName.includes(h.name.toLowerCase())||h.name.toLowerCase().includes(pName));
+    if(hc){
+      const jarMatch=p.qty.match(/^(\d+)/);
+      if(jarMatch){
+        const jarsUsed=parseInt(jarMatch[1])||1;
+        hc.qty=(hc.qty||0)+jarsUsed;
+      }
+    }
+  });
   pull.forEach(p=>{
     if(!p.qty||!p.item)return;
     const pName=p.item.toLowerCase().trim();
@@ -3215,6 +3263,185 @@ function restoreInventoryFromPull(pull){
 }
 
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
+function rGuide(){
+  return`<div class="page-title">How to Use Meal Builder Pro</div>
+  <div class="page-sub">The system works in a loop. Log what you have, build meals from it, schedule them, shop for what's missing, and repeat. Here's each piece.</div>
+
+  <!-- THE LOOP -->
+  <div class="card" style="margin-bottom:20px;padding:20px;background:var(--green);color:white;border:none">
+    <div style="font-size:15px;font-weight:800;margin-bottom:12px">The Weekly Loop</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      <div style="flex:1;min-width:120px;background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:22px;margin-bottom:4px">1️⃣</div>
+        <div style="font-size:12px;font-weight:700">Log Inventory</div>
+        <div style="font-size:10px;opacity:.8;margin-top:2px">What's in your freezer, pantry, and fridge right now?</div>
+      </div>
+      <div style="flex:1;min-width:120px;background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:22px;margin-bottom:4px">2️⃣</div>
+        <div style="font-size:12px;font-weight:700">Build Meals</div>
+        <div style="font-size:10px;opacity:.8;margin-top:2px">Pick a protein, choose a flavor, and let the AI build your recipe.</div>
+      </div>
+      <div style="flex:1;min-width:120px;background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:22px;margin-bottom:4px">3️⃣</div>
+        <div style="font-size:12px;font-weight:700">Schedule It</div>
+        <div style="font-size:10px;opacity:.8;margin-top:2px">Put it on the calendar. This is when inventory deducts and the grocery list updates.</div>
+      </div>
+      <div style="flex:1;min-width:120px;background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center">
+        <div style="font-size:22px;margin-bottom:4px">4️⃣</div>
+        <div style="font-size:12px;font-weight:700">Shop & Cook</div>
+        <div style="font-size:10px;opacity:.8;margin-top:2px">Check the grocery list, shop what's missing, cook the meals.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EACH SECTION -->
+  <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Each Section</div>
+
+  <div class="card" style="margin-bottom:8px">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="font-size:22px;flex-shrink:0">📊</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px">Dashboard</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Your home base. See your emergency meal count, protein stock at a glance, and what's happening this week. Start here each time you open the app.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="font-size:22px;flex-shrink:0">🥩</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px">Inventory — Bases</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Frozen cooked proteins in quart bags. <strong>1 bag = 1.5 lbs cooked.</strong> This is the foundation — cook once, pull all week. Log what's in your freezer so the AI knows what to build with.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="font-size:22px;flex-shrink:0">🥬</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px">Inventory — Supports</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Frozen vegetables, canned goods, dry goods (rice, pasta, beans). These round out the meal. The AI picks from whatever form you actually have — frozen bags, cans, dry. If you're out, it flags it on the grocery list.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="font-size:22px;flex-shrink:0">🧂</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px">Kitchen Staples</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Your pantry, fridge, and fresh produce. Track what you have — flour, butter, spices, fresh vegetables. <strong>Fresh items are used first</strong> so nothing goes to waste. Update this when you shop.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="font-size:22px;flex-shrink:0">🚨</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px">Emergency Layer</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Your safety net — <strong>6 fully assembled meals</strong> in gallon bags or 9x13 pans. Pull one out on a hard day, heat, and eat. Zero thinking. Build 2 at a time using the Emergency toggle in the meal builder. Both portions freeze. Always.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="font-size:22px;flex-shrink:0">🍽️</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px">Meal Builder</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">The heart of the app. Pick a protein from your freezer, choose a flavor direction, and the AI builds a complete recipe using what you actually have. Every ingredient in the recipe comes from your logged inventory — if something's missing, it lands on the grocery list.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="font-size:22px;flex-shrink:0">⭐</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px">Favorites</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Save any recipe you love. Rebuild it later at any serving size — all quantities, steps, and grocery flags scale automatically. Your personal recipe book that grows with you.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="font-size:22px;flex-shrink:0">📅</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px">Calendar</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5"><strong>This is when everything happens.</strong> When you place a meal on the calendar, inventory deducts and grocery flags appear. Remove a meal and everything restores. Navigate forward and backward to plan ahead or see what you made last week.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="font-size:22px;flex-shrink:0">🛒</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px">Grocery List</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Auto-generated from the meals you've scheduled. Shows exactly what you need, how much, and why. Check items off as you shop. Add manual items anytime. This is your one shopping list — nothing else needed.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BEST PRACTICES -->
+  <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:24px 0 12px">Best Practices</div>
+
+  <div class="card" style="margin-bottom:8px;padding:14px 16px">
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px">✅ Update inventory before building meals</div>
+    <div style="font-size:13px;color:var(--text-muted);line-height:1.5">The AI builds from what you've logged. If your freezer says 0 bags of chicken but you have 4, the AI doesn't know. Take 2 minutes to update counts before your weekly build session.</div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px;padding:14px 16px">
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px">✅ Build first, schedule second</div>
+    <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Building a meal does NOT change your inventory or grocery list. Only scheduling it on the calendar does. So build as many meals as you want, look them over, then schedule the ones you're keeping.</div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px;padding:14px 16px">
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px">✅ Log fresh produce so the AI uses it first</div>
+    <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Got zucchini from the garden or onions from the store? Log them in Kitchen Staples → Fresh Produce. The AI prioritizes fresh items before frozen so nothing goes to waste.</div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px;padding:14px 16px">
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px">✅ Keep your emergency layer at 6</div>
+    <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Check the dashboard. If you're under 6, flip the Emergency toggle in the builder and build 2 at a time. Both portions freeze — gallon bags for soups and stews, 9x13 pans for casseroles. Eat the oldest first.</div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px;padding:14px 16px">
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px">✅ Save recipes that work</div>
+    <div style="font-size:13px;color:var(--text-muted);line-height:1.5">When you make something your family loves, save it to Favorites. Next time you can rebuild it at any serving size without using an AI build. The quantities, steps, and grocery flags all scale automatically.</div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px;padding:14px 16px">
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px">✅ Changed your mind? Remove the meal</div>
+    <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Tap any scheduled meal on the calendar and remove it. Your inventory restores and the grocery flags disappear. No penalty for replanning.</div>
+  </div>
+
+  <!-- QUICK REFERENCE -->
+  <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin:24px 0 12px">Quick Reference</div>
+
+  <div class="card" style="margin-bottom:8px;padding:14px 16px">
+    <div style="font-size:13px;line-height:1.8">
+      <strong>1 quart bag protein</strong> = 1.5 lbs cooked<br>
+      <strong>1 quart bag vegetables</strong> = 3 cups<br>
+      <strong>Emergency meals</strong> = gallon bags or 9x13 pans<br>
+      <strong>Magic number</strong> = 6 emergency meals<br>
+      <strong>Frozen protein</strong> = already cooked, just heat through<br>
+      <strong>Home canned jars</strong> = pull by jar count, not cups<br>
+      <strong>Freeze dried</strong> = measure out what you need from the jar<br>
+      <strong>Dry goods (rice, pasta)</strong> = cook separately, then add to dish
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:24px 0;font-size:13px;color:var(--text-muted);line-height:1.6">
+    Reduce decisions. Install structure.<br>
+    <strong style="color:var(--green)">Prep with Purpose.</strong>
+  </div>`;
+}
+
 function openSettings(){
   const dietary=A.dietary||[];
   const allPrefs=['No Pork','No Beef','No Seafood','No Shellfish','Gluten Free','Dairy Free','No Nuts','Vegetarian','Halal','Kosher','Low Sodium','Diabetic Friendly'];
@@ -3248,7 +3475,7 @@ function openSettings(){
     <div style="border-top:1px solid var(--border);margin:16px 0"></div>
     <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Subscription</div>
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6">Manage or cancel your subscription through the Stripe customer portal. Your data stays saved and you can resubscribe any time.</div>
-    <a href="https://billing.stripe.com/p/login/cNi14mewfb3083J2xIffy01" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;text-decoration:none">Manage Subscription →</a>
+    <a href="https://billing.stripe.com/p/login/4gM00i2Nx1sqdo34FQffy00" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;text-decoration:none">Manage Subscription →</a>
     <div style="font-size:11px;color:var(--text-hint);text-align:center">Need help? <a href="mailto:support@prepandpurpose.com" style="color:var(--green)">support@prepandpurpose.com</a></div>`);
 }
 function toggleDietChip(el){
@@ -3400,7 +3627,7 @@ function removeCookItem(protein,type){
 
 function addProteinToGroc(name,rawLbs){
   if(!A.grocery.find(g=>g.name.toLowerCase().includes(name.toLowerCase()))){
-    A.grocery.push({id:Date.now(),name,qty:rawLbs+' lbs raw',urgency:'out',done:false,reason:'Maintenance day cook — needed for the week'});
+    A.grocery.push({id:Date.now(),name,qty:rawLbs+' lbs raw',urgency:'out',done:false,reason:'Cook and bag — needed for the week'});
     save();render();
   }
 }
