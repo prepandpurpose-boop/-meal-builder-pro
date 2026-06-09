@@ -954,7 +954,7 @@ function grantAccess(){
   document.getElementById('sidebar-email').textContent=A.email;
   // Always recalculate cook list from live calendar data — never trust stored version
   recalcCookListFromCalendar();
-  if(!A.onboarded){showOnboarding();}else{showPage('dashboard');}
+  if(!A.onboarded){A.page='guide';showPage('guide');}else{showPage('dashboard');}
 }
 function signOut(){if(confirm('Sign out?')){localStorage.removeItem('pp_user');showPaywall();}}
 
@@ -3636,6 +3636,10 @@ function restoreInventoryFromPull(pull){
 // ─── SETTINGS ─────────────────────────────────────────────────────────────────
 function rGuide(){
   return`<div class="page-title">How to Use Meal Builder Pro</div>
+  ${!A.onboarded?`<div style="background:var(--green);color:white;border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+    <div style="font-size:14px;font-weight:700">Welcome — read through, then dive in</div>
+    <button onclick="A.onboarded=true;save();A.page='dashboard';render()" style="background:white;color:var(--green);border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">Go to Dashboard →</button>
+  </div>`:''}
   <div class="page-sub">The system works in a loop. Log what you have, build meals from it, schedule them, shop for what's missing, and repeat. Here's each piece.</div>
 
   <!-- THE LOOP -->
@@ -3668,20 +3672,7 @@ function rGuide(){
   <!-- EACH SECTION -->
   <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Each Section</div>
 
-  
-    ${(A.lunchBankMeals||[]).length>0?`
-      <div style="border-top:1px solid rgba(42,128,32,.1);padding-top:10px">
-        ${(A.lunchBankMeals||[]).map(m=>`
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(42,128,32,.08)">
-          <div>
-            <div style="font-size:13px;font-weight:600">${m.title}</div>
-            <div style="font-size:11px;color:var(--text-muted)">${m.qty} portion${m.qty!==1?'s':''} · ${m.dateBanked}</div>
-          </div>
-          <button onclick="if(confirm('Remove all ${m.qty} portion${m.qty!==1?'s':''} and restore inventory?'))removeLunchBankMeal('${m.id}',${m.qty})" style="background:none;border:1px solid var(--red);border-radius:6px;color:var(--red);font-size:11px;font-weight:600;padding:4px 8px;cursor:pointer">Remove</button>
-        </div>`).join('')}
-      </div>
-    `:''}
-  </div>
+    </div>
 
   <div class="card" style="margin-bottom:8px">
     <div style="display:flex;gap:12px;align-items:flex-start">
@@ -3825,6 +3816,18 @@ function rGuide(){
   </div>
 
   <div class="card" style="margin-bottom:8px;padding:14px 16px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-size:18px">🧊</span>
+      <div style="font-size:14px;font-weight:700">Lunch Bank</div>
+    </div>
+    <div style="font-size:13px;color:var(--text-muted);line-height:1.7">The Lunch Bank lets you cook dinner once and freeze extra portions for lunches throughout the week — so you never cook twice.<br><br>
+    <strong>To fill it:</strong> After building a dinner recipe, tap <strong>🧊 Also Banking Lunch?</strong> Enter how many lunch portions you want to freeze. The recipe scales up to cover dinner plus the bank in one cook. Portion the extras into individual takeout containers, label with today's date, and freeze.<br><br>
+    <strong>To track it:</strong> Your dashboard shows your current count against your monthly target (household size × 20 work days). The bar fills as you stock up.<br><br>
+    <strong>To use it:</strong> Pull oldest first. Thaw overnight or heat from frozen. Tap <strong>−</strong> on the dashboard each time you eat a portion. You can also tap the number directly and type a new count.<br><br>
+    <strong>If you remove a dinner from the calendar</strong> after banking — tap <strong>−</strong> on the dashboard to adjust your count manually. The number is always yours to control.</div>
+  </div>
+
+  <div class="card" style="margin-bottom:8px;padding:14px 16px">
     <div style="font-size:14px;font-weight:700;margin-bottom:8px">📱 Add to Your Home Screen</div>
     <div style="font-size:13px;color:var(--text-muted);line-height:1.6"><strong>iPhone:</strong> Tap the share icon at the bottom of Safari → scroll down → tap "Add to Home Screen" → tap Add. Meal Builder Pro will appear on your home screen like an app.<br><br><strong>Android:</strong> Tap the three dots (⋮) in Chrome → tap "Add to Home Screen" → tap Add.</div>
   </div>
@@ -3948,8 +3951,8 @@ function obSetQty(input){
 }
 function finishOnboarding(){
   A.onboarded=true;save();
-  document.getElementById('onboarding').style.display='none';
-  showPage('builder');// Send new users straight to Meal Builder
+  const ob=document.getElementById('onboarding');if(ob)ob.style.display='none';
+  A.page='guide';showPage('guide');
 }
 
 // ─── PRINT ─────────────────────────────────────────────────────────────────────
