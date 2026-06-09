@@ -1223,6 +1223,9 @@ function rEmergency(){
     <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:4px;transition:width .3s"></div></div>
     <div style="font-size:12px;color:var(--text-muted);margin-top:8px">${total>=MAGIC?'You are stocked. Eat oldest first.':total>0?`Build ${needed} more to reach your safety net of 6.`:'Emergency supply is empty. Build 6 meals to start your safety net.'}</div>
   </div>
+  ${A.grocery.filter(g=>!g.scheduledDate&&!g.done).length>0?`<div style="font-size:11px;color:#888;background:#fafafa;border:1px solid #eee;border-radius:6px;padding:8px 10px;margin-bottom:10px">
+    💡 Some items show in all views because they were added before date tracking. Tap <strong>Clear All</strong> and re-place your calendar meals to filter by week.
+  </div>`:''}
   <div class="alert alert-gold" style="margin-bottom:16px"><span>📏</span><div>Emergency Meals = <strong>GALLON bags</strong> only. Fully cooked, portioned, ready to heat. Always build 2 of the same meal per batch. Magic number is 6.</div></div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
     <div class="page-title" style="font-size:18px">Emergency Meal Log</div>
@@ -1858,8 +1861,8 @@ function rRecipe(){
           <strong>You have:</strong> ${A.lunchBank||0} · <strong>Still need:</strong> ${Math.max(0,((A.householdSize||4)*20)-(A.lunchBank||0))} more to be fully stocked
         </div>
         <label style="font-size:12px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.04em">Lunch portions to bank</label>
-        <input class="inp" id="lb-qty" type="number" value="${Math.min((A.householdSize||4)*5,Math.max(0,((A.householdSize||4)*20)-(A.lunchBank||0)))}" min="1" max="60" style="font-size:20px;font-weight:800;text-align:center;padding:12px;margin:6px 0 4px" inputmode="numeric" oninput="document.getElementById('lb-preview').textContent='Cook total of '+((parseInt(this.value)||0)+(${A.householdSize||4}))+' portions — serve ${A.householdSize||4} for dinner, freeze '+(parseInt(this.value)||0)+' for your lunch bank'">
-        <div id="lb-preview" style="font-size:12px;color:#2980b9;font-weight:600;margin-bottom:10px">Defaulting to one week of lunches — adjust as needed</div>
+        <input class="inp" id="lb-qty" type="number" value="${A.householdSize||4}" min="1" max="60" style="font-size:20px;font-weight:800;text-align:center;padding:12px;margin:6px 0 4px" inputmode="numeric" oninput="document.getElementById('lb-preview').textContent='Cook total of '+((parseInt(this.value)||0)+(${A.householdSize||4}))+' portions — serve ${A.householdSize||4} for dinner, freeze '+(parseInt(this.value)||0)+' for your lunch bank'">
+        <div id="lb-preview" style="font-size:12px;color:#2980b9;font-weight:600;margin-bottom:10px">Enter how many lunch portions to freeze</div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-primary" style="background:#2980b9;flex:2" onclick="executeLunchBank()">Scale Up, Deduct & Bank</button>
           <button class="btn btn-outline" style="flex:1" onclick="A._lunchBankOpen=false;render()">Cancel</button>
@@ -3264,7 +3267,14 @@ function rGrocery(){
   const weekLabel=realSun.toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+grocEnd.toLocaleDateString('en-US',{month:'short',day:'numeric'});
 
   // Now filter with date window
-  function inWindow(g){if(!g.scheduledDate)return true;const sd=new Date(g.scheduledDate+'T00:00:00');return sd>=realSun&&sd<=grocEnd;}
+  function inWindow(g){
+    // Items without a date always show — they were added before date tracking
+    // Going forward, newly added items have scheduledDate and filter correctly
+    if(!g.scheduledDate)return true;
+    const sd=new Date(g.scheduledDate+'T00:00:00');
+    return sd>=realSun&&sd<=grocEnd;
+  }
+  // Note: to get proper filtering, clear your list and re-place meals on the calendar
   const out=consolidated.filter(g=>g.urgency==='out'&&!g.done&&inWindow(g));
   const low=consolidated.filter(g=>g.urgency!=='out'&&!g.done&&inWindow(g));
   const done=consolidated.filter(g=>g.done&&inWindow(g));
@@ -3280,7 +3290,12 @@ function rGrocery(){
     <div style="font-size:12px;font-weight:600;color:var(--text-muted);align-self:center">Shop for:</div>
     ${[1,2,3,4].map(w=>`<button class="btn btn-sm ${grocWindow===w?'btn-primary':'btn-outline'}" onclick="A.grocWindow=${w};save();render()">${windowLabels[w]}</button>`).join('')}
   </div>
-  <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Showing meals planned for: <strong>${grocWindow===1?weekLabel:grocWindow===2?'next 2 weeks':grocWindow===3?'next 3 weeks':'next 4 weeks'}</strong></div>
+  <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Showing meals planned for: <strong>${grocWindow===1?weekLabel:grocWindow===2?'next 2 weeks':grocWindow===3?'next 3 weeks':'the month'}</strong></div>
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <button class="btn btn-outline btn-sm" onclick="A.grocery=A.grocery.filter(g=>!g.done);save();render()" style="font-size:11px;padding:6px 10px">Clear Completed</button>
+    <button class="btn btn-outline btn-sm" onclick="if(confirm('Clear your entire grocery list? Re-place meals on the calendar to rebuild it.')){{A.grocery=[];save();render();}}" style="font-size:11px;padding:6px 10px;color:var(--red);border-color:var(--red)">Clear All</button>
+    ${(out.length+low.length)===0&&done.length>0?'':''}
+  </div>
   <div class="alert alert-gold" style="margin-bottom:16px"><span>🏠</span><div><strong>Check long term storage first</strong> — chest freezer, pantry overflow, bulk storage — before purchasing anything.</div></div>`;
 
   if(out.length===0&&low.length===0&&done.length===0){
