@@ -697,13 +697,75 @@ let A={
 // ─── SAVE / LOAD ───────────────────────────────────────────────────────────────
 let _saveTimer=null;
 function openLunchBankModal(){
+  if(!A.recipe){return showToast('Build a recipe first');}
   const hs=A.householdSize||4;
   openModal(`<div class="modal-header"><div class="modal-title">🧊 Bank for Lunch</div><button class="modal-close" onclick="closeModal()">×</button></div>
-    <div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:16px">Cook extra portions of this dinner and freeze them individually in takeout containers. Label with today's date. Pull from your lunch bank throughout the week — oldest first. You will never eat the same thing two days in a row.</div>
-    <div class="fg"><label class="l">How many lunch portions to bank?</label>
-    <input class="inp" id="lb-qty" type="number" value="${hs}" min="1" max="20" style="font-size:20px;font-weight:700;text-align:center;padding:12px">
-    <div style="font-size:12px;color:#888;margin-top:6px;text-align:center">Defaults to your household size — adjust for a bigger bank</div></div>
-    <button class="btn btn-primary" style="margin-top:16px;background:#2980b9" onclick="const qty=parseInt(document.getElementById('lb-qty').value)||${hs};A.lunchBank=(A.lunchBank||0)+qty;save();closeModal();showToast(qty+' lunch portion'+(qty!==1?'s':'')+' banked — label and freeze!')">Add to Lunch Bank</button>`);
+    <div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:16px">Cook extra portions with this dinner and freeze in takeout containers. The app will scale up the ingredients and deduct them from your inventory. Label with today's date — pull oldest first.</div>
+    <div class="fg"><label class="lbl">How many lunch portions to bank?</label>
+    <input class="inp" id="lb-qty" type="number" value="${hs}" min="1" max="20" style="font-size:20px;font-weight:700;text-align:center;padding:12px" oninput="previewLBScale(${hs})">
+    <div style="font-size:12px;color:#888;margin-top:6px;text-align:center">Cooking for ${hs} for dinner — how many extra for the lunch bank?</div></div>
+    <div id="lb-preview" style="margin:12px 0;padding:10px;background:#f5f5f5;border-radius:8px;font-size:12px;color:#555;line-height:1.6">
+      Enter a number above to see scaled ingredients
+    </div>
+    <button class="btn btn-primary" style="margin-top:8px;background:#2980b9" onclick="confirmBankForLunch(${hs})">Scale Up, Deduct Inventory & Bank</button>`);
+}
+
+function previewLBScale(hs){
+  const qty=parseInt(document.getElementById('lb-qty')?.value)||hs;
+  const factor=qty/hs;
+  const preview=document.getElementById('lb-preview');
+  if(!preview||!A.recipe?.pull)return;
+  const scaled=(A.recipe.pull||[]).filter(p=>p.item&&p.qty).slice(0,6).map(p=>{
+    const newQty=scaleQty(p.qty,factor);
+    return `<div>• ${p.item}: <strong>${newQty}</strong> (extra for bank)</div>`;
+  }).join('');
+  preview.innerHTML=`<div style="font-weight:700;margin-bottom:6px">Extra ingredients needed (${qty} bank portions at ${factor.toFixed(1)}x):</div>${scaled}${(A.recipe.pull||[]).length>6?`<div style="color:#888">...and ${(A.recipe.pull.length-6)} more</div>`:''}`;
+}
+
+function confirmBankForLunch(hs){
+  const qty=parseInt(document.getElementById('lb-qty')?.value)||hs;
+  if(!qty||qty<1)return showToast('Enter at least 1 portion');
+  const factor=qty/hs;
+  // Scale the pull list for extra portions
+  const scaledPull=(A.recipe.pull||[]).map(p=>({...p,qty:scaleQty(p.qty,factor)}));
+  // Deduct extra inventory
+  deductInventory(scaledPull);
+  deductPantryItems(scaledPull);
+  // Save banked meal record
+  const bankedMeal={
+    id:'lb_'+Date.now(),
+    title:A.recipe.title,
+    dateBanked:new Date().toISOString().split('T')[0],
+    qty,
+    scaleFactor:factor,
+    pull:scaledPull
+  };
+  if(!A.lunchBankMeals)A.lunchBankMeals=[];
+  A.lunchBankMeals.push(bankedMeal);
+  A.lunchBank=(A.lunchBank||0)+qty;
+  save();
+  closeModal();
+  showToast(qty+' lunch portion'+(qty!==1?'s':'')+' banked — label and freeze!');
+  render();
+}
+
+function removeLunchBankMeal(mealId,portionsToRemove){
+  const meal=(A.lunchBankMeals||[]).find(m=>m.id===mealId);
+  if(!meal)return;
+  const removePct=(portionsToRemove||meal.qty)/meal.qty;
+  // Restore proportional inventory
+  const restoredPull=(meal.pull||[]).map(p=>({...p,qty:scaleQty(p.qty,removePct)}));
+  restoreInventoryFromPull(restoredPull);
+  restorePantryItems(restoredPull);
+  const remaining=meal.qty-(portionsToRemove||meal.qty);
+  if(remaining<=0){
+    A.lunchBankMeals=(A.lunchBankMeals||[]).filter(m=>m.id!==mealId);
+  }else{
+    meal.qty=remaining;
+  }
+  A.lunchBank=Math.max(0,(A.lunchBank||0)-(portionsToRemove||meal.qty));
+  save();render();
+  showToast('Portions removed — inventory restored');
 }
 function save(){
   clearTimeout(_saveTimer);
@@ -731,6 +793,7 @@ function save(){
       last_meal_type:A.lastMealType,
       onboarded:A.onboarded,
       lunch_bank:A.lunchBank||0,
+      lunch_bank_meals:A.lunchBankMeals||[],
       // weekProteins session-only
     };
     sbSave(A.email,data);
@@ -772,6 +835,7 @@ async function loadUserData(email){
     if(A.pantry.fridge)A.pantry.fridge=A.pantry.fridge.filter(i=>i.name.toLowerCase()!=='eggs'&&i.name.toLowerCase()!=='egg');
     A.emergency=remote.emergency||[];
     A.lunchBank=remote.lunch_bank||0;
+    A.lunchBankMeals=remote.lunch_bank_meals||[];
     A.calendarByDate=remote.calendar_by_date||{};
     A.grocery=remote.grocery||[];
     A.dietary=remote.dietary||[];
@@ -787,7 +851,8 @@ async function loadUserData(email){
     A.lastMealType=remote.last_meal_type||'Dinner';
     A.onboarded=remote.onboarded||false;
     A.weekProteins=[];
-  A.lunchBank=A.lunchBank||0;// session-only
+  A.lunchBank=A.lunchBank||0;
+  A.lunchBankMeals=A.lunchBankMeals||[];
     // Cook list is always recalculated from calendar — never loaded from storage
     return;
   }
@@ -1442,14 +1507,16 @@ MEAL TYPE RULES:
     Cold Sandwich: turkey, chicken salad, tuna salad, or egg salad on bread or crackers
     Bento Box: protein + cheese cubes + crackers + fruit + veggies — no cooking
     Pasta Salad: cold cooked pasta + protein + veggies + dressing — batch for the week
-    Quesadilla: cheese + protein, press and slice cold or hot
+    Quesadilla: cheese + protein, press and slice cold or warm
+    Tacos: protein + toppings in hard or soft shell — pack shells and filling separately so nothing gets soggy
+    Burritos: protein + rice or beans + cheese + sauce, wrapped tight in foil — eat cold or warm cold or hot
     Lunch Bank Pull: portion from a banked dinner container — thaw overnight, heat if needed
 - Kid-friendly ON → grilled cheese, PB&J, pinwheels, or bento box first.
 - Lunch Bank: when dinner is built with extra portions, tip says "Portion X extras into individual takeout containers, label with date, freeze. Pull from your lunch bank throughout the week — oldest first."
 - Breakfast = 5 groups, rotate — never same group back to back:
     A(grain): baked oatmeal, oat bars, granola bars, overnight oats
-    B(egg savory): scrambled bowl, omelette, frittata, egg muffin cups, breakfast casserole
-    C(bread/batter): pancakes, french toast, waffles, crepes, biscuits and gravy, muffins
+    B(egg savory): scrambled bowl, omelette, frittata, egg muffin cups, breakfast casserole, breakfast quesadilla, migas
+    C(bread/batter): pancakes, french toast, waffles, crepes, biscuits and gravy, muffins, breakfast tacos, breakfast burritos
     D(no-cook): yogurt parfait, smoothie pack, fruit and cheese, overnight oats
     E(hash/skillet): breakfast hash, potato sausage skillet, sheet pan breakfast, loaded hash browns
   Last breakfast: "${A.lastBuiltBreakfast||'none'}" — build from a DIFFERENT group. All groups valid, just rotate.
@@ -1464,7 +1531,7 @@ MEAL TYPE RULES:
 ${!includeSoups?'SOUPS OFF: No soups, stews, chili, or broth-based dishes.':''}
 
 ${grabAndGo?`GRAB AND GO: Batchable item, made once, grabbed all week. Rotate formats — last: "${A.lastBuiltBreakfast||'none'}":
-Formats: freezer burritos, egg muffin cups, baked oatmeal bars, granola bars, banana oat muffins, overnight oats jars, yogurt parfait cups, smoothie packs, sheet pan hash, pancakes, waffles, french toast sticks, muffins.
+Formats: freezer burritos, breakfast tacos (wrapped in foil), egg muffin cups, baked oatmeal bars, granola bars, banana oat muffins, overnight oats jars, yogurt parfait cups, smoothie packs, sheet pan hash, pancakes, waffles, french toast sticks, muffins.
 Stock guidance: sausage→burritos/egg cups · hash browns→hash bake · oats→bars/overnight oats · yogurt→parfait · frozen fruit→smoothie packs · bananas→banana muffins · flour+eggs+butter→pancakes/waffles/muffins.
 Yield in pieces, storage, how long keeps, grab size. BAKING SCALE TIP in tip: "~1.4x baking powder/soda/salt when scaling up — not 2x."`:''}
 
@@ -1523,7 +1590,7 @@ ${(()=>{
   return`SEASONAL (this month): Proteins on sale: ${proteins}. Produce abundant: ${produce}. Year-round: canned tuna, salmon, chicken thighs, eggs, ground turkey.`;
 })()}
 
-DISH VARIETY — never repeat same format twice in a row. Rotate: tacos, enchiladas, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, pot pie, skillet meals, rice bowls, smothered chicken, soups, stews, sandwiches, sliders, wraps, hash, quesadillas, curry, flatbread pizza, meatloaf, lasagna, sheet pan meals, stir-fry noodles, kabobs, stuffed baked potatoes, grain bowls, chili.
+DISH VARIETY — never repeat same format twice in a row. Rotate: tacos, enchiladas, burritos, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, quesadillas, pot pie, skillet meals, rice bowls, smothered chicken, soups, stews, sandwiches, sliders, wraps, hash, curry, flatbread pizza, meatloaf, lasagna, sheet pan meals, stir-fry noodles, kabobs, stuffed baked potatoes, grain bowls, chili, taco bowls, fajitas.
 INGREDIENT COMMON SENSE: Never put fruit on savory dishes unless a known classic. Frozen fruit = breakfast/desserts only.
 SEASONAL PRODUCE IN DINNER: Actively build seasonal produce into dinner dishes. If abundant produce is listed in the seasonal guide, include it in the vegetable component of dinner — corn in summer dishes, butternut squash in fall, sweet potatoes in winter, asparagus in spring. The meal should feel like the season.
 BAKING SCALE: For baked items, leaveners and salt scale ~1.4x on a double batch, not 2x. Flour, sugar, butter, eggs scale normally.
@@ -1736,8 +1803,8 @@ function rRecipe(){
       </div>
       <div class="conflict-msg" id="conflict-msg"></div>
       <button class="btn btn-primary btn-full btn-lg" style="margin-bottom:8px" onclick="placeOnCal()">📅 Add to Calendar & Deduct Inventory</button>
+      <button class="btn btn-outline btn-full" style="margin-bottom:8px;border-color:#2980b9;color:#2980b9;font-weight:700" onclick="openLunchBankModal()">🧊 Bank for Lunch — Scale Up & Freeze Extra</button>
       <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="printRecipe()">🖨️ Print This Recipe</button>
-      <button class="btn btn-outline btn-full" style="margin-bottom:8px;border-color:#2980b9;color:#2980b9" onclick="openLunchBankModal()">🧊 Bank for Lunch</button>
       <button class="btn btn-ghost btn-full" onclick="A.recipe=null;render()">↩ Generate a Different Meal</button>
       `}
     </div>
@@ -3482,17 +3549,26 @@ function rGuide(){
   <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Each Section</div>
 
   <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,#e8f4fd,#f0f8e8);border-color:rgba(42,128,32,.15)">
-    <div style="display:flex;justify-content:space-between;align-items:center">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${(A.lunchBankMeals||[]).length>0?'12':'0'}px">
       <div>
         <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">🧊 Lunch Bank</div>
         <div style="font-size:28px;font-weight:800;color:var(--green)">${A.lunchBank||0} <span style="font-size:14px;font-weight:500;color:var(--text-muted)">portion${(A.lunchBank||0)!==1?'s':''}</span></div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">${(A.lunchBank||0)>0?'Pull oldest first — thaw overnight':'Bank portioned dinner extras here'}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">${(A.lunchBank||0)>0?'Pull oldest first — thaw overnight':'Build a recipe and tap 🧊 Bank for Lunch'}</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-        <button onclick="A.lunchBank=Math.max(0,(A.lunchBank||0)-1);save();render()" style="background:white;border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:18px;cursor:pointer;font-weight:700;color:var(--red)">−</button>
-        <button onclick="A.lunchBank=(A.lunchBank||0)+1;save();render()" style="background:var(--green);border:none;border-radius:8px;padding:8px 14px;font-size:18px;cursor:pointer;font-weight:700;color:white">+</button>
-      </div>
+      <button onclick="A.lunchBank=Math.max(0,(A.lunchBank||0)-1);save();render()" style="background:white;border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:18px;cursor:pointer;font-weight:700;color:var(--red)">−</button>
     </div>
+    ${(A.lunchBankMeals||[]).length>0?`
+      <div style="border-top:1px solid rgba(42,128,32,.1);padding-top:10px">
+        ${(A.lunchBankMeals||[]).map(m=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(42,128,32,.08)">
+          <div>
+            <div style="font-size:13px;font-weight:600">${m.title}</div>
+            <div style="font-size:11px;color:var(--text-muted)">${m.qty} portion${m.qty!==1?'s':''} · ${m.dateBanked}</div>
+          </div>
+          <button onclick="if(confirm('Remove all ${m.qty} portion${m.qty!==1?'s':''} and restore inventory?'))removeLunchBankMeal('${m.id}',${m.qty})" style="background:none;border:1px solid var(--red);border-radius:6px;color:var(--red);font-size:11px;font-weight:600;padding:4px 8px;cursor:pointer">Remove</button>
+        </div>`).join('')}
+      </div>
+    `:''}
   </div>
 
   <div class="card" style="margin-bottom:8px">
