@@ -1224,7 +1224,7 @@ function rEmergency(){
     <div style="font-size:12px;color:var(--text-muted);margin-top:8px">${total>=MAGIC?'You are stocked. Eat oldest first.':total>0?`Build ${needed} more to reach your safety net of 6.`:'Emergency supply is empty. Build 6 meals to start your safety net.'}</div>
   </div>
   ${A.grocery.filter(g=>!g.scheduledDate&&!g.done).length>0?`<div style="font-size:11px;color:#888;background:#fafafa;border:1px solid #eee;border-radius:6px;padding:8px 10px;margin-bottom:10px">
-    💡 Some items show in all views because they were added before date tracking. Tap <strong>Clear All</strong> and re-place your calendar meals to filter by week.
+    💡 Items without a scheduled date show only in This Month. Tap <strong>Clear All</strong> and re-place your calendar meals so all items filter correctly by week.
   </div>`:''}
   <div class="alert alert-gold" style="margin-bottom:16px"><span>📏</span><div>Emergency Meals = <strong>GALLON bags</strong> only. Fully cooked, portioned, ready to heat. Always build 2 of the same meal per batch. Magic number is 6.</div></div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
@@ -1539,7 +1539,15 @@ DINNER PROTEIN RULE (non-negotiable):
 - Standard diet: dinner centerpiece MUST be real meat — beef, pork, chicken, turkey, fish. No exceptions.
 - Beans, chickpeas, lentils = supports that go ALONGSIDE meat. Never the dinner centerpiece for standard diet.
 - Eggs = breakfast only for standard diet. Never a dinner protein.
-- IF NO FROZEN PROTEIN STOCKED AND NO ANCHOR SET: Choose the most affordable seasonal protein from the seasonal list below. Flag it on groceryFlags urgency "out" with reason "Buy this before cooking." Build the full recipe as if they have it. Do NOT substitute eggs, chickpeas, or beans as the protein.
+- IF NO FROZEN PROTEIN STOCKED AND NO ANCHOR SET: Choose the most affordable seasonal protein using the BUDGET HIERARCHY below. Flag it on groceryFlags urgency "out" with reason "Buy this before cooking." Build the full recipe as if they have it. Do NOT substitute eggs, chickpeas, or beans as the protein.
+
+PROTEIN BUDGET HIERARCHY — when no anchor is set, always default to the cheapest cut first:
+CHICKEN: leg quarters first (cheapest, $0.79-1.49/lb, most forgiving) → bone-in thighs second (great flavor, stays moist) → whole chicken third → boneless thighs fourth → boneless breasts LAST. Chicken breasts are the most expensive cut year-round and the least forgiving — they dry out easily. Never suggest breasts unless the anchor explicitly calls for them.
+PORK: Boston butt/shoulder first (cheapest, ideal for shredding) → whole loin second → pork chops third → tenderloin last (most expensive).
+BEEF: 80/20 ground beef first (most versatile, cheapest ground) → chuck roast second (great for braising) → brisket third → steak cuts last (most expensive).
+TURKEY: whole turkey first (best value per pound) → bone-in thighs second → ground turkey third.
+FISH: canned tuna/salmon first (cheapest) → frozen tilapia or catfish second → frozen salmon third → fresh fish last.
+LAMB/OTHER: only if specifically anchored — never as a default suggestion.
 - Vegetarian selected: beans, chickpeas, lentils, tofu, tempeh, eggs ARE valid dinner centerpieces. Seasonal suggestion = most affordable plant protein.
 - Vegan selected: beans, chickpeas, lentils, tofu, tempeh ARE valid dinner centerpieces. No eggs.
 - Every dinner and lunch MUST have a protein centerpiece appropriate to the dietary setting.
@@ -2482,8 +2490,10 @@ function placeOnCal(){
   deductInventory(A.recipe.pull);
   if(A.recipe.groceryFlags?.length>0){
     A.recipe.groceryFlags.forEach(flag=>{
-      if(!A.grocery.find(g=>g.name===flag.name)){
-        A.grocery.push({id:Date.now()+Math.random()*1000|0,name:flag.name,urgency:flag.urgency||'low',qty:flag.qty,reason:flag.reason,done:false,scheduledDate:document.getElementById('cal-date')?.value||dateKey(new Date())});
+      const sd=document.getElementById('cal-date')?.value||dateKey(new Date());
+      // Allow same item for different weeks — each week needs its own entry
+      if(!A.grocery.find(g=>g.name===flag.name&&g.scheduledDate===sd)){
+        A.grocery.push({id:Date.now()+Math.random()*1000|0,name:flag.name,urgency:flag.urgency||'low',qty:flag.qty,reason:flag.reason,done:false,scheduledDate:sd});
       }
     });
   }
@@ -3268,13 +3278,14 @@ function rGrocery(){
 
   // Now filter with date window
   function inWindow(g){
-    // Items without a date always show — they were added before date tracking
-    // Going forward, newly added items have scheduledDate and filter correctly
-    if(!g.scheduledDate)return true;
-    const sd=new Date(g.scheduledDate+'T00:00:00');
-    return sd>=realSun&&sd<=grocEnd;
+    if(!g.scheduledDate)return grocWindow===4;// undated items only show in This Month (all)
+    // Parse date safely without timezone shift
+    const parts=g.scheduledDate.split('-');
+    const sd=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
+    const start=new Date(realSun.getFullYear(),realSun.getMonth(),realSun.getDate());
+    const end=new Date(grocEnd.getFullYear(),grocEnd.getMonth(),grocEnd.getDate());
+    return sd>=start&&sd<=end;
   }
-  // Note: to get proper filtering, clear your list and re-place meals on the calendar
   const out=consolidated.filter(g=>g.urgency==='out'&&!g.done&&inWindow(g));
   const low=consolidated.filter(g=>g.urgency!=='out'&&!g.done&&inWindow(g));
   const done=consolidated.filter(g=>g.done&&inWindow(g));
