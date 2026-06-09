@@ -1655,6 +1655,12 @@ ${(()=>{
 })()}
 
 DISH VARIETY — never repeat same format twice in a row. Rotate: tacos, enchiladas, burritos, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, quesadillas, pot pie, skillet meals, rice bowls, smothered chicken, soups, stews, sandwiches, sliders, wraps, hash, curry, flatbread pizza, meatloaf, lasagna, sheet pan meals, stir-fry noodles, kabobs, stuffed baked potatoes, grain bowls, chili, taco bowls, fajitas.
+RECIPE INGREDIENT COMPLETENESS (non-negotiable):
+- EVERY ingredient used anywhere in the recipe steps MUST appear in the pull list. No ingredient may appear for the first time inside a step.
+- If chickpeas go in step 1, chickpeas are in the pull list. If feta goes in step 2, feta is in the pull list. If lemon juice goes in any step, lemon juice is in the pull list. No exceptions.
+- This is standard recipe format. The pull list is the complete shopping/prep list. Steps only reference items already listed.
+- After building the pull list, cross-check every step and verify every ingredient mentioned is accounted for in the list.
+
 KITCHEN STAPLES FLAGGING RULE: The user prompt shows exactly what is in the user's Kitchen Staples. Any ingredient the recipe uses that is NOT in those lists MUST be added to groceryFlags — no exceptions for jarred goods (pasta sauce, coconut milk, tomato paste, salsa), dairy (cream cheese, sour cream, heavy cream, buttermilk), specialty dry goods (specific pasta shapes, bread crumbs, cornmeal if not listed), or any packaged/processed ingredient. Do NOT assume the user has something just because it is common. If it is not listed, flag it. Basic exceptions: water, table salt, black pepper.
 
 INGREDIENT COMMON SENSE: Never put fruit on savory dishes unless a known classic. Frozen fruit = breakfast/desserts only.
