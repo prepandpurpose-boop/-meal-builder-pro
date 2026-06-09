@@ -825,6 +825,9 @@ function save(){
     };
     sbSave(A.email,data);
     localStorage.setItem('pp_data',JSON.stringify(data));
+    // Save variety tracking separately so it persists across sessions on same device
+    if(A.lastBuiltBreakfast)localStorage.setItem('pp_last_breakfast',A.lastBuiltBreakfast);
+    if(A.lastBuiltMeal)localStorage.setItem('pp_last_meal',A.lastBuiltMeal);
   },800);
 }
 
@@ -862,6 +865,9 @@ async function loadUserData(email){
     if(A.pantry.fridge)A.pantry.fridge=A.pantry.fridge.filter(i=>i.name.toLowerCase()!=='eggs'&&i.name.toLowerCase()!=='egg');
     A.emergency=remote.emergency||[];
     A.lunchBank=remote.lunch_bank||0;
+    // Restore variety tracking from localStorage
+    if(!A.lastBuiltBreakfast)A.lastBuiltBreakfast=localStorage.getItem('pp_last_breakfast')||'';
+    if(!A.lastBuiltMeal)A.lastBuiltMeal=localStorage.getItem('pp_last_meal')||'';
     A.lunchBankMeals=remote.lunch_bank_meals||[];
     A.calendarByDate=remote.calendar_by_date||{};
     A.grocery=remote.grocery||[];
@@ -883,6 +889,8 @@ async function loadUserData(email){
     // Cook list is always recalculated from calendar — never loaded from storage
     return;
   }
+  A.lastBuiltBreakfast=localStorage.getItem('pp_last_breakfast')||'';
+  A.lastBuiltMeal=localStorage.getItem('pp_last_meal')||'';
   const local=localStorage.getItem('pp_data');
   if(local){
     try{
@@ -1647,6 +1655,8 @@ ${(()=>{
 })()}
 
 DISH VARIETY — never repeat same format twice in a row. Rotate: tacos, enchiladas, burritos, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, quesadillas, pot pie, skillet meals, rice bowls, smothered chicken, soups, stews, sandwiches, sliders, wraps, hash, curry, flatbread pizza, meatloaf, lasagna, sheet pan meals, stir-fry noodles, kabobs, stuffed baked potatoes, grain bowls, chili, taco bowls, fajitas.
+KITCHEN STAPLES FLAGGING RULE: The user prompt shows exactly what is in the user's Kitchen Staples. Any ingredient the recipe uses that is NOT in those lists MUST be added to groceryFlags — no exceptions for jarred goods (pasta sauce, coconut milk, tomato paste, salsa), dairy (cream cheese, sour cream, heavy cream, buttermilk), specialty dry goods (specific pasta shapes, bread crumbs, cornmeal if not listed), or any packaged/processed ingredient. Do NOT assume the user has something just because it is common. If it is not listed, flag it. Basic exceptions: water, table salt, black pepper.
+
 INGREDIENT COMMON SENSE: Never put fruit on savory dishes unless a known classic. Frozen fruit = breakfast/desserts only.
 SEASONAL PRODUCE IN DINNER: Actively build seasonal produce into dinner dishes. If abundant produce is listed in the seasonal guide, include it in the vegetable component of dinner — corn in summer dishes, butternut squash in fall, sweet potatoes in winter, asparagus in spring. The meal should feel like the season.
 BAKING SCALE: For baked items, leaveners and salt scale ~1.4x on a double batch, not 2x. Flour, sugar, butter, eggs scale normally.
@@ -1707,6 +1717,13 @@ Dry: ${dryList.length>0?dryList.join(' | '):'None'}
 Ready to use (each): ${eachList.length>0?eachList.join(' | '):'None'}
 
 FRESH ITEMS (USE FIRST): ${freshList.length>0?freshList.join(' | '):'None'}
+
+KITCHEN STAPLES (what user actually has in pantry/fridge — ONLY flag items NOT on these lists):
+Fridge: ${(()=>{const f=A.pantry?.fridge||[];return f.filter(i=>i.have).map(i=>i.qty?`${i.name} (${i.qty} ${i.unit||''})`.trim():i.name).join(', ')||'None';})()}
+Baking/Dry: ${(()=>{const b=A.pantry?.baking||[];return b.filter(i=>i.have).map(i=>i.qty?`${i.name} (${i.qty} ${i.unit||''})`.trim():i.name).join(', ')||'None';})()}
+Oils & Condiments: ${(()=>{const o=[...(A.pantry?.oils||[]),...(A.pantry?.condiments||[])];return o.filter(i=>i.have).map(i=>i.name).join(', ')||'None';})()}
+Spices: ${(()=>{const s=A.pantry?.spices||[];return s.filter(i=>i.have).map(i=>i.name).join(', ')||'None';})()}
+NOTE: Any ingredient NOT listed above AND NOT a basic assumed staple (water, standard salt, black pepper) MUST appear in groceryFlags.
 HOME CANNED: ${(A.homeCanned||[]).length>0?(A.homeCanned||[]).map(hc=>{const cups={halfPint:1,pint:2,pintHalf:3,quart:4,halfGallon:8}[hc.jarSize]||2;const jarLabel={halfPint:'half-pint jar (1 cup)',pint:'pint jar (2 cups)',pintHalf:'pint-and-a-half jar (3 cups)',quart:'quart jar (4 cups)',halfGallon:'half-gallon jar (8 cups)'}[hc.jarSize]||'pint jar (2 cups)';const isFD=/freeze.?dried|freeze dried|FD/i.test(hc.name);const totalCups=hc.qty*cups;if(isFD){return`${hc.name}: ${hc.qty} ${jarLabel}${hc.qty!==1?'s':''} = ${totalCups} cups total — FREEZE DRIED: measure out exact amount by cup/tbsp, no need to pull whole jar`;}return`${hc.name}: ${hc.qty} ${jarLabel}${hc.qty!==1?'s':''} = ${totalCups} cups — pull by jar count, use whole jars`;}).join(' | '):'None'}
 FRIDGE: ${fridgeQty.length>0?fridgeQty.join(' | '):'None'}
 PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}
@@ -3801,6 +3818,10 @@ function rGuide(){
     </div>
   </div>
 
+  <div class="card" style="margin-bottom:8px;padding:14px 16px">
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px">📱 Add to Your Home Screen</div>
+    <div style="font-size:13px;color:var(--text-muted);line-height:1.6"><strong>iPhone:</strong> Tap the share icon at the bottom of Safari → scroll down → tap "Add to Home Screen" → tap Add. Meal Builder Pro will appear on your home screen like an app.<br><br><strong>Android:</strong> Tap the three dots (⋮) in Chrome → tap "Add to Home Screen" → tap Add.</div>
+  </div>
   <div style="text-align:center;padding:24px 0;font-size:13px;color:var(--text-muted);line-height:1.6">
     Reduce decisions. Install structure.<br>
     <strong style="color:var(--green)">Prep with Purpose.</strong>
