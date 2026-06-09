@@ -2481,7 +2481,7 @@ function placeOnCal(){
   if(A.recipe.groceryFlags?.length>0){
     A.recipe.groceryFlags.forEach(flag=>{
       if(!A.grocery.find(g=>g.name===flag.name)){
-        A.grocery.push({id:Date.now()+Math.random()*1000|0,name:flag.name,urgency:flag.urgency||'low',qty:flag.qty,reason:flag.reason,done:false});
+        A.grocery.push({id:Date.now()+Math.random()*1000|0,name:flag.name,urgency:flag.urgency||'low',qty:flag.qty,reason:flag.reason,done:false,scheduledDate:document.getElementById('cal-date')?.value||dateKey(new Date())});
       }
     });
   }
@@ -3249,17 +3249,26 @@ function rGrocery(){
       consolidated.push({...g});
     }
   });
-  const out=consolidated.filter(g=>g.urgency==='out'&&!g.done);
-  const low=consolidated.filter(g=>g.urgency!=='out'&&!g.done);
-  const done=consolidated.filter(g=>g.done);
+  // Filter by date window — calculated below after date vars defined
 
-  // Week label for grocery list
-  const weekStart=getWeekStart(A.weekOffset||0);
-  const weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+6);
-  const weekLabel=weekStart.toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+weekEnd.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-
+  // Shopping list ALWAYS uses real current date — independent of calendar navigation
   const grocWindow=A.grocWindow||1;
   const windowLabels={1:'This Week',2:'2 Weeks',3:'3 Weeks',4:'This Month'};
+  const realToday=new Date();realToday.setHours(0,0,0,0);
+  const realSun=new Date(realToday);realSun.setDate(realToday.getDate()-realToday.getDay());
+  // End date based on window
+  const grocEnd=new Date(realSun);
+  if(grocWindow===1)grocEnd.setDate(realSun.getDate()+6);
+  else if(grocWindow===2)grocEnd.setDate(realSun.getDate()+13);
+  else if(grocWindow===3)grocEnd.setDate(realSun.getDate()+20);
+  else{grocEnd.setMonth(realToday.getMonth()+1);grocEnd.setDate(0);}
+  const weekLabel=realSun.toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+grocEnd.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+
+  // Now filter with date window
+  function inWindow(g){if(!g.scheduledDate)return true;const sd=new Date(g.scheduledDate+'T00:00:00');return sd>=realSun&&sd<=grocEnd;}
+  const out=consolidated.filter(g=>g.urgency==='out'&&!g.done&&inWindow(g));
+  const low=consolidated.filter(g=>g.urgency!=='out'&&!g.done&&inWindow(g));
+  const done=consolidated.filter(g=>g.done&&inWindow(g));
 
   let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
     <div><div class="page-title" style="font-size:18px">Shopping List</div><div style="font-size:13px;color:var(--text-muted)">${out.length+low.length} items needed</div></div>
