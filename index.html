@@ -696,6 +696,15 @@ let A={
 
 // ─── SAVE / LOAD ───────────────────────────────────────────────────────────────
 let _saveTimer=null;
+function openLunchBankModal(){
+  const hs=A.householdSize||4;
+  openModal(`<div class="modal-header"><div class="modal-title">🧊 Bank for Lunch</div><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:16px">Cook extra portions of this dinner and freeze them individually in takeout containers. Label with today's date. Pull from your lunch bank throughout the week — oldest first. You will never eat the same thing two days in a row.</div>
+    <div class="fg"><label class="l">How many lunch portions to bank?</label>
+    <input class="inp" id="lb-qty" type="number" value="${hs}" min="1" max="20" style="font-size:20px;font-weight:700;text-align:center;padding:12px">
+    <div style="font-size:12px;color:#888;margin-top:6px;text-align:center">Defaults to your household size — adjust for a bigger bank</div></div>
+    <button class="btn btn-primary" style="margin-top:16px;background:#2980b9" onclick="const qty=parseInt(document.getElementById('lb-qty').value)||${hs};A.lunchBank=(A.lunchBank||0)+qty;save();closeModal();showToast(qty+' lunch portion'+(qty!==1?'s':'')+' banked — label and freeze!')">Add to Lunch Bank</button>`);
+}
 function save(){
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(()=>{
@@ -721,6 +730,7 @@ function save(){
       emergency_cook_list:A.emergencyCookList||[],
       last_meal_type:A.lastMealType,
       onboarded:A.onboarded,
+      lunch_bank:A.lunchBank||0,
       // weekProteins session-only
     };
     sbSave(A.email,data);
@@ -761,6 +771,7 @@ async function loadUserData(email){
     A.pantry=mergePantryWithDefaults(remote.pantry,DEF_PANTRY);
     if(A.pantry.fridge)A.pantry.fridge=A.pantry.fridge.filter(i=>i.name.toLowerCase()!=='eggs'&&i.name.toLowerCase()!=='egg');
     A.emergency=remote.emergency||[];
+    A.lunchBank=remote.lunch_bank||0;
     A.calendarByDate=remote.calendar_by_date||{};
     A.grocery=remote.grocery||[];
     A.dietary=remote.dietary||[];
@@ -775,7 +786,8 @@ async function loadUserData(email){
     A.dietaryGoals=remote.dietary_goals||[];
     A.lastMealType=remote.last_meal_type||'Dinner';
     A.onboarded=remote.onboarded||false;
-    A.weekProteins=[];// session-only
+    A.weekProteins=[];
+  A.lunchBank=A.lunchBank||0;// session-only
     // Cook list is always recalculated from calendar — never loaded from storage
     return;
   }
@@ -1407,15 +1419,33 @@ async function generateRecipe(){
 ${weekSelections.length>0?`SELECTED PROTEIN — NON-NEGOTIABLE: Build this meal using ONLY: ${weekSelections.join(', ')}. Do not substitute. Do not switch proteins.`:''}
 
 PROTEIN RULES:
-- Every dinner and lunch MUST contain animal protein. No exceptions unless Vegetarian is selected.
 - Frozen protein = ALREADY COOKED. Say "heat gently 3-4 min over medium heat." NEVER say "cook until done."
 - Never partial bags. 1 quart bag = 1.5 lbs cooked. For ${A.householdSize} people use ${A.householdSize<=4?'1-2':'2-3'} bags.
-- If no protein stocked: pick most seasonal, flag urgency "out", write recipe as if user has it.
-- Dinner/lunch with only beans, grains, or vegetables = wrong. Always protein.
+
+DINNER PROTEIN RULE (non-negotiable):
+- Standard diet: dinner centerpiece MUST be real meat — beef, pork, chicken, turkey, fish. No exceptions.
+- Beans, chickpeas, lentils = supports that go ALONGSIDE meat. Never the dinner centerpiece for standard diet.
+- Eggs = breakfast only for standard diet. Never a dinner protein.
+- IF NO FROZEN PROTEIN STOCKED AND NO ANCHOR SET: Choose the most affordable seasonal protein from the seasonal list below. Flag it on groceryFlags urgency "out" with reason "Buy this before cooking." Build the full recipe as if they have it. Do NOT substitute eggs, chickpeas, or beans as the protein.
+- Vegetarian selected: beans, chickpeas, lentils, tofu, tempeh, eggs ARE valid dinner centerpieces. Seasonal suggestion = most affordable plant protein.
+- Vegan selected: beans, chickpeas, lentils, tofu, tempeh ARE valid dinner centerpieces. No eggs.
+- Every dinner and lunch MUST have a protein centerpiece appropriate to the dietary setting.
 
 MEAL TYPE RULES:
 - Dinner = real dinner. Protein + starch + vegetable. NOT breakfast food.
 - Lunch = grab and go. 3 steps max. No scratch cooking. PACK IT note in tip.
+- LUNCH FORMATS — rotate, never repeat same format back to back. Last lunch: "${A.lastBuiltBreakfast||'none'}":
+    Wraps: protein + veggies + sauce in tortilla, sliced in half
+    Pinwheels: cream cheese or hummus + protein + veggies, rolled tight, sliced into rounds
+    Grilled Cheese: rotate varieties — classic cheddar · tomato basil · ham and swiss · turkey and provolone · caprese · pesto mozzarella
+    PB&J / Uncrustable style: peanut butter and jelly or honey, sealed edges, packed whole
+    Cold Sandwich: turkey, chicken salad, tuna salad, or egg salad on bread or crackers
+    Bento Box: protein + cheese cubes + crackers + fruit + veggies — no cooking
+    Pasta Salad: cold cooked pasta + protein + veggies + dressing — batch for the week
+    Quesadilla: cheese + protein, press and slice cold or hot
+    Lunch Bank Pull: portion from a banked dinner container — thaw overnight, heat if needed
+- Kid-friendly ON → grilled cheese, PB&J, pinwheels, or bento box first.
+- Lunch Bank: when dinner is built with extra portions, tip says "Portion X extras into individual takeout containers, label with date, freeze. Pull from your lunch bank throughout the week — oldest first."
 - Breakfast = 5 groups, rotate — never same group back to back:
     A(grain): baked oatmeal, oat bars, granola bars, overnight oats
     B(egg savory): scrambled bowl, omelette, frittata, egg muffin cups, breakfast casserole
@@ -1423,7 +1453,12 @@ MEAL TYPE RULES:
     D(no-cook): yogurt parfait, smoothie pack, fruit and cheese, overnight oats
     E(hash/skillet): breakfast hash, potato sausage skillet, sheet pan breakfast, loaded hash browns
   Last breakfast: "${A.lastBuiltBreakfast||'none'}" — build from a DIFFERENT group. All groups valid, just rotate.
-- Snack = small, light, no cooking.
+- Snack = small, light, no cooking. SNACK GROUPS — rotate, never same group back to back:
+    A(cheese/dairy): cheese and crackers, cottage cheese with fruit, string cheese, yogurt cup with granola
+    B(produce/dip): apple slices with peanut butter, veggies and hummus, celery with peanut butter, cucumber slices with cream cheese
+    C(protein): hard boiled eggs, deviled eggs, tuna on crackers, beef jerky, deli meat roll-ups
+    D(sweet): granola bar, energy balls, banana with peanut butter, dried fruit and nut mix, fruit cup
+    E(savory/crunch): popcorn with seasoning, chips and salsa, pita and hummus, trail mix, rice cakes with peanut butter
 - Never serve breakfast food for dinner.
 
 ${!includeSoups?'SOUPS OFF: No soups, stews, chili, or broth-based dishes.':''}
@@ -1488,8 +1523,9 @@ ${(()=>{
   return`SEASONAL (this month): Proteins on sale: ${proteins}. Produce abundant: ${produce}. Year-round: canned tuna, salmon, chicken thighs, eggs, ground turkey.`;
 })()}
 
-DISH VARIETY — never repeat same format twice in a row. Rotate: tacos, enchiladas, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, pot pie, skillet meals, rice bowls, smothered chicken, soups, stews, sandwiches, sliders, wraps, hash, quesadillas.
+DISH VARIETY — never repeat same format twice in a row. Rotate: tacos, enchiladas, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, pot pie, skillet meals, rice bowls, smothered chicken, soups, stews, sandwiches, sliders, wraps, hash, quesadillas, curry, flatbread pizza, meatloaf, lasagna, sheet pan meals, stir-fry noodles, kabobs, stuffed baked potatoes, grain bowls, chili.
 INGREDIENT COMMON SENSE: Never put fruit on savory dishes unless a known classic. Frozen fruit = breakfast/desserts only.
+SEASONAL PRODUCE IN DINNER: Actively build seasonal produce into dinner dishes. If abundant produce is listed in the seasonal guide, include it in the vegetable component of dinner — corn in summer dishes, butternut squash in fall, sweet potatoes in winter, asparagus in spring. The meal should feel like the season.
 BAKING SCALE: For baked items, leaveners and salt scale ~1.4x on a double batch, not 2x. Flour, sugar, butter, eggs scale normally.
 
 ${buildEmergency?`EMERGENCY MEAL MODE:
@@ -1701,6 +1737,7 @@ function rRecipe(){
       <div class="conflict-msg" id="conflict-msg"></div>
       <button class="btn btn-primary btn-full btn-lg" style="margin-bottom:8px" onclick="placeOnCal()">📅 Add to Calendar & Deduct Inventory</button>
       <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="printRecipe()">🖨️ Print This Recipe</button>
+      <button class="btn btn-outline btn-full" style="margin-bottom:8px;border-color:#2980b9;color:#2980b9" onclick="openLunchBankModal()">🧊 Bank for Lunch</button>
       <button class="btn btn-ghost btn-full" onclick="A.recipe=null;render()">↩ Generate a Different Meal</button>
       `}
     </div>
@@ -3443,6 +3480,20 @@ function rGuide(){
 
   <!-- EACH SECTION -->
   <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Each Section</div>
+
+  <div class="card" style="margin-bottom:16px;background:linear-gradient(135deg,#e8f4fd,#f0f8e8);border-color:rgba(42,128,32,.15)">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">🧊 Lunch Bank</div>
+        <div style="font-size:28px;font-weight:800;color:var(--green)">${A.lunchBank||0} <span style="font-size:14px;font-weight:500;color:var(--text-muted)">portion${(A.lunchBank||0)!==1?'s':''}</span></div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">${(A.lunchBank||0)>0?'Pull oldest first — thaw overnight':'Bank portioned dinner extras here'}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+        <button onclick="A.lunchBank=Math.max(0,(A.lunchBank||0)-1);save();render()" style="background:white;border:1px solid var(--border);border-radius:8px;padding:8px 14px;font-size:18px;cursor:pointer;font-weight:700;color:var(--red)">−</button>
+        <button onclick="A.lunchBank=(A.lunchBank||0)+1;save();render()" style="background:var(--green);border:none;border-radius:8px;padding:8px 14px;font-size:18px;cursor:pointer;font-weight:700;color:white">+</button>
+      </div>
+    </div>
+  </div>
 
   <div class="card" style="margin-bottom:8px">
     <div style="display:flex;gap:12px;align-items:flex-start">
