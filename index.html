@@ -696,6 +696,37 @@ let A={
 
 // ─── SAVE / LOAD ───────────────────────────────────────────────────────────────
 let _saveTimer=null;
+function executeLunchBank(){
+  if(!A.recipe)return showToast('No recipe to bank');
+  const hs=A.householdSize||4;
+  const bankQty=parseInt(document.getElementById('lb-qty')?.value)||hs;
+  if(bankQty<1)return showToast('Enter at least 1 portion');
+  const factor=bankQty/hs;
+
+  // Scale the pull list for the extra lunch portions
+  const scaledPull=(A.recipe.pull||[]).map(p=>({...p,qty:scaleQty(p.qty,factor)}));
+
+  // Deduct inventory for the extra portions (dinner already deducted via placeOnCal)
+  deductInventory(scaledPull);
+  deductPantryItems(scaledPull);
+
+  // Save banked meal
+  const bankedMeal={
+    id:'lb_'+Date.now(),
+    title:A.recipe.title,
+    dateBanked:new Date().toISOString().split('T')[0],
+    qty:bankQty,
+    pull:scaledPull
+  };
+  if(!A.lunchBankMeals)A.lunchBankMeals=[];
+  A.lunchBankMeals.push(bankedMeal);
+  A.lunchBank=(A.lunchBank||0)+bankQty;
+  A._lunchBankOpen=false;
+  save();
+  render();
+  showToast(`${bankQty} lunch portion${bankQty!==1?'s':''} banked — label and freeze!`);
+}
+
 function openLunchBankModal(){
   if(!A.recipe){return showToast('Build a recipe first');}
   const hs=A.householdSize||4;
@@ -996,6 +1027,7 @@ function rDashboard(){
     <div class="stat-card"><div class="stat-label">Frozen Bags</div><div class="stat-value">${totalFrozenBags}</div><div class="stat-sub">cooked protein bags</div></div>
     <div class="stat-card"><div class="stat-label">Supports Stocked</div><div class="stat-value">${supportsStocked}</div><div class="stat-sub">frozen, canned & dry</div></div>
     <div class="stat-card"><div class="stat-label">Emergency Meals</div><div class="stat-value" style="color:${emergencyCount>=6?'var(--green)':'#c62828'}">${emergencyCount}</div><div class="stat-sub">magic number is 6</div></div>
+    <div class="stat-card" style="cursor:pointer" onclick="A._showLunchBank=!A._showLunchBank;render()"><div class="stat-label">🧊 Lunch Bank</div><div class="stat-value" style="color:#2980b9">${A.lunchBank||0}</div><div class="stat-sub">${(A.lunchBank||0)>0?'tap to manage':'build &amp; bank'}</div></div>
     <div class="stat-card"><div class="stat-label">Grocery Items</div><div class="stat-value">${grocNeeded}</div><div class="stat-sub">items on your list</div></div>
   </div>`;
 
@@ -1409,7 +1441,25 @@ function rBuilderForm(){
     <div>
       ${selectedProteins.length>0?`
       <div class="alert alert-green" style="margin-bottom:16px"><span>✅</span><div><strong>Building with:</strong> ${selectedProteins.join(', ')}. The AI will use frozen stock first, then calculate what needs to be cooked.</div></div>`:''}
-      ${freshItems.length>0?`<div class="alert alert-gold"><span>🌿</span><div><strong>Fresh items on hand — use these first:</strong> ${freshItems.map(f=>`${f.name} (${f.qty} ${f.unit})`).join(', ')}</div></div>`:''}
+      ${A._showLunchBank&&(A.lunchBankMeals||[]).length>0?`
+  <div style="background:#ebf5fb;border:1px solid #2980b9;border-radius:10px;padding:14px;margin-bottom:16px">
+    <div style="font-weight:700;color:#1a5276;margin-bottom:10px">🧊 Lunch Bank — Pull Oldest First</div>
+    ${(A.lunchBankMeals||[]).map(m=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(41,128,185,.15)">
+        <div>
+          <div style="font-size:14px;font-weight:600">${m.title}</div>
+          <div style="font-size:11px;color:#555">${m.qty} portion${m.qty!==1?'s':''} · Banked ${m.dateBanked}</div>
+        </div>
+        <button onclick="if(confirm('Remove all ${m.qty} portion${m.qty!==1?'s':''} and restore inventory?'))removeLunchBankMeal('${m.id}',${m.qty})" style="background:none;border:1px solid #c62828;border-radius:6px;color:#c62828;font-size:11px;font-weight:600;padding:4px 10px;cursor:pointer">Remove</button>
+      </div>`).join('')}
+    <button onclick="A.lunchBank=Math.max(0,(A.lunchBank||0)-1);save();render()" style="margin-top:10px;background:none;border:1px solid #555;border-radius:6px;color:#555;font-size:12px;font-weight:600;padding:6px 12px;cursor:pointer">− I ate one portion</button>
+  </div>
+  `:``}
+  ${A._showLunchBank&&!(A.lunchBankMeals||[]).length?`
+  <div style="background:#ebf5fb;border:1px solid #2980b9;border-radius:10px;padding:14px;margin-bottom:16px;text-align:center;color:#555;font-size:13px">
+    No meals banked yet. Build a dinner and tap 🧊 Also Banking Lunch?
+  </div>`:``}
+  ${freshItems.length>0?`<div class="alert alert-gold"><span>🌿</span><div><strong>Fresh items on hand — use these first:</strong> ${freshItems.map(f=>`${f.name} (${f.qty} ${f.unit})`).join(', ')}</div></div>`:''}
       ${frozenBases.length===0?`<div class="alert alert-blue"><span>🍳</span><div>No frozen protein bases yet. Add inventory then come back to build.</div></div>`:''}
       ${availSupports.length>0?`<div class="card card-pad">
         <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Supports Available</div>
@@ -1803,7 +1853,20 @@ function rRecipe(){
       </div>
       <div class="conflict-msg" id="conflict-msg"></div>
       <button class="btn btn-primary btn-full btn-lg" style="margin-bottom:8px" onclick="placeOnCal()">📅 Add to Calendar & Deduct Inventory</button>
-      <button class="btn btn-outline btn-full" style="margin-bottom:8px;border-color:#2980b9;color:#2980b9;font-weight:700" onclick="openLunchBankModal()">🧊 Bank for Lunch — Scale Up & Freeze Extra</button>
+      ${!A._lunchBankOpen?
+      `<button class="btn btn-outline btn-full" style="margin-bottom:8px;border-color:#2980b9;color:#2980b9;font-weight:700" onclick="A._lunchBankOpen=true;render()">🧊 Also Banking Lunch? Tap to Scale Up</button>`
+      :`<div style="background:#ebf5fb;border:1px solid #2980b9;border-radius:10px;padding:14px;margin-bottom:8px">
+        <div style="font-weight:700;color:#1a5276;margin-bottom:8px">🧊 Bank for Lunch</div>
+        <div style="font-size:13px;color:#555;margin-bottom:10px">Cook once — serve dinner tonight, freeze the rest for lunches. Enter how many lunch portions you want to bank and the recipe scales to cover everything in one cook.</div>
+        <label style="font-size:12px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.04em">Lunch portions to bank</label>
+        <input class="inp" id="lb-qty" type="number" value="${A.householdSize||4}" min="1" max="30" style="font-size:20px;font-weight:800;text-align:center;padding:12px;margin:6px 0 4px" inputmode="numeric" oninput="document.getElementById('lb-preview').textContent='Cook total of '+(parseInt(this.value)||0)+(${A.householdSize||4})+' portions — serve ${A.householdSize||4} for dinner, freeze '+this.value+' for your lunch bank'">
+        <div id="lb-preview" style="font-size:12px;color:#2980b9;font-weight:600;margin-bottom:10px">Enter a number above</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary" style="background:#2980b9;flex:2" onclick="executeLunchBank()">Scale Up, Deduct & Bank</button>
+          <button class="btn btn-outline" style="flex:1" onclick="A._lunchBankOpen=false;render()">Cancel</button>
+        </div>
+      </div>`
+    }
       <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="printRecipe()">🖨️ Print This Recipe</button>
       <button class="btn btn-ghost btn-full" onclick="A.recipe=null;render()">↩ Generate a Different Meal</button>
       `}
