@@ -824,7 +824,8 @@ function save(){
       // weekProteins session-only
     };
     sbSave(A.email,data);
-    localStorage.setItem('pp_data',JSON.stringify(data));
+    const dataWithTs={...data,updated_at:new Date().toISOString()};
+    localStorage.setItem('pp_data',JSON.stringify(dataWithTs));
     // Save variety tracking separately so it persists across sessions on same device
     if(A.lastBuiltBreakfast)localStorage.setItem('pp_last_breakfast',A.lastBuiltBreakfast);
     if(A.lastBuiltMeal)localStorage.setItem('pp_last_meal',A.lastBuiltMeal);
@@ -858,31 +859,51 @@ function mergePantryWithDefaults(saved,defaults){
 
 async function loadUserData(email){
   const remote=await sbGet(email);
+
+  // Compare timestamps — use whichever data is newer
+  let source=remote;
   if(remote){
-    A.bases=mergeWithDefaults(remote.bases,DEF_BASES);
-    A.supports=mergeWithDefaults(remote.supports,DEF_SUPPORTS);
-    A.pantry=mergePantryWithDefaults(remote.pantry,DEF_PANTRY);
+    try{
+      const localRaw=localStorage.getItem('pp_data');
+      if(localRaw){
+        const localData=JSON.parse(localRaw);
+        const remoteTs=new Date(remote.updated_at||0).getTime();
+        const localTs=new Date(localData.updated_at||0).getTime();
+        if(localTs>remoteTs){
+          // Local data is newer — use it and push back to Supabase
+          source=localData;
+          sbSave(email,localData);// sync local back to Supabase
+          console.log('Using newer local data — syncing to Supabase');
+        }
+      }
+    }catch(e){console.warn('Timestamp compare failed',e);}
+  }
+
+  if(source){
+    A.bases=mergeWithDefaults(source.bases,DEF_BASES);
+    A.supports=mergeWithDefaults(source.supports,DEF_SUPPORTS);
+    A.pantry=mergePantryWithDefaults(source.pantry,DEF_PANTRY);
     if(A.pantry.fridge)A.pantry.fridge=A.pantry.fridge.filter(i=>i.name.toLowerCase()!=='eggs'&&i.name.toLowerCase()!=='egg');
-    A.emergency=remote.emergency||[];
-    A.lunchBank=remote.lunch_bank||0;
+    A.emergency=source.emergency||[];
+    A.lunchBank=source.lunch_bank||0;
     // Restore variety tracking from localStorage
     if(!A.lastBuiltBreakfast)A.lastBuiltBreakfast=localStorage.getItem('pp_last_breakfast')||'';
     if(!A.lastBuiltMeal)A.lastBuiltMeal=localStorage.getItem('pp_last_meal')||'';
-    A.lunchBankMeals=remote.lunch_bank_meals||[];
-    A.calendarByDate=remote.calendar_by_date||{};
-    A.grocery=remote.grocery||[];
-    A.dietary=remote.dietary||[];
-    A.householdSize=remote.household_size||4;
-    A.ppSpices=remote.pp_spices!==false;
-    A.kidFriendly=remote.kid_friendly||false;
-    A.grabAndGo=remote.grab_and_go||false;
-    A.includeSoups=remote.include_soups!==false;
-    A.favorites=remote.favorites||[];
-    A.homeCanned=remote.home_canned||[];
-    A.emergencyCookList=remote.emergency_cook_list||[];
-    A.dietaryGoals=remote.dietary_goals||[];
-    A.lastMealType=remote.last_meal_type||'Dinner';
-    A.onboarded=remote.onboarded||false;
+    A.lunchBankMeals=source.lunch_bank_meals||[];
+    A.calendarByDate=source.calendar_by_date||{};
+    A.grocery=source.grocery||[];
+    A.dietary=source.dietary||[];
+    A.householdSize=source.household_size||4;
+    A.ppSpices=source.pp_spices!==false;
+    A.kidFriendly=source.kid_friendly||false;
+    A.grabAndGo=source.grab_and_go||false;
+    A.includeSoups=source.include_soups!==false;
+    A.favorites=source.favorites||[];
+    A.homeCanned=source.home_canned||[];
+    A.emergencyCookList=source.emergency_cook_list||[];
+    A.dietaryGoals=source.dietary_goals||[];
+    A.lastMealType=source.last_meal_type||'Dinner';
+    A.onboarded=source.onboarded||false;
     A.weekProteins=[];
   A.lunchBank=A.lunchBank||0;
   A.lunchBankMeals=A.lunchBankMeals||[];
@@ -2458,7 +2479,6 @@ function deductInventory(pull){
     const pName=p.item.toLowerCase().trim();
     const hc=(A.homeCanned||[]).find(h=>h.name.toLowerCase()===pName||pName.includes(h.name.toLowerCase())||h.name.toLowerCase().includes(pName));
     if(hc){
-      // Extract jar count from qty string like "2 pint-and-a-half jars" or "1 quart jar"
       const jarMatch=p.qty.match(/^(\d+)/);
       if(jarMatch){
         const jarsUsed=parseInt(jarMatch[1])||1;
@@ -2467,13 +2487,31 @@ function deductInventory(pull){
     }
   });
   pull.forEach(p=>{
-    // Fuzzy match — normalize both sides to lowercase, try contains match
+    if(!p.item||!p.qty)return;
     const pName=p.item.toLowerCase().trim();
-    const base=A.bases.find(b=>b.name.toLowerCase()===pName||pName.includes(b.name.toLowerCase())||b.name.toLowerCase().includes(pName));
-    const support=!base&&A.supports.find(s=>s.name.toLowerCase()===pName||pName.includes(s.name.toLowerCase())||s.name.toLowerCase().includes(pName));
+    const qtyStr=p.qty.toLowerCase();
+
+    // Only match bases/supports if the qty clearly references a bag/can/jar/dry unit
+    // This prevents "Pork Sausage" from deducting frozen Pork bags
+    const isBagRef=qtyStr.includes('bag')||qtyStr.includes('cooked')||qtyStr.includes('frozen');
+    const isCanRef=qtyStr.includes('can')||qtyStr.includes('jar')||qtyStr.includes('pint')||qtyStr.includes('quart');
+    const isDryRef=qtyStr.includes('lb')||qtyStr.includes('cup')&&!qtyStr.includes('bag');
+    const isStorageRef=isBagRef||isCanRef||isDryRef;
+
+    // Strict name matching — require exact match OR the base name must be the START of the pull item name
+    // Never match if pull item has extra words BEFORE the base name (e.g. "Ground" Turkey)
+    const base=isStorageRef&&A.bases.find(b=>{
+      const bn=b.name.toLowerCase();
+      return pName===bn||pName.startsWith(bn)||bn===pName.replace(/^(shredded|ground|sliced|diced|cubed|cooked|boneless|bone-in)\s+/,'');
+    });
+    const support=!base&&isStorageRef&&A.supports.find(s=>{
+      const sn=s.name.toLowerCase();
+      return pName===sn||pName.startsWith(sn)||sn.startsWith(pName)||
+        // Also match "Roasted Peppers & Onions" → "roasted peppers"
+        (sn.includes('&')&&pName.includes(sn.split('&')[0].trim()));
+    });
     const item=base||support;
     if(item){
-      // Extract number from qty string — "2 bags", "1 bag = 1.5 lbs", "2 cans" etc
       const num=parseInt(p.qty)||1;
       const deduct=Math.max(1,num);
       if((item.frozen||0)>0)item.frozen=Math.max(0,item.frozen-deduct);
@@ -3683,8 +3721,22 @@ function restoreInventoryFromPull(pull){
   pull.forEach(p=>{
     if(!p.qty||!p.item)return;
     const pName=p.item.toLowerCase().trim();
-    const base=A.bases.find(b=>b.name.toLowerCase()===pName||pName.includes(b.name.toLowerCase())||b.name.toLowerCase().includes(pName));
-    const support=!base&&A.supports.find(s=>s.name.toLowerCase()===pName||pName.includes(s.name.toLowerCase())||s.name.toLowerCase().includes(pName));
+    const qtyStr=p.qty.toLowerCase();
+
+    // Same strict matching as deductInventory — only restore if clearly a storage reference
+    const isStorageRef=qtyStr.includes('bag')||qtyStr.includes('cooked')||qtyStr.includes('frozen')||
+      qtyStr.includes('can')||qtyStr.includes('jar')||qtyStr.includes('pint')||qtyStr.includes('quart')||
+      qtyStr.includes('lb');
+
+    const base=isStorageRef&&A.bases.find(b=>{
+      const bn=b.name.toLowerCase();
+      return pName===bn||pName.startsWith(bn)||bn===pName.replace(/^(shredded|ground|sliced|diced|cubed|cooked|boneless|bone-in)\s+/,'');
+    });
+    const support=!base&&isStorageRef&&A.supports.find(s=>{
+      const sn=s.name.toLowerCase();
+      return pName===sn||pName.startsWith(sn)||sn.startsWith(pName)||
+        (sn.includes('&')&&pName.includes(sn.split('&')[0].trim()));
+    });
     const item=base||support;
     if(item){
       const num=parseInt(p.qty)||1;const restore=Math.max(1,num);
