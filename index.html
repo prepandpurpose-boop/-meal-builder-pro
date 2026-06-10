@@ -1543,6 +1543,15 @@ PROTEIN RULES:
 - Frozen protein = ALREADY COOKED. Say "heat gently 3-4 min over medium heat." NEVER say "cook until done."
 - Never partial bags. 1 quart bag = 1.5 lbs cooked. For ${A.householdSize} people use ${A.householdSize<=4?'1-2':'2-3'} bags.
 
+INVENTORY FIRST — MANDATORY:
+If frozen protein bags are logged in the user's inventory, USE THEM. Do not choose a different protein because it fits the cuisine or flavor direction better. The protein on hand drives everything else. Adapt the cuisine, flavor profile, and dish format to the protein available — not the other way around.
+- Pork in inventory → build pork dishes. Carnitas, pork verde, pulled pork tacos, smothered pork chops, pork fried rice, pork pasta, pork stir fry.
+- Chicken in inventory → build chicken dishes in any cuisine that fits.
+- Beef in inventory → build beef dishes. Tacos, rice bowls, pasta bolognese, smothered beef, stir fry.
+- Turkey in inventory → build turkey dishes. Turkey soup, turkey rice bake, turkey tacos, turkey pasta.
+- If MULTIPLE proteins are in inventory → rotate through them across the week. Never use the same one every meal.
+- Only when NO protein is in inventory does the seasonal budget hierarchy apply.
+
 DINNER PROTEIN RULE (non-negotiable):
 - Standard diet: dinner centerpiece MUST be real meat — beef, pork, chicken, turkey, fish. No exceptions.
 - Beans, chickpeas, lentils = supports that go ALONGSIDE meat. Never the dinner centerpiece for standard diet.
@@ -1601,7 +1610,13 @@ Yield in pieces, storage, how long keeps, grab size. BAKING SCALE TIP in tip: "~
 
 ${A.kidFriendly?`KID FRIENDLY: Mild, nut-free, simple, kid portions.`:''}
 ${A.dietary.length>0?`DIETARY RESTRICTIONS — NEVER VIOLATE: ${A.dietary.join(', ')}`:''}
-${(A.dietaryGoals||[]).length>0?`DIETARY GOALS: ${(A.dietaryGoals||[]).join(', ')}`:''}
+${(A.dietaryGoals||[]).length>0?`DIETARY GOALS ACTIVE: ${(A.dietaryGoals||[]).join(', ')}
+DIETARY GOAL RULES — apply precisely, never over-interpret:
+HIGH PROTEIN: Maximize protein per serving. Choose protein-rich ingredients. Include substantial protein at every meal. NEVER replace bread, pizza crust, tortillas, pasta, or rice with meat. A pizza with regular crust and high-protein toppings IS high protein. A meat crust wastes protein and is not appropriate for a family kitchen.
+LOW FAT: Use leaner cuts where possible. Keep fat portions reasonable. Do not eliminate olive oil, avocado, or cheese entirely.
+LOW CARB: Reduce grain portions or use lower-carb swaps where natural. Do not eliminate carbs unless KETO is also selected.
+KETO: No grains, no sugar, no starchy vegetables. Carbs from vegetables only.
+HIGH PROTEIN + LOW FAT together: Lean proteins, normal carb bases (crust/tortilla/pasta/rice), high-protein toppings and fillings. Never sacrifice the structure of a dish to add more protein.`:''}
 
 FLAVOR GUIDE: Classic American=meat+potatoes/casseroles · Comfort=creamy/cheesy/hearty · Southern=gravy/cornbread/grits · Tex-Mex=cumin/cheese/tortillas · Mexican=authentic(carnitas/barbacoa/mole) · Italian=tomato/pasta/olive oil · BBQ=smoked/chipotle · Cajun=holy trinity/bold spice · Asian=soy/ginger/sesame · Mediterranean=olive oil/lemon/feta · Caribbean=allspice/jerk · Surprise Me=rotate freely.
 
@@ -1655,6 +1670,9 @@ ${(()=>{
 })()}
 
 DISH VARIETY — never repeat same format twice in a row. Rotate: tacos, enchiladas, burritos, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, quesadillas, pot pie, skillet meals, rice bowls, smothered chicken, soups, stews, sandwiches, sliders, wraps, hash, curry, flatbread pizza, meatloaf, lasagna, sheet pan meals, stir-fry noodles, kabobs, stuffed baked potatoes, grain bowls, chili, taco bowls, fajitas.
+INGREDIENT DEDUPLICATION: Before finalizing the pull list, check for duplicate or near-duplicate ingredient names. "Fresh Cilantro" and "Cilantro (fresh)" are the same thing. "Ground beef" and "ground beef (80/20)" are the same thing. Consolidate into one entry with the correct combined quantity. Never list the same ingredient twice under different names.
+OPTIONAL INGREDIENTS: Optional garnishes (cilantro, parsley, green onion, sour cream drizzle, hot sauce) must be marked as optional in the pull list AND must NEVER appear in groceryFlags. Do not put optional ingredients on the grocery list. They are nice to have, not required.
+
 RECIPE INGREDIENT COMPLETENESS (non-negotiable):
 - EVERY ingredient used anywhere in the recipe steps MUST appear in the pull list. No ingredient may appear for the first time inside a step.
 - If chickpeas go in step 1, chickpeas are in the pull list. If feta goes in step 2, feta is in the pull list. If lemon juice goes in any step, lemon juice is in the pull list. No exceptions.
