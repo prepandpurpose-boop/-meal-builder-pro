@@ -2159,10 +2159,36 @@ function moveMeal(){
 function removeMeal(dateKey,slot){
   const meal=A.calendarByDate[dateKey]?.[slot];
   if(meal&&typeof meal==='object'){
+    // Restore inventory
     if(meal.pull&&meal.pull.length>0)restoreInventoryFromPull(meal.pull);
+    restorePantryItems(meal.pull||[]);
+
+    // Remove grocery items tagged with this date
+    // But keep any item that is ALSO needed by another meal on the same date
+    const otherMealsOnDate=Object.entries(A.calendarByDate[dateKey]||{})
+      .filter(([s])=>s!==slot)
+      .map(([,m])=>m?.groceryFlags||[])
+      .flat()
+      .map(f=>f.name?.toLowerCase());
+
+    A.grocery=A.grocery.filter(g=>{
+      // Always keep manually added or completed items
+      if(g.manualAdd||g.done)return true;
+      // Remove items tagged to this date unless another meal on same date needs them
+      if(g.scheduledDate===dateKey){
+        return otherMealsOnDate.includes(g.name?.toLowerCase());
+      }
+      // Keep items from other dates
+      return true;
+    });
+
+    // Fallback: if items have no scheduledDate, use old name-match method
     if(meal.groceryFlags&&meal.groceryFlags.length>0){
-      const flagNames=meal.groceryFlags.map(f=>f.name.toLowerCase());
-      A.grocery=A.grocery.filter(g=>!flagNames.includes(g.name.toLowerCase())||g.manualAdd||g.done);
+      const flagNames=meal.groceryFlags.map(f=>f.name?.toLowerCase());
+      A.grocery=A.grocery.filter(g=>{
+        if(g.manualAdd||g.done||g.scheduledDate)return true;
+        return !flagNames.includes(g.name?.toLowerCase());
+      });
     }
   }
   if(A.calendarByDate[dateKey])delete A.calendarByDate[dateKey][slot];
