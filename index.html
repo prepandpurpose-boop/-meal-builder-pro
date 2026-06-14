@@ -636,24 +636,26 @@ const DEF_PANTRY={
     {id:'fr13',name:'Jalapeños',qty:0,unit:'each',have:false,fresh:true},
   ],
   oils:[
-    {id:'o1',name:'Olive Oil',have:false},
-    {id:'o2',name:'Vegetable Oil',have:false},
-    {id:'o3',name:'Cooking Spray',have:false},
-    {id:'o4',name:'Apple Cider Vinegar',have:false},
-    {id:'o5',name:'Soy Sauce',have:false},
-    {id:'o6',name:'Worcestershire Sauce',have:false},
-    {id:'o7',name:'Hot Sauce',have:false},
+    {id:'o1',name:'Olive Oil',qty:0,unit:'oz',have:false},
+    {id:'o2',name:'Vegetable Oil',qty:0,unit:'oz',have:false},
+    {id:'o3',name:'Cooking Spray',qty:0,unit:'cans',have:false},
+    {id:'o4',name:'Apple Cider Vinegar',qty:0,unit:'oz',have:false},
+    {id:'o5',name:'Soy Sauce',qty:0,unit:'oz',have:false},
+    {id:'o6',name:'Worcestershire Sauce',qty:0,unit:'oz',have:false},
+    {id:'o7',name:'Hot Sauce',qty:0,unit:'oz',have:false},
   ],
   condiments:[
-    {id:'c1',name:'Ketchup',have:false},
-    {id:'c2',name:'Mustard',have:false},
-    {id:'c3',name:'Mayonnaise',have:false},
-    {id:'c4',name:'BBQ Sauce',have:false},
-    {id:'c5',name:'Salsa',have:false},
-    {id:'c6',name:'Jarred Pasta Sauce',have:false},
-    {id:'c7',name:'Honey',have:false},
-    {id:'c8',name:'Tortillas',have:false},
-    {id:'c9',name:'Tortilla Chips',have:false},
+    {id:'c1',name:'Ketchup',qty:0,unit:'oz',have:false},
+    {id:'c2',name:'Mustard',qty:0,unit:'oz',have:false},
+    {id:'c3',name:'Mayonnaise',qty:0,unit:'oz',have:false},
+    {id:'c4',name:'BBQ Sauce',qty:0,unit:'oz',have:false},
+    {id:'c5',name:'Salsa',qty:0,unit:'oz',have:false},
+    {id:'c6',name:'Jarred Pasta Sauce',qty:0,unit:'jars',have:false},
+    {id:'c7',name:'Honey',qty:0,unit:'oz',have:false},
+    {id:'c8',name:'Tortillas',qty:0,unit:'each',have:false},
+    {id:'c9',name:'Tortilla Chips',qty:0,unit:'oz',have:false},
+    {id:'c10',name:'Peanut Butter',qty:0,unit:'oz',have:false},
+    {id:'c11',name:'Maple Syrup',qty:0,unit:'oz',have:false},
   ],
   spices:[
     {id:'sp1',name:'Salt & Pepper',have:false},
@@ -668,6 +670,13 @@ const DEF_PANTRY={
     {id:'sp10',name:'Bay Leaves',have:false},
     {id:'sp11',name:'Oregano',have:false},
     {id:'sp12',name:'Thyme',have:false},
+    // P&P Spice Blends — shown when P&P toggle is on
+    {id:'ppb1',name:'P&P House Blend',qty:0,unit:'pint jars',have:false,ppBlend:true},
+    {id:'ppb2',name:'P&P Italian Herb & Garlic',qty:0,unit:'pint jars',have:false,ppBlend:true},
+    {id:'ppb3',name:'P&P Lemon Pepper Garlic Salt',qty:0,unit:'pint jars',have:false,ppBlend:true},
+    {id:'ppb4',name:'P&P Cinnamon Sugar Spice',qty:0,unit:'pint jars',have:false,ppBlend:true},
+    {id:'ppb5',name:'P&P Smoky BBQ Rub',qty:0,unit:'pint jars',have:false,ppBlend:true},
+    {id:'ppb6',name:'P&P Taco Seasoning',qty:0,unit:'pint jars',have:false,ppBlend:true},
   ]
 };
 
@@ -856,6 +865,18 @@ function mergePantryWithDefaults(saved,defaults){
   const merged={};
   Object.keys(defaults).forEach(cat=>{
     merged[cat]=saved[cat]?JSON.parse(JSON.stringify(saved[cat])):[];
+    // Migrate old toggle-only oils/condiments to qty items
+    if(cat==='oils'||cat==='condiments'){
+      merged[cat].forEach(item=>{
+        if(item.qty==null){
+          item.qty=item.have?1:0;
+          // find default unit
+          const def=defaults[cat].find(d=>d.id===item.id);
+          if(def&&def.unit)item.unit=def.unit;
+          else if(!item.unit)item.unit='oz';
+        }
+      });
+    }
     defaults[cat].forEach(def=>{
       if(!merged[cat].find(i=>i.id===def.id)){
         merged[cat].push(JSON.parse(JSON.stringify(def)));
@@ -1316,14 +1337,14 @@ function rPantry(){
     baking:{label:'🍞 Baking',type:'qty'},
     fridge:{label:'🧈 Fridge & Dairy',type:'qty',note:'Eggs are tracked in Inventory → Canned & Dry'},
     fresh:{label:'🌿 Fresh Produce (use first)',type:'qty'},
-    oils:{label:'🫙 Oils & Acids',type:'toggle'},
-    condiments:{label:'🥫 Condiments & Sauces',type:'toggle'},
-    spices:{label:'🧂 Spices',type:'toggle'},
+    oils:{label:'🫙 Oils & Acids',type:'qty'},
+    condiments:{label:'🥫 Condiments & Sauces',type:'qty'},
+    spices:{label:'🧂 Spices',type:'spices'},
   };
   let html=`<div class="page-sub">Track what is in your kitchen. Fresh items are prioritized — the AI uses them first so nothing goes to waste.</div>
     <div style="font-size:11px;color:var(--text-muted);background:white;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:16px;line-height:1.5">
       📦 <strong>What deducts automatically:</strong> Frozen bases, frozen/canned/dry supports, home canned jars, and measured kitchen items (butter, flour, sugar, fresh produce, milk, eggs) all deduct when you schedule a meal.<br>
-      🧂 <strong>What does not deduct:</strong> Spices, oils, and condiments are tracked as "have it" or "don't have it" — they don't decrease per recipe. Check these when you notice you're running low.
+      🧂 <strong>Oils, condiments, and spices:</strong> Now tracked by quantity so the AI knows exactly what you have. Update counts when you run out or restock.
     </div>`;
   Object.keys(catConfig).forEach(cat=>{
     const {label,type}=catConfig[cat];
@@ -1334,27 +1355,49 @@ function rPantry(){
         <button class="btn btn-sm btn-outline" data-cat="${cat}" onclick="openAddPantryItem(this.dataset.cat)">+ Add</button>
       </div>
       <div>`;
+
     items.forEach(item=>{
-      if(type==='qty'){
+      // P&P blend items — only show when ppSpices toggle is on
+      if(item.ppBlend){
+        if(!A.ppSpices)return;
+        html+=`<div class="pantry-item" style="background:var(--green-xpale)">
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:600;color:var(--green)">${item.name}</div>
+            <div style="font-size:11px;color:var(--green-mid)">P&P Blend · 1 pint jar = ready to use</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="number" min="0" step="1" value="${item.qty||0}" data-cat="${cat}" data-id="${item.id}"
+              onchange="setPantryQty(this.dataset.cat,this.dataset.id,+this.value)"
+              style="width:70px;padding:6px 10px;border:1px solid var(--green);border-radius:var(--radius-xs);font-size:14px;font-weight:600;text-align:center;color:var(--green)">
+            <span style="font-size:12px;color:var(--green-mid);min-width:54px">pint jars</span>
+            <button style="background:none;border:none;font-size:16px;color:var(--text-hint);cursor:pointer;padding:2px 4px" data-cat="${cat}" data-id="${item.id}" onclick="deletePantryItem(this.dataset.cat,this.dataset.id)">×</button>
+          </div>
+        </div>`;
+        return;
+      }
+
+      if(type==='qty'||(type==='spices'&&item.unit)){
+        // qty-tracked item
         html+=`<div class="pantry-item">
           <div style="flex:1">
             <div style="font-size:14px;font-weight:500">${item.name}${item.fresh?`<span class="pantry-fresh-badge">FRESH — USE FIRST</span>`:''}</div>
             ${item.note?`<div style="font-size:11px;color:var(--text-hint)">${item.note}</div>`:''}
           </div>
           <div style="display:flex;align-items:center;gap:8px">
-            <input type="number" min="0" value="${item.qty||0}" data-cat="${cat}" data-id="${item.id}"
+            <input type="number" min="0" step="${item.unit==='each'||item.unit==='jars'||item.unit==='cans'?'1':'0.5'}" value="${item.qty||0}" data-cat="${cat}" data-id="${item.id}"
               onchange="setPantryQty(this.dataset.cat,this.dataset.id,+this.value)"
               style="width:70px;padding:6px 10px;border:1px solid var(--border-strong);border-radius:var(--radius-xs);font-size:14px;font-weight:600;text-align:center;color:var(--green)">
             <span style="font-size:12px;color:var(--text-muted);min-width:32px">${item.unit||''}</span>
-            <button style="background:none;border:none;font-size:16px;color:var(--text-hint);cursor:pointer;padding:2px 4px" data-cat="${cat}" data-id="${item.id}" onclick="deletePantryItem(this.dataset.cat,this.dataset.id)" title="Remove">×</button>
+            <button style="background:none;border:none;font-size:16px;color:var(--text-hint);cursor:pointer;padding:2px 4px" data-cat="${cat}" data-id="${item.id}" onclick="deletePantryItem(this.dataset.cat,this.dataset.id)">×</button>
           </div>
         </div>`;
       } else {
+        // toggle item (regular spices when no qty unit)
         html+=`<div class="pantry-item">
           <div class="tog ${item.have?'on':''}" data-cat="${cat}" data-id="${item.id}" onclick="togglePantryItem(this.dataset.cat,this.dataset.id)"><div class="tog-th"></div></div>
           <div style="flex:1;font-size:14px;font-weight:500">${item.name}</div>
           <span style="font-size:12px;color:${item.have?'var(--green)':'var(--text-hint)'}">${item.have?'On hand':'Not stocked'}</span>
-          <button style="background:none;border:none;font-size:16px;color:var(--text-hint);cursor:pointer;padding:2px 4px;margin-left:8px" data-cat="${cat}" data-id="${item.id}" onclick="deletePantryItem(this.dataset.cat,this.dataset.id)" title="Remove">×</button>
+          <button style="background:none;border:none;font-size:16px;color:var(--text-hint);cursor:pointer;padding:2px 4px;margin-left:8px" data-cat="${cat}" data-id="${item.id}" onclick="deletePantryItem(this.dataset.cat,this.dataset.id)">×</button>
         </div>`;
       }
     });
@@ -1377,12 +1420,13 @@ function deletePantryItem(cat,id){
 }
 function openAddPantryItem(cat){
   const catLabels={baking:'Baking',fridge:'Fridge & Dairy',fresh:'Fresh Produce',oils:'Oils & Acids',condiments:'Condiments',spices:'Spices'};
-  const isQty=['baking','fridge','fresh'].includes(cat);
+  const isQty=['baking','fridge','fresh','oils','condiments'].includes(cat);
+  const defaultUnit=cat==='oils'?'oz':cat==='condiments'?'oz':cat==='spices'?'pint jars':'';
   openModal(`<div class="modal-header"><div class="modal-title">Add to ${catLabels[cat]||cat}</div><button class="modal-close" onclick="closeModal()">×</button></div>
-    <div class="fg"><label class="lbl">Item Name</label><input class="inp" id="api-name" placeholder="e.g. Almond Flour, Oat Milk"></div>
+    <div class="fg"><label class="lbl">Item Name</label><input class="inp" id="api-name" placeholder="e.g. Coconut Aminos, Fish Sauce"></div>
     ${isQty?`<div class="r2">
-      <div class="fg"><label class="lbl">Quantity</label><input class="inp" type="number" id="api-qty" value="0" min="0"></div>
-      <div class="fg"><label class="lbl">Unit</label><input class="inp" id="api-unit" placeholder="e.g. lbs, cups, each"></div>
+      <div class="fg"><label class="lbl">Quantity</label><input class="inp" type="number" id="api-qty" value="0" min="0" step="0.5"></div>
+      <div class="fg"><label class="lbl">Unit</label><input class="inp" id="api-unit" placeholder="oz, jars, each..." value="${defaultUnit}"></div>
     </div>`:''}
     ${cat==='fresh'?`<div class="fg"><div style="display:flex;align-items:center;gap:10px"><input type="checkbox" id="api-fresh" checked><label for="api-fresh" style="font-size:14px">Mark as fresh — use first</label></div></div>`:''}
     <button class="btn btn-primary btn-full btn-lg" style="margin-top:12px" data-cat="${cat}" onclick="saveAddPantryItem(this.dataset.cat)">Add Item</button>`);
@@ -1390,7 +1434,7 @@ function openAddPantryItem(cat){
 function saveAddPantryItem(cat){
   const name=document.getElementById('api-name')?.value.trim();
   if(!name)return;
-  const isQty=['baking','fridge','fresh'].includes(cat);
+  const isQty=['baking','fridge','fresh','oils','condiments'].includes(cat);
   const qty=isQty?+document.getElementById('api-qty')?.value||0:0;
   const unit=isQty?document.getElementById('api-unit')?.value.trim()||'':undefined;
   const isFresh=cat==='fresh'?document.getElementById('api-fresh')?.checked:false;
@@ -1568,8 +1612,9 @@ async function generateRecipe(){
 
   const pantryFlat=getPantryFlat().filter(p=>p.have);
   const freshList=pantryFlat.filter(p=>p.fresh&&(p.qty||0)>0).map(p=>`${p.name}: ${p.qty} ${p.unit} [FRESH — USE FIRST]`);
-  const fridgeQty=pantryFlat.filter(p=>!p.fresh&&(p.qty||0)>0&&p.unit&&p.name.toLowerCase()!=='eggs'&&p.name.toLowerCase()!=='egg').map(p=>`${p.name}: ${p.qty} ${p.unit}`);
-  const toggles=pantryFlat.filter(p=>!(p.qty||0)&&p.have).map(p=>p.name);
+  const fridgeQty=pantryFlat.filter(p=>!p.fresh&&(p.qty||0)>0&&p.unit&&p.name.toLowerCase()!=='eggs'&&p.name.toLowerCase()!=='egg'&&!p.ppBlend).map(p=>`${p.name}: ${p.qty} ${p.unit}`);
+  // toggles = items explicitly marked have:true but with no qty (old-style spices, any remaining toggles)
+  const toggles=pantryFlat.filter(p=>!(p.qty||0)&&p.have&&!p.ppBlend).map(p=>p.name);
 
   const hasNoProteins=allProteins.length===0;
 
@@ -1756,7 +1801,7 @@ ${buildEmergency?`EMERGENCY MEAL MODE:
 
 MISSING INGREDIENTS: Always build anyway. Flag on groceryFlags. Zero stock = omit and flag.
 COOK LIST: When proteins need cooking, include cookList with bags and raw lbs (cooked × 1.43).
-${ppSpices?'Use P&P Spice Blend names only.':''}
+${ppSpices?'P&P BLEND RULE: The user has P&P spice blends. When building a recipe, check the blend definitions above. If an in-stock blend covers the spices needed, use the blend name in the pull list and steps — never list the individual spices it replaces. Only list individual spices for flavors no blend covers.':''}
 
 RESPOND WITH VALID JSON ONLY:
 {
@@ -1806,8 +1851,21 @@ FRESH ITEMS (USE FIRST): ${freshList.length>0?freshList.join(' | '):'None'}
 KITCHEN STAPLES (what user actually has in pantry/fridge — ONLY flag items NOT on these lists):
 Fridge: ${(()=>{const f=A.pantry?.fridge||[];return f.filter(i=>i.have).map(i=>i.qty?`${i.name} (${i.qty} ${i.unit||''})`.trim():i.name).join(', ')||'None';})()}
 Baking/Dry: ${(()=>{const b=A.pantry?.baking||[];return b.filter(i=>i.have).map(i=>i.qty?`${i.name} (${i.qty} ${i.unit||''})`.trim():i.name).join(', ')||'None';})()}
-Oils & Condiments: ${(()=>{const o=[...(A.pantry?.oils||[]),...(A.pantry?.condiments||[])];return o.filter(i=>i.have).map(i=>i.name).join(', ')||'None';})()}
-Spices: ${(()=>{const s=A.pantry?.spices||[];return s.filter(i=>i.have).map(i=>i.name).join(', ')||'None';})()}
+Oils & Acids: ${(()=>{const o=A.pantry?.oils||[];return o.filter(i=>i.have&&!i.ppBlend).map(i=>i.qty>0?i.name+' ('+i.qty+' '+(i.unit||'oz')+')':i.name).join(', ')||'None';})()}
+Condiments & Sauces: ${(()=>{const c=A.pantry?.condiments||[];return c.filter(i=>i.have).map(i=>i.qty>0?i.name+' ('+i.qty+' '+(i.unit||'oz')+')':i.name).join(', ')||'None';})()}
+${ppSpices?(()=>{
+  const blends=(A.pantry?.spices||[]).filter(i=>i.ppBlend&&(i.qty||0)>0);
+  const blendList=blends.length?'P&P SPICE BLENDS IN STOCK — USE THESE INSTEAD OF INDIVIDUAL SPICES:\n'+blends.map(b=>'  '+b.name+': '+b.qty+' pint jar'+(b.qty!==1?'s':'')).join('\n'):'P&P Spice Blends: None in stock — fall back to individual spices below.';
+  const defs='BLEND DEFINITIONS — substitute correctly:\n'
+    +'  P&P House Blend: replaces salt+pepper+garlic powder+onion powder+paprika+thyme. Use 1-2 tsp per lb meat or per cup veg.\n'
+    +'  P&P Italian Herb & Garlic: replaces basil+oregano+parsley+thyme+rosemary+garlic powder. Use 1 tbsp per 2 cups tomato sauce or pasta dish.\n'
+    +'  P&P Lemon Pepper Garlic Salt: replaces salt+black pepper+lemon+garlic powder. Use 1 tsp per lb chicken or 2 cups veg. Best on chicken, fish, vegetables.\n'
+    +'  P&P Cinnamon Sugar Spice: replaces cinnamon+nutmeg+sugar. Use 1-2 tsp per serving oatmeal, sweet potatoes, breakfast baked goods.\n'
+    +'  P&P Smoky BBQ Rub: replaces brown sugar+smoked paprika+garlic powder+onion powder+chili powder+black pepper. Use 1-2 tbsp per lb meat. Best on pork, beef, chicken.\n'
+    +'  P&P Taco Seasoning: replaces chili powder+cumin+paprika+garlic powder+onion powder+oregano+salt+pepper+cayenne. Use 2-3 tbsp per lb ground meat + 1/2 cup water, simmer until thickened.\n'
+    +'RULE: When a blend covers the spices a recipe needs, USE THE BLEND NAME in the pull list and steps. Never list the individual spices the blend already contains. If a spice is NOT covered by any blend, list it individually.';
+  return blendList+'\n'+defs;
+})():'Spices: '+((A.pantry?.spices||[]).filter(i=>i.have&&!i.ppBlend).map(i=>i.name).join(', ')||'None')}
 NOTE: Any ingredient NOT listed above AND NOT a basic assumed staple (water, standard salt, black pepper) MUST appear in groceryFlags.
 HOME CANNED: ${(A.homeCanned||[]).length>0?(A.homeCanned||[]).map(hc=>{const cups={halfPint:1,pint:2,pintHalf:3,quart:4,halfGallon:8}[hc.jarSize]||2;const jarLabel={halfPint:'half-pint jar (1 cup)',pint:'pint jar (2 cups)',pintHalf:'pint-and-a-half jar (3 cups)',quart:'quart jar (4 cups)',halfGallon:'half-gallon jar (8 cups)'}[hc.jarSize]||'pint jar (2 cups)';const isFD=/freeze.?dried|freeze dried|FD/i.test(hc.name);const totalCups=hc.qty*cups;if(isFD){return`${hc.name}: ${hc.qty} ${jarLabel}${hc.qty!==1?'s':''} = ${totalCups} cups total — FREEZE DRIED: measure out exact amount by cup/tbsp, no need to pull whole jar`;}return`${hc.name}: ${hc.qty} ${jarLabel}${hc.qty!==1?'s':''} = ${totalCups} cups — pull by jar count, use whole jars`;}).join(' | '):'None'}
 FRIDGE: ${fridgeQty.length>0?fridgeQty.join(' | '):'None'}
@@ -2373,6 +2431,23 @@ const PANTRY_CONV={
   'milk':{unit:'cups',cup:1},
   'yogurt':{unit:'cups',cup:1},
   'buttermilk':{unit:'cups',cup:1},
+  // Condiments and oils — tracked in oz, deduct by oz or tbsp
+  'olive oil':{unit:'oz',tbsp:0.5,cup:8},
+  'vegetable oil':{unit:'oz',tbsp:0.5,cup:8},
+  'soy sauce':{unit:'oz',tbsp:0.5},
+  'apple cider vinegar':{unit:'oz',tbsp:0.5,cup:8},
+  'worcestershire sauce':{unit:'oz',tbsp:0.5},
+  'hot sauce':{unit:'oz',tbsp:0.5,tsp:0.167},
+  'ketchup':{unit:'oz',tbsp:0.5},
+  'bbq sauce':{unit:'oz',tbsp:0.5,cup:8},
+  'honey':{unit:'oz',tbsp:0.75,cup:12},
+  'mayonnaise':{unit:'oz',tbsp:0.5,cup:8},
+  'salsa':{unit:'oz',cup:8,tbsp:0.5},
+  'peanut butter':{unit:'oz',tbsp:0.5,cup:8},
+  'maple syrup':{unit:'oz',tbsp:0.5,cup:8},
+  // Jarred pasta sauce — 1 jar = 1 use
+  'jarred pasta sauce':{unit:'jars',jar:1},
+  'tortillas':{unit:'each',each:1},
 };
 
 function deductPantryItems(pull){
@@ -4012,10 +4087,11 @@ function openSettings(){
       ${['High Protein','Low Carb','Low Fat','Mediterranean Diet'].map(g=>`<div class="diet-chip ${(A.dietaryGoals||[]).includes(g)?'selected':''}" data-pref="${g}" onclick="toggleDietChip(this)">${g}</div>`).join('')}
     </div>
     <div class="section-head">P&P Spice Blends</div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;margin-bottom:16px">
-      <div><div style="font-size:14px;font-weight:500">I own the P&P Spice Kit</div><div style="font-size:12px;color:var(--text-muted)">Uses blend names in recipes</div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;margin-bottom:8px">
+      <div><div style="font-size:14px;font-weight:500">I have P&P Spice Blends</div><div style="font-size:12px;color:var(--text-muted)">Turns on blend jar tracking in Kitchen Staples</div></div>
       <div class="tog ${A.ppSpices?'on':''}" id="st-spices" onclick="this.classList.toggle('on')"><div class="tog-th"></div></div>
     </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;background:var(--green-xpale);border-radius:8px;padding:10px 12px;line-height:1.6">6 blends: House, Italian Herb & Garlic, Lemon Pepper Garlic Salt, Cinnamon Sugar Spice, Smoky BBQ Rub, Taco Seasoning. When toggled on, go to <strong>Kitchen Staples → Spices</strong> to log how many pint jars you have of each blend.</div>
     <button class="btn btn-primary btn-full" style="margin-bottom:8px" onclick="saveSettings()">Save Settings</button>
     <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="signOut()">Sign Out</button>
     <div style="border-top:1px solid var(--border);margin:16px 0"></div>
@@ -4049,7 +4125,7 @@ function showOnboarding(){
   }
   const pantrySetup=document.getElementById('ob-pantry-setup');
   if(pantrySetup){
-    const cats={baking:{label:'🍞 Baking',type:'qty'},fridge:{label:'🧈 Fridge & Dairy',type:'qty'},fresh:{label:'🌿 Fresh Produce',type:'qty'},oils:{label:'🫙 Oils & Acids',type:'toggle'},condiments:{label:'🥫 Condiments',type:'toggle'},spices:{label:'🧂 Spices',type:'toggle'}};
+    const cats={baking:{label:'🍞 Baking',type:'qty'},fridge:{label:'🧈 Fridge & Dairy',type:'qty'},fresh:{label:'🌿 Fresh Produce',type:'qty'},oils:{label:'🫙 Oils & Acids',type:'qty'},condiments:{label:'🥫 Condiments',type:'qty'},spices:{label:'🧂 Spices',type:'toggle'}};
     let html='';
     Object.keys(cats).forEach(cat=>{
       const {label,type}=cats[cat];
