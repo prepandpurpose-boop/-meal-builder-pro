@@ -778,15 +778,51 @@ function removeLunchBankMeal(mealId,portionsToRemove){
 function save(){
   clearTimeout(_saveTimer);
   _saveTimer=setTimeout(()=>{
-    // Only save items that have actual quantities — strip zeros to reduce payload
-    const basesToSave=A.bases.map(b=>({id:b.id,name:b.name,icon:b.icon,frozen:b.frozen||0,canned:b.canned||0,storageTypes:b.storageTypes}));
-    const supportsToSave=A.supports.map(s=>({id:s.id,name:s.name,icon:s.icon,frozen:s.frozen||0,canned:s.canned||0,dry:s.dry||0,fresh:s.fresh||0,each:s.each||0,storageTypes:s.storageTypes,dryUnit:s.dryUnit,eachUnit:s.eachUnit}));
+    // Strip zero-quantity items to reduce payload size
+    const basesToSave=A.bases
+      .filter(b=>(b.frozen||0)>0||(b.canned||0)>0)
+      .map(b=>({id:b.id,name:b.name,icon:b.icon,frozen:b.frozen||0,canned:b.canned||0,storageTypes:b.storageTypes}));
+    const supportsToSave=A.supports
+      .filter(s=>(s.frozen||0)>0||(s.canned||0)>0||(s.dry||0)>0||(s.fresh||0)>0||(s.each||0)>0)
+      .map(s=>({id:s.id,name:s.name,icon:s.icon,frozen:s.frozen||0,canned:s.canned||0,dry:s.dry||0,fresh:s.fresh||0,each:s.each||0,storageTypes:s.storageTypes,dryUnit:s.dryUnit,eachUnit:s.eachUnit}));
+    // Strip zero-qty pantry items — keep only items that have qty>0 or are toggled on
+    const pantryToSave={};
+    Object.keys(A.pantry||{}).forEach(cat=>{
+      pantryToSave[cat]=(A.pantry[cat]||[]).filter(item=>{
+        if(item.ppBlend)return(item.qty||0)>0;// only save blends with jars
+        if(item.qty!=null)return(item.qty||0)>0||item.have;// qty items: save if qty>0 or toggled on
+        return item.have;// toggle items: save only if on
+      }).map(item=>({...item}));
+    });
+    // Strip large recipe data from calendar — only keep title, slot, macros, pull, steps, tip, servings
+    const calToSave={};
+    Object.keys(A.calendarByDate||{}).forEach(dk=>{
+      calToSave[dk]={};
+      Object.keys(A.calendarByDate[dk]).forEach(slot=>{
+        const meal=A.calendarByDate[dk][slot];
+        if(!meal)return;
+        if(typeof meal==='string'){calToSave[dk][slot]=meal;return;}
+        // Save essential fields only — drop suggestions, cookList details, raw prompt data
+        calToSave[dk][slot]={
+          title:meal.title,
+          description:meal.description||'',
+          servings:meal.servings||4,
+          servingSize:meal.servingSize||'',
+          macros:meal.macros||null,
+          pull:meal.pull||[],
+          steps:meal.steps||[],
+          tip:meal.tip||'',
+          groceryFlags:meal.groceryFlags||[],
+          cookList:meal.cookList||null,
+        };
+      });
+    });
     const data={
       bases:basesToSave,
       supports:supportsToSave,
-      pantry:A.pantry,
+      pantry:pantryToSave,
       emergency:A.emergency,
-      calendar_by_date:A.calendarByDate,
+      calendar_by_date:calToSave,
       grocery:A.grocery,
       dietary:A.dietary,
       dietary_goals:A.dietaryGoals||[],
@@ -803,7 +839,6 @@ function save(){
       lunch_bank:A.lunchBank||0,
       lunch_bank_meals:A.lunchBankMeals||[],
       deleted_ids:A.deletedIds||[],
-      // weekProteins session-only
     };
     sbSave(A.email,data);
     const dataWithTs={...data,updated_at:new Date().toISOString()};
@@ -815,50 +850,58 @@ function save(){
 }
 
 // Merge saved data with defaults — keeps user quantities, adds any new default items
+// Note: saved may be sparse (zero-qty items stripped to reduce payload size)
 function mergeWithDefaults(saved,defaults){
-  if(!saved||!saved.length)return JSON.parse(JSON.stringify(defaults));
-  const merged=JSON.parse(JSON.stringify(saved));
-  // Migrate old pasta items: boxes → lbs, add fresh field
-  merged.forEach(item=>{
-    if(item.dryUnit==='boxes')item.dryUnit='lbs';
-    if(item.storageTypes&&item.storageTypes.includes('dry')&&['Spaghetti','Rotini','Penne','Macaroni','Egg Noodles'].includes(item.name)){
-      if(!item.storageTypes.includes('fresh'))item.storageTypes.push('fresh');
-    }
-    if(item.fresh==null)item.fresh=0;
-  });
+  // Always start from defaults and overlay saved quantities — handles sparse saves correctly
+  const merged=JSON.parse(JSON.stringify(defaults));
+  if(saved&&saved.length){
+    // Migrate saved items
+    saved.forEach(item=>{
+      if(item.dryUnit==='boxes')item.dryUnit='lbs';
+      if(item.storageTypes&&item.storageTypes.includes('dry')&&['Spaghetti','Rotini','Penne','Macaroni','Egg Noodles'].includes(item.name)){
+        if(!item.storageTypes.includes('fresh'))item.storageTypes.push('fresh');
+      }
+      if(item.fresh==null)item.fresh=0;
+      // Apply saved quantities to the matching default item
+      const existing=merged.find(m=>m.id==item.id);
+      if(existing){
+        Object.assign(existing,{frozen:item.frozen||0,canned:item.canned||0,dry:item.dry||0,fresh:item.fresh||0,each:item.each||0,dryUnit:item.dryUnit||existing.dryUnit});
+      } else {
+        // Custom item not in defaults — add it
+        merged.push(JSON.parse(JSON.stringify(item)));
+      }
+    });
+  }
+  // Remove deliberately deleted items
   const deletedIds=A.deletedIds||[];
-  defaults.forEach(def=>{
-    // Skip items the user has deliberately deleted
-    if(deletedIds.includes(String(def.id)))return;
-    if(!merged.find(s=>s.id==def.id)){
-      merged.push(JSON.parse(JSON.stringify(def)));
-    }
-  });
-  return merged;
+  return merged.filter(item=>!deletedIds.includes(String(item.id)));
 }
 function mergePantryWithDefaults(saved,defaults){
   if(!saved)return JSON.parse(JSON.stringify(defaults));
   const merged={};
   const deletedIds=A.deletedIds||[];
   Object.keys(defaults).forEach(cat=>{
-    merged[cat]=saved[cat]?JSON.parse(JSON.stringify(saved[cat])):[];
-    // Migrate old toggle-only oils/condiments to qty items
-    if(cat==='oils'||cat==='condiments'){
-      merged[cat].forEach(item=>{
-        if(item.qty==null){
-          item.qty=item.have?1:0;
-          const def=defaults[cat].find(d=>d.id===item.id);
-          if(def&&def.unit)item.unit=def.unit;
-          else if(!item.unit)item.unit='oz';
-        }
-      });
-    }
-    defaults[cat].forEach(def=>{
-      if(deletedIds.includes(String(def.id)))return;
-      if(!merged[cat].find(i=>i.id===def.id)){
-        merged[cat].push(JSON.parse(JSON.stringify(def)));
+    // Start from defaults, then overlay saved quantities
+    const defaultItems=JSON.parse(JSON.stringify(defaults[cat]||[]));
+    const savedItems=saved[cat]||[];
+    savedItems.forEach(item=>{
+      // Migrate old toggle-only oils/condiments to qty items
+      if((cat==='oils'||cat==='condiments')&&item.qty==null){
+        item.qty=item.have?1:0;
+        const def=defaults[cat].find(d=>d.id===item.id);
+        if(def&&def.unit)item.unit=def.unit;
+        else if(!item.unit)item.unit='oz';
+      }
+      const existing=defaultItems.find(d=>d.id===item.id);
+      if(existing){
+        Object.assign(existing,item);
+      } else {
+        // Custom item
+        defaultItems.push({...item});
       }
     });
+    // Remove deleted items
+    merged[cat]=defaultItems.filter(i=>!deletedIds.includes(String(i.id)));
   });
   return merged;
 }
@@ -1886,7 +1929,22 @@ NEVER omit the protein from the recipe just because it is not in inventory.`:`Us
 DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese. That is a side dish.`:''}`;
 
   try{
-    const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemPrompt,userPrompt})});
+    const controller=new AbortController();
+    const timeoutId=setTimeout(()=>controller.abort(),30000);
+    let r;
+    try{
+      r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemPrompt,userPrompt}),signal:controller.signal});
+    }catch(fetchErr){
+      clearTimeout(timeoutId);
+      A.generating=false;
+      showPage('builder');
+      const isTimeout=fetchErr.name==='AbortError';
+      setTimeout(()=>openModal(`<div class="modal-header"><div class="modal-title">${isTimeout?'Request Timed Out':'Connection Error'}</div><button class="modal-close" onclick="closeModal()">×</button></div>
+        <div style="font-size:15px;line-height:1.7;margin-bottom:16px">${isTimeout?'The meal builder took too long. Try turning on Use What I Have to simplify the build, or use the Anchor field to guide it.':'Could not connect. Check your connection and try again.'}</div>
+        <button class="btn btn-primary btn-full" onclick="closeModal()">Try Again</button>`),100);
+      return;
+    }
+    clearTimeout(timeoutId);
     const data=await r.json();
     A.generating=false;
     if(!r.ok){
@@ -1951,8 +2009,11 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
     showPage('builder');
   }catch(e){
     A.generating=false;
-    alert('Generation failed: '+e.message);
+    A.stretchingIt=false;
     showPage('builder');
+    setTimeout(()=>openModal(`<div class="modal-header"><div class="modal-title">Something Went Wrong</div><button class="modal-close" onclick="closeModal()">×</button></div>
+      <div style="font-size:15px;line-height:1.7;margin-bottom:16px">The meal builder ran into an unexpected error. Try again — if it keeps happening, contact support@prepandpurpose.com</div>
+      <button class="btn btn-primary btn-full" onclick="closeModal()">Try Again</button>`),100);
   }
 }
 
@@ -2116,7 +2177,21 @@ PANTRY ON HAND: ${toggleList.join(', ')||'none'}
 Dietary: ${A.dietary.length>0?A.dietary.join(', '):'none'}`;
 
   try{
-    const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemPrompt,userPrompt})});
+    const controller2=new AbortController();
+    const timeoutId2=setTimeout(()=>controller2.abort(),30000);
+    let r;
+    try{
+      r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemPrompt,userPrompt}),signal:controller2.signal});
+    }catch(fetchErr){
+      clearTimeout(timeoutId2);
+      A.stretchingIt=false;
+      showPage('builder');
+      setTimeout(()=>openModal(`<div class="modal-header"><div class="modal-title">${fetchErr.name==='AbortError'?'Request Timed Out':'Connection Error'}</div><button class="modal-close" onclick="closeModal()">×</button></div>
+        <div style="font-size:15px;line-height:1.7;margin-bottom:16px">Could not stretch this meal right now. Check your connection and try again.</div>
+        <button class="btn btn-primary btn-full" onclick="closeModal()">Try Again</button>`),100);
+      return;
+    }
+    clearTimeout(timeoutId2);
     const data=await r.json();
     A.stretchingIt=false;
     let raw=data.content?.[0]?.text||'';
