@@ -1632,23 +1632,15 @@ Every component of the meal — protein, starch, vegetable, sauce, dairy, oil, c
 
 INVENTORY CONSTRAINTS ARE NOT A REASON TO SIMPLIFY. They are a creative challenge. Build the most flavorful, well-executed dish possible from what is available. Bold flavors, proper technique, real seasoning — the ingredients come from her kitchen, the quality comes from the cooking.
 
-${pantryMode?`PANTRY MODE — ON:
-She is NOT going to the store. Build exclusively from what is logged above.
-- groceryFlags must be EMPTY or contain ONLY items that make the meal physically impossible to complete without (e.g. no protein of any kind in inventory).
-- If a component is missing, substitute from what IS in inventory. No fresh bell peppers? Use frozen peppers, canned corn, or whatever vegetable is available. Adapt — never flag optional extras.
-- NEVER flag seasonal produce, garnishes, or "would be nice" additions.
-- Do NOT use the seasonal guide to drive dish selection under any circumstances.
-- After the recipe, populate the "suggestions" field with 1-2 optional items that would make the dish more complete, written naturally. Example: "Fresh bell peppers would add great color and crunch — in season right now." These are suggestions only, never requirements.`:`PANTRY MODE — OFF:
-Build from inventory first. Only flag an ingredient if the dish genuinely cannot be made without it AND it is not available in any form in inventory.
-- Do NOT flag seasonal produce just because it would be nice to have.
-- Do NOT build a dish around seasonal produce she does not have logged.
-- If she has enough in inventory to make a complete meal, groceryFlags should be empty or minimal.
-- Seasonal produce belongs in suggestions only — never as the reason to build a specific dish.
-- Populate the "suggestions" field with 1-2 optional seasonal or complementary items she could add if she chooses to shop. Written naturally, never as requirements.`}
+${pantryMode?`PANTRY MODE — ON: No store run. Build exclusively from logged inventory.
+- groceryFlags MUST be empty unless a protein is physically missing and no substitute exists.
+- Missing a component? Substitute from what IS logged. Never flag optional extras or produce.
+- End with 1-2 natural suggestions in the "suggestions" field for items that would enhance the dish.`:`PANTRY MODE — OFF: Build from inventory first. Only flag items genuinely missing and required.
+- Seasonal produce belongs in suggestions only — never drives dish selection.
+- End with 1-2 natural suggestions in the "suggestions" field if relevant.`}
 
-SEASONAL PRODUCE RULE — APPLIES IN BOTH MODES:
-Seasonal produce NEVER drives dish selection. It belongs only in the suggestions field as an optional enhancement. The dish is built from inventory. Seasonal produce is a smart shopping tip, not a recipe requirement.
-Current season produce for ${new Date().toLocaleString('en-US',{month:'long'})} in North Carolina: ${['citrus, sweet potatoes, potatoes, carrots, cabbage, onions','citrus, sweet potatoes, carrots, cabbage, broccoli','broccoli, cauliflower, cabbage, carrots, potatoes','asparagus, peas, spinach, lettuce, strawberries','asparagus, peas, spinach, strawberries, green onions','corn, cucumbers, zucchini, squash, tomatoes, blueberries','corn, cucumbers, zucchini, tomatoes, peaches, blueberries','corn, tomatoes, bell peppers, eggplant, summer squash','butternut squash, sweet potatoes, apples, broccoli, kale','sweet potatoes, apples, pears, Brussels sprouts, cauliflower','sweet potatoes, apples, pears, Brussels sprouts, kale','citrus, sweet potatoes, potatoes, carrots, cabbage'][new Date().getMonth()]}. Use this ONLY for the suggestions field.
+SEASONAL PRODUCE RULE: Seasonal produce NEVER drives dish selection. Suggestions field only.
+Current season (${new Date().toLocaleString('en-US',{month:'long'})}, NC): ${['citrus, sweet potatoes, carrots, cabbage','citrus, sweet potatoes, carrots, broccoli','broccoli, cabbage, carrots, potatoes','asparagus, peas, spinach, strawberries','asparagus, spinach, strawberries, green onions','corn, zucchini, tomatoes, blueberries','corn, zucchini, tomatoes, peaches','corn, tomatoes, bell peppers, eggplant','butternut squash, sweet potatoes, apples, kale','sweet potatoes, apples, Brussels sprouts','sweet potatoes, apples, Brussels sprouts, kale','citrus, sweet potatoes, carrots, cabbage'][new Date().getMonth()]}. Use only in suggestions field.
 
 MISSING COMMON DISHES — actively rotate through these when inventory supports them:
 Sloppy Joes, American Goulash (ground beef + elbow macaroni + canned tomatoes), Tuna Noodle Casserole, Chicken and Dumplings, Chicken Alfredo, Baked Ziti, Swedish Meatballs over Egg Noodles, Salisbury Steak with Gravy, Cabbage and Beef Skillet, Chicken and Rice Casserole, Pasta e Fagioli, Hamburger Helper Skillet, Loaded Potato Soup, Smothered Pork Chops over Rice, White Chicken Chili, Chicken Piccata.
@@ -1661,47 +1653,21 @@ DINNER PROTEIN RULE (non-negotiable):
 - Eggs = breakfast only for standard diet. Never a dinner protein.
 - IF NO FROZEN PROTEIN STOCKED AND NO ANCHOR SET: Choose the most affordable seasonal protein using the BUDGET HIERARCHY below. Flag it on groceryFlags urgency "out" with reason "Buy this before cooking." Build the full recipe as if they have it. Do NOT substitute eggs, chickpeas, or beans as the protein.
 
-PROTEIN BUDGET HIERARCHY — when no anchor is set, always default to the cheapest cut first:
-CHICKEN: leg quarters first (cheapest, $0.79-1.49/lb, most forgiving) → bone-in thighs second (great flavor, stays moist) → whole chicken third → boneless thighs fourth → boneless breasts LAST. Chicken breasts are the most expensive cut year-round and the least forgiving — they dry out easily. Never suggest breasts unless the anchor explicitly calls for them.
-PORK: Boston butt/shoulder first (cheapest, ideal for shredding) → whole loin second → pork chops third → tenderloin last (most expensive).
-BEEF: 80/20 ground beef first (most versatile, cheapest ground) → chuck roast second (great for braising) → brisket third → steak cuts last (most expensive).
-TURKEY: whole turkey first (best value per pound) → bone-in thighs second → ground turkey third.
-FISH: canned tuna/salmon first (cheapest) → frozen tilapia or catfish second → frozen salmon third → fresh fish last.
-LAMB/OTHER: only if specifically anchored — never as a default suggestion.
+PROTEIN BUDGET HIERARCHY — cheapest cut first when no anchor set:
+CHICKEN: leg quarters → bone-in thighs → whole chicken → boneless thighs → breasts LAST (most expensive, driest).
+PORK: Boston butt/shoulder → whole loin → pork chops → tenderloin.
+BEEF: 80/20 ground → chuck roast → brisket → steak cuts.
+TURKEY: whole turkey → bone-in thighs → ground turkey.
+FISH: canned tuna/salmon → frozen tilapia/catfish → frozen salmon → fresh.
 - Vegetarian selected: beans, chickpeas, lentils, tofu, tempeh, eggs ARE valid dinner centerpieces. Seasonal suggestion = most affordable plant protein.
 - Vegan selected: beans, chickpeas, lentils, tofu, tempeh ARE valid dinner centerpieces. No eggs.
 - Every dinner and lunch MUST have a protein centerpiece appropriate to the dietary setting.
 
 MEAL TYPE RULES:
-- Dinner = real dinner. Protein + starch + vegetable. NOT breakfast food.
-- Lunch = grab and go. 3 steps max. No scratch cooking. PACK IT note in tip.
-- LUNCH FORMATS — rotate, never repeat same format back to back. Last lunch: "${A.lastBuiltBreakfast||'none'}":
-    Wraps: protein + veggies + sauce in tortilla, sliced in half
-    Pinwheels: cream cheese or hummus + protein + veggies, rolled tight, sliced into rounds
-    Grilled Cheese: rotate varieties — classic cheddar · tomato basil · ham and swiss · turkey and provolone · caprese · pesto mozzarella
-    PB&J / Uncrustable style: peanut butter and jelly or honey, sealed edges, packed whole
-    Cold Sandwich: turkey, chicken salad, tuna salad, or egg salad on bread or crackers
-    Bento Box: protein + cheese cubes + crackers + fruit + veggies — no cooking
-    Pasta Salad: cold cooked pasta + protein + veggies + dressing — batch for the week
-    Quesadilla: cheese + protein, press and slice cold or warm
-    Tacos: protein + toppings in hard or soft shell — pack shells and filling separately so nothing gets soggy
-    Burritos: protein + rice or beans + cheese + sauce, wrapped tight in foil — eat cold or warm cold or hot
-    Lunch Bank Pull: portion from a banked dinner container — thaw overnight, heat if needed
-- Kid-friendly ON → grilled cheese, PB&J, pinwheels, or bento box first.
-- Lunch Bank: when dinner is built with extra portions, tip says "Portion X extras into individual takeout containers, label with date, freeze. Pull from your lunch bank throughout the week — oldest first."
-- Breakfast = 5 groups, rotate — never same group back to back:
-    A(grain): baked oatmeal, oat bars, granola bars, overnight oats
-    B(egg savory): scrambled bowl, omelette, frittata, egg muffin cups, breakfast casserole, breakfast quesadilla, migas
-    C(bread/batter): pancakes, french toast, waffles, crepes, biscuits and gravy, muffins, breakfast tacos, breakfast burritos
-    D(no-cook): yogurt parfait, smoothie pack, fruit and cheese, overnight oats
-    E(hash/skillet): breakfast hash, potato sausage skillet, sheet pan breakfast, loaded hash browns
-  Last breakfast: "${A.lastBuiltBreakfast||'none'}" — build from a DIFFERENT group. All groups valid, just rotate.
-- Snack = small, light, no cooking. SNACK GROUPS — rotate, never same group back to back:
-    A(cheese/dairy): cheese and crackers, cottage cheese with fruit, string cheese, yogurt cup with granola
-    B(produce/dip): apple slices with peanut butter, veggies and hummus, celery with peanut butter, cucumber slices with cream cheese
-    C(protein): hard boiled eggs, deviled eggs, tuna on crackers, beef jerky, deli meat roll-ups
-    D(sweet): granola bar, energy balls, banana with peanut butter, dried fruit and nut mix, fruit cup
-    E(savory/crunch): popcorn with seasoning, chips and salsa, pita and hummus, trail mix, rice cakes with peanut butter
+- Dinner = protein + starch + vegetable. NOT breakfast food.
+- Lunch = grab and go. 3 steps max. No scratch cooking. PACK IT note in tip. Rotate: wraps · pinwheels · grilled cheese · cold sandwich · bento box · pasta salad · quesadilla · tacos · burritos · lunch bank pull. Last: "${A.lastBuiltBreakfast||'none'}".
+- Breakfast = 5 groups, rotate (never same group back to back, last: "${A.lastBuiltBreakfast||'none'}"): A=oatmeal/bars B=egg savory/frittata/casserole C=pancakes/waffles/muffins/burritos D=yogurt/smoothie/no-cook E=hash/skillet.
+- Snack = small, no cooking. Rotate: A=cheese/crackers B=produce/dip C=protein bites D=sweet bar E=savory/crunch.
 - Never serve breakfast food for dinner.
 
 ${!includeSoups?'SOUPS OFF: No soups, stews, chili, or broth-based dishes.':''}
