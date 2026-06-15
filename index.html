@@ -476,7 +476,6 @@ async function sbGet(email){
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     const d=await r.json();
-    console.log('Supabase GET result:',d);
     return d[0]||null;
   }catch(e){
     console.error('Supabase GET error:',e);
@@ -508,7 +507,6 @@ async function sbSave(email,data){
       showSaveStatus('❌ Save failed — '+r.status+' '+err.substring(0,60));
       return;
     }
-    console.log('Supabase SAVE success');
     showSaveStatus('✅ Saved');
   }catch(e){
     console.error('Supabase SAVE exception:',e);
@@ -740,6 +738,25 @@ function executeLunchBank(){
   save();render();
   showToast('Recipe scaled for '+totalPortions+' total \u2014 cook once, freeze '+bankQty+' for lunch!');
 }
+function executeLunchBankWhole(){
+  if(!A.recipe)return showToast('No recipe to bank');
+  const bankQty=parseInt(document.getElementById('lb-whole-qty')?.value)||((A.householdSize||4)*4);
+  if(bankQty<1)return showToast('Enter at least 1 portion');
+  const hs=A.householdSize||4;
+  // Scale recipe to the total number of lunch portions (no dinner served)
+  const factor=bankQty/hs;
+  A.recipe.pull=(A.recipe.pull||[]).map(p=>({...p,qty:scaleQty(p.qty,factor)}));
+  const portionNote='FULL BATCH LUNCH BANK: This entire batch makes '+bankQty+' individual lunch portions. Portion into single-serve takeout containers, label with today\'s date, and freeze. Pull oldest first. Reheat from frozen in 1-2 min.';
+  A.recipe.tip=portionNote+(A.recipe.tip?' | '+A.recipe.tip:'');
+  A.recipe.description='[Full batch — '+bankQty+' freezer lunch portions] '+(A.recipe.description||'');
+  const bankedMeal={id:'lb_'+Date.now(),title:A.recipe.title,dateBanked:new Date().toISOString().split('T')[0],qty:bankQty,pull:A.recipe.pull};
+  if(!A.lunchBankMeals)A.lunchBankMeals=[];
+  A.lunchBankMeals.push(bankedMeal);
+  A.lunchBank=(A.lunchBank||0)+bankQty;
+  A._lunchBankOpen=false;
+  save();render();
+  showToast('Full batch banked — '+bankQty+' freezer lunches added!');
+}
 function removeLunchBankMeal(mealId,portionsToRemove){
   const meal=(A.lunchBankMeals||[]).find(m=>m.id===mealId);
   if(!meal)return;
@@ -895,8 +912,6 @@ async function loadUserData(email){
     A.lastMealType=source.last_meal_type||'Dinner';
     A.onboarded=source.onboarded||false;
     A.weekProteins=[];
-  A.lunchBank=A.lunchBank||0;
-  A.lunchBankMeals=A.lunchBankMeals||[];
     // Cook list is always recalculated from calendar — never loaded from storage
     return;
   }
@@ -986,7 +1001,7 @@ window.addEventListener('load',async()=>{
 });
 
 // ─── NAV ───────────────────────────────────────────────────────────────────────
-const PAGE_TITLES={dashboard:'Dashboard',inventory:'Inventory — Bases & Supports',pantry:'Kitchen Staples',builder:'Meal Builder',favorites:'Favorites',calendar:'Calendar',grocery:'Grocery List',guide:'How to Use'};
+const PAGE_TITLES={dashboard:'Dashboard',inventory:'Inventory — Bases & Supports',pantry:'Kitchen Staples',builder:'Meal Builder',favorites:'Favorites',calendar:'Calendar',grocery:'Grocery List',guide:'How to Use',maintenance:'Maintenance Day'};
 function showPage(p){
   A.page=p;
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
@@ -1067,7 +1082,7 @@ function rDashboard(){
   // Cook list nudge — just a button, details live on Maintenance Day page
   if(A.cookList&&A.cookList.length>0){
     const _ckSummary=A.cookList.map(c=>c.protein+(c.bags?' ('+c.bags+' bags)':'')).join(', ');
-    html+=`<div class="alert alert-green" style="margin-bottom:16px"><span>🍳</span><div><strong>Cook list:</strong> ${_ckSummary}. <button onclick="showPage('grocery')" style="background:none;border:none;color:var(--green);font-weight:700;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;font-size:13px;padding:0">View Grocery List →</button></div></div>`;
+    html+=`<div class="alert alert-green" style="margin-bottom:16px"><span>🍳</span><div><strong>Cook list:</strong> ${_ckSummary}. <button onclick="showPage('maintenance')" style="background:none;border:none;color:var(--green);font-weight:700;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;font-size:13px;padding:0">View Maintenance Day →</button></div></div>`;
   }
 
   html+=`<div class="grid-2">
@@ -1370,7 +1385,7 @@ function rPantry(){
 }
 function setPantryQty(cat,id,val){
   const item=(A.pantry[cat]||[]).find(i=>i.id===id);
-  if(item){item.qty=Math.max(0,val);item.have=item.qty>0;save();}
+  if(item){item.qty=Math.max(0,val);item.have=item.qty>0;save();render();}
 }
 function togglePantryItem(cat,id){
   const item=(A.pantry[cat]||[]).find(i=>i.id===id);
@@ -1379,6 +1394,9 @@ function togglePantryItem(cat,id){
 function deletePantryItem(cat,id){
   if(!confirm('Remove this item?'))return;
   if(A.pantry[cat])A.pantry[cat]=A.pantry[cat].filter(i=>i.id!==id);
+  // Track deletion so mergePantryWithDefaults never re-adds default items
+  if(!A.deletedIds)A.deletedIds=[];
+  if(!A.deletedIds.includes(String(id)))A.deletedIds.push(String(id));
   save();render();
 }
 function openAddPantryItem(cat){
@@ -1525,9 +1543,10 @@ function rBuilderForm(){
 
 function captureBuilderFields(){
   const fl=document.getElementById('fl');if(fl)A.flavor=fl.value;
-  const sv=document.getElementById('sv');if(sv&&sv.value)A.householdSize=parseInt(sv.value)||A.householdSize;
+  // Store servings separately — never overwrite householdSize with a per-build servings count
+  const sv=document.getElementById('sv');if(sv&&sv.value)A.buildServings=parseInt(sv.value)||A.householdSize;
   const anchor=document.getElementById('anchor');if(anchor)A.anchorIngredient=anchor.value;
-  const mt=document.getElementById('mealType');if(mt)A.mealType=mt.value;
+  // Note: meal type is read directly from 'mt' in generateRecipe — no need to capture here
 }
 function toggleBuilderOption(opt){
   captureBuilderFields();
@@ -1590,9 +1609,11 @@ async function generateRecipe(){
 
 ${weekSelections.length>0?`SELECTED PROTEIN — NON-NEGOTIABLE: Build this meal using ONLY: ${weekSelections.join(', ')}. Do not substitute. Do not switch proteins.`:''}
 
+SERVINGS — HARD CONSTRAINT: The user requested ${servings} servings. Every ingredient quantity, pan size, step measurement, and yield statement MUST be calibrated precisely to ${servings} people. A 4-serving request gets an 8x8 pan, not a 9x13. A 4-serving breakfast casserole uses 6 eggs, not 12. If the dish naturally makes more, cut the recipe in half. The serving count is non-negotiable — never build for more than requested.
+
 PROTEIN RULES:
 - Frozen protein = ALREADY COOKED. Say "heat gently 3-4 min over medium heat." NEVER say "cook until done."
-- Never partial bags. 1 quart bag = 1.5 lbs cooked. For ${A.householdSize} people use ${A.householdSize<=4?'1-2':'2-3'} bags.
+- Never partial bags. 1 quart bag = 1.5 lbs cooked. For ${servings} servings use ${+servings<=4?'1':'2'} bag${+servings<=4?'':'s'} max in a mixed dish.
 
 INVENTORY FIRST — THE ONLY RULE THAT MATTERS:
 Every component of the meal — protein, starch, vegetable, sauce, dairy, oil, condiment — is chosen from what is already logged in inventory. The dish emerges from what she has. The AI's creative job is making that combination taste outstanding, not designing a recipe and shopping for it.
@@ -1816,6 +1837,8 @@ RESPOND WITH VALID JSON ONLY:
 {
   "title": "Specific dish name",
   "description": "One line that makes them want to make it",
+  "servings": 4,
+  "servingSize": "1 piece (approx 4x4 inches) or 1.5 cups",
   "macros": {"cal": 450, "protein": 38, "carbs": 35, "fat": 16},
   "pull": [
     {"icon": "🥩", "item": "Shredded Pork", "qty": "2 bags = 3 lbs cooked", "prepNote": "Already cooked — heat gently 3-4 min"},
@@ -1937,7 +1960,7 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
       alert('Could not parse recipe. Try again.');
       showPage('builder');return;
     }
-    A.recipe={...recipe,servings:servings,id:Date.now(),title:recipe.title||'Your Meal',description:recipe.description||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:(recipe.pull||[]).map(p=>({...p,qty:cleanQty(p.qty),item:cleanQty(p.item),prepNote:p.prepNote?cleanQty(p.prepNote):p.prepNote})),steps:recipe.steps||[],tip:recipe.tip||'',suggestions:recipe.suggestions||[]};
+    A.recipe={...recipe,servings:servings,id:Date.now(),title:recipe.title||'Your Meal',description:recipe.description||'',servingSize:recipe.servingSize||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:(recipe.pull||[]).map(p=>({...p,qty:cleanQty(p.qty),item:cleanQty(p.item),prepNote:p.prepNote?cleanQty(p.prepNote):p.prepNote})),steps:recipe.steps||[],tip:recipe.tip||'',suggestions:recipe.suggestions||[]};
     // Track last built for variety enforcement
     if(mealType==='Breakfast')A.lastBuiltBreakfast=recipe.title||'';
     else{
@@ -1989,6 +2012,7 @@ function rRecipe(){
       </div>
       <div class="card-pad">
         <div style="font-size:11px;color:var(--text-hint);margin-bottom:6px">Per serving · ${r.servings||'4'} servings total</div>
+        ${r.servingSize?`<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;font-weight:600">📏 Serving size: ${r.servingSize}</div>`:''}
         <div class="macro-grid">
           <div class="macro-box"><div class="macro-val">${r.macros.cal}</div><div class="macro-lbl">Calories</div></div>
           <div class="macro-box"><div class="macro-val">${r.macros.protein}g</div><div class="macro-lbl">Protein</div></div>
@@ -2054,12 +2078,20 @@ function rRecipe(){
           <strong>Monthly target:</strong> ${(A.householdSize||4)*20} portions (${A.householdSize||4} people × 20 work days)<br>
           <strong>You have:</strong> ${A.lunchBank||0} · <strong>Still need:</strong> ${Math.max(0,((A.householdSize||4)*20)-(A.lunchBank||0))} more to be fully stocked
         </div>
-        <label style="font-size:12px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.04em">Lunch portions to bank</label>
+        <label style="font-size:12px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.04em">Lunch portions to bank (alongside dinner)</label>
         <input class="inp" id="lb-qty" type="number" value="${A.householdSize||4}" min="1" max="60" style="font-size:20px;font-weight:800;text-align:center;padding:12px;margin:6px 0 4px" inputmode="numeric" oninput="document.getElementById('lb-preview').textContent='Cook total of '+((parseInt(this.value)||0)+(${A.householdSize||4}))+' portions — serve ${A.householdSize||4} for dinner, freeze '+(parseInt(this.value)||0)+' for your lunch bank'">
         <div id="lb-preview" style="font-size:12px;color:#2980b9;font-weight:600;margin-bottom:10px">Enter how many lunch portions to freeze</div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
           <button class="btn btn-primary" style="background:#2980b9;flex:2" onclick="executeLunchBank()">Scale Up, Deduct & Bank</button>
           <button class="btn btn-outline" style="flex:1" onclick="A._lunchBankOpen=false;render()">Cancel</button>
+        </div>
+        <div style="border-top:1px solid #d0e8f8;padding-top:10px;margin-top:4px">
+          <div style="font-size:12px;font-weight:700;color:#1a5276;margin-bottom:6px">Or — dedicate the whole batch to lunches</div>
+          <div style="font-size:12px;color:#555;margin-bottom:8px">No dinner served — the entire recipe becomes individual lunch portions for the freezer.</div>
+          <div class="r2" style="margin-bottom:8px">
+            <div class="fg"><label class="lbl">Total lunch portions</label><input class="inp" type="number" id="lb-whole-qty" value="${(A.householdSize||4)*4}" min="1" max="60" style="text-align:center;font-weight:700;color:#2980b9"></div>
+          </div>
+          <button class="btn btn-outline btn-full" style="border-color:#2980b9;color:#2980b9;font-weight:700" onclick="executeLunchBankWhole()">🧊 Bank the Whole Batch</button>
         </div>
       </div>`
     }
@@ -2090,9 +2122,9 @@ async function runStretchIt(){
   showPage('builder');
 
   const pantryFlat=getPantryFlat().filter(p=>p.have);
-  const freshList=pantryFlat.filter(p=>p.fresh).map(p=>`${p.name}: ${p.qty} ${p.unit}`);
-  const fridgeList=pantryFlat.filter(p=>!p.fresh&&p.qty).map(p=>`${p.name}: ${p.qty} ${p.unit}`);
-  const toggleList=pantryFlat.filter(p=>!p.qty&&p.have).map(p=>p.name);
+  const freshList=pantryFlat.filter(p=>p.fresh&&(p.qty||0)>0).map(p=>`${p.name}: ${p.qty} ${p.unit}`);
+  const fridgeList=pantryFlat.filter(p=>!p.fresh&&(p.qty||0)>0&&p.unit&&!p.ppBlend).map(p=>`${p.name}: ${p.qty} ${p.unit}`);
+  const toggleList=pantryFlat.filter(p=>!(p.qty||0)&&p.have&&!p.ppBlend).map(p=>p.name);
   const basesList=A.bases.filter(b=>hasAny(b)).map(b=>{const s=getBestStorage(b);return`${b.name}: ${s?s.qty+' '+s.unit:'none'}`;});
   const supportsList=A.supports.filter(s=>hasAny(s)).map(s=>{const best=getBestStorage(s);return`${s.name}: ${best?best.qty+' '+best.unit:'none'}`;});
 
@@ -2293,6 +2325,10 @@ function moveMeal(){
   if(!A.calendarByDate[toDate])A.calendarByDate[toDate]={};
   A.calendarByDate[toDate][toSlot]=meal;
   delete A.calendarByDate[fromDate][fromSlot];
+  // Update grocery flags tagged to the old date
+  A.grocery.forEach(g=>{
+    if(g.scheduledDate===fromDate&&!g.manualAdd)g.scheduledDate=toDate;
+  });
   const d=new Date(toDate+'T12:00:00');
   const today=new Date();today.setHours(0,0,0,0);
   const todaySun=new Date(today);todaySun.setDate(today.getDate()-today.getDay());
@@ -2500,7 +2536,7 @@ function deductPantryItems(pull){
     if(!pantryItem)return;
 
     // Parse recipe qty: "4 tbsp", "2 cups", "5 lbs", "1/2 cup", "3 each", "1 medium (1/2 lb)"
-    const qtyMatch=p.qty.match(/^(\d+(?:\.\d+)?(?:\s+\d+\/\d+)?|\d+\/\d+)\s*(tsp|tbsp|cup|cups|oz|lb|lbs|each|sticks?|medium|heads?)/i);
+    const qtyMatch=p.qty.match(/^(\d+(?:\.\d+)?(?:\s+\d+\/\d+)?|\d+\/\d+)\s*(tsp|tbsp|cup|cups|oz|lb|lbs|each|sticks?|medium|heads?|jars?|boxes?|loaves?|pints?)/i);
     if(!qtyMatch)return;
 
     let amount;
@@ -2564,7 +2600,7 @@ function restorePantryItems(pull){
     );
     if(!pantryItem)return;
 
-    const qtyMatch=p.qty.match(/^(\d+(?:\.\d+)?(?:\s+\d+\/\d+)?|\d+\/\d+)\s*(tsp|tbsp|cup|cups|oz|lb|lbs|each|sticks?|medium|heads?)/i);
+    const qtyMatch=p.qty.match(/^(\d+(?:\.\d+)?(?:\s+\d+\/\d+)?|\d+\/\d+)\s*(tsp|tbsp|cup|cups|oz|lb|lbs|each|sticks?|medium|heads?|jars?|boxes?|loaves?|pints?)/i);
     if(!qtyMatch)return;
 
     let amount;
@@ -2742,7 +2778,7 @@ function placeOnCal(){
       const sd=document.getElementById('cal-date')?.value||dateKey(new Date());
       // Allow same item for different weeks — each week needs its own entry
       if(!A.grocery.find(g=>g.name===flag.name&&g.scheduledDate===sd)){
-        A.grocery.push({id:Date.now()+Math.random()*1000|0,name:flag.name,urgency:flag.urgency||'low',qty:flag.qty,reason:flag.reason,done:false,scheduledDate:sd});
+        A.grocery.push({id:Date.now()+Math.random()*1000|0,name:flag.name,urgency:flag.urgency||'out',qty:flag.qty,reason:flag.reason,done:false,scheduledDate:sd});
       }
     });
   }
@@ -3016,7 +3052,7 @@ function rebuildFavorite(idx){
 
   const _bRE=/\b(baking\s+(?:powder|soda)|salt|vanilla(?:\s+extract)?|cream\s+of\s+tartar)\b/i;
   const _cf=Math.sqrt(factor);
-  const scaledSteps=(fav.steps||[]).map(step=>step.replace(/(\d+(?:\.\d+)?)\s*(bag[s]?|quart bag[s]?|cup[s]?|tbsp|tsp|oz|lb[s]?|pound[s]?|egg[s]?|can[s]?|tortilla[s]?|each|piece[s]?)/gi,(match,num,unit)=>{
+  const scaledSteps=(fav.steps||[]).map(step=>step.replace(/(\d+(?:\.\d+)?)\s*(bag[s]?|quart bag[s]?|cup[s]?|tbsp|tsp|oz|lb[s]?|pound[s]?|egg[s]?|can[s]?|jar[s]?|box(?:es)?|loave[s]?|tortilla[s]?|each|piece[s]?)/gi,(match,num,unit)=>{
     const mi=step.indexOf(match);
     const isBaking=_bRE.test(step.slice(Math.max(0,mi-50),mi+match.length+50));
     let scaled=parseFloat(num)*(isBaking?_cf:factor);
@@ -3033,7 +3069,7 @@ function rebuildFavorite(idx){
   };
 
   // Scale the tip — same number replacement as steps
-  const scaledTip=fav.tip?fav.tip.replace(/(\d+(?:\.\d+)?)\s*(bag[s]?|quart bag[s]?|cup[s]?|tbsp|tsp|oz|lb[s]?|pound[s]?|egg[s]?|can[s]?|tortilla[s]?|each|piece[s]?|slider[s]?|bun[s]?|roll[s]?|serving[s]?|pancake[s]?|muffin[s]?|bar[s]?|burrito[s]?|people|person[s]?)/gi,(match,num,unit)=>{
+  const scaledTip=fav.tip?fav.tip.replace(/(\d+(?:\.\d+)?)\s*(bag[s]?|quart bag[s]?|cup[s]?|tbsp|tsp|oz|lb[s]?|pound[s]?|egg[s]?|can[s]?|jar[s]?|box(?:es)?|loave[s]?|tortilla[s]?|each|piece[s]?|slider[s]?|bun[s]?|roll[s]?|serving[s]?|pancake[s]?|muffin[s]?|bar[s]?|burrito[s]?|people|person[s]?)/gi,(match,num,unit)=>{
     const scaled=parseFloat(num)*factor;
     const r=Math.round(scaled*4)/4;
     return`${r===Math.floor(r)?Math.floor(r):r.toFixed(1).replace(/\.0$/,'')} ${unit}`;
@@ -3348,6 +3384,7 @@ function rMaintenance(){
         <button class="btn btn-primary" onclick="showPage('builder')">Go to Meal Builder →</button>
       </div>
     </div>`;
+  } else {
     const weeklyBases=cookList.filter(c=>c.bags>0&&c.type!=='emergency');
     const emergencyItems=cookList.filter(c=>c.bags>0&&c.type==='emergency');
 
@@ -3447,7 +3484,7 @@ function rMaintenance(){
         <div style="font-size:11px;color:var(--text-hint);margin-top:10px">30% shrinkage factored in · Always round up at the store · Check long term storage first</div>
       </div>`;
     }
-  }
+  } // end cook list else
 
   // This week's planned meals
   const weekStart2=getWeekStart(A.weekOffset||0);
@@ -3487,14 +3524,17 @@ function rGrocery(){
   // Deduplicate — fuzzy match on protein names
   const PROTEIN_KEYWORDS=['chicken','beef','turkey','pork','salmon','tuna','shrimp','sausage','steak','ground','shredded'];
   function isSameGroceryItem(a,b){
-    const na=a.toLowerCase();const nb=b.toLowerCase();
+    const na=a.toLowerCase().trim();const nb=b.toLowerCase().trim();
     if(na===nb)return true;
-    // Check if both contain the same protein keyword
-    for(const kw of PROTEIN_KEYWORDS){
-      if(na.includes(kw)&&nb.includes(kw))return true;
-    }
-    // One contains the other
+    // One fully contains the other (e.g. "Ground Beef" vs "Ground Beef 80/20")
     if(na.includes(nb)||nb.includes(na))return true;
+    // Same first significant word AND same protein keyword — prevents "Chicken Broth" merging with "Chicken Breast"
+    const firstWordA=na.split(' ')[0];const firstWordB=nb.split(' ')[0];
+    if(firstWordA===firstWordB&&firstWordA.length>3){
+      for(const kw of PROTEIN_KEYWORDS){
+        if(na.includes(kw)&&nb.includes(kw))return true;
+      }
+    }
     return false;
   }
   const consolidated=[];
@@ -3527,8 +3567,7 @@ function rGrocery(){
 
   // Now filter with date window
   function inWindow(g){
-    if(!g.scheduledDate)return grocWindow===4;// undated items only show in This Month (all)
-    // Parse date safely without timezone shift
+    if(!g.scheduledDate)return true;// unscheduled items always show regardless of window
     const parts=g.scheduledDate.split('-');
     const sd=new Date(parseInt(parts[0]),parseInt(parts[1])-1,parseInt(parts[2]));
     const start=new Date(realSun.getFullYear(),realSun.getMonth(),realSun.getDate());
@@ -4099,13 +4138,18 @@ function rGuide(){
   <div class="card" style="margin-bottom:8px;padding:14px 16px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <span style="font-size:18px">🧊</span>
-      <div style="font-size:14px;font-weight:700">Lunch Bank</div>
+      <div style="font-size:14px;font-weight:700">Lunches — Two Ways</div>
     </div>
-    <div style="font-size:13px;color:var(--text-muted);line-height:1.7">The Lunch Bank lets you cook dinner once and freeze extra portions for lunches throughout the week — so you never cook twice.<br><br>
-    <strong>To fill it:</strong> After building a dinner recipe, tap <strong>🧊 Also Banking Lunch?</strong> Enter how many lunch portions you want to freeze. The recipe scales up to cover dinner plus the bank in one cook. Portion the extras into individual takeout containers, label with today's date, and freeze.<br><br>
-    <strong>To track it:</strong> Your dashboard shows your current count against your monthly target (household size × 20 work days). The bar fills as you stock up.<br><br>
-    <strong>To use it:</strong> Pull oldest first. Thaw overnight or heat from frozen. Tap <strong>−</strong> on the dashboard each time you eat a portion. You can also tap the number directly and type a new count.<br><br>
-    <strong>If you remove a dinner from the calendar</strong> after banking — tap <strong>−</strong> on the dashboard to adjust your count manually. The number is always yours to control.</div>
+    <div style="font-size:13px;color:var(--text-muted);line-height:1.7">
+      <strong style="color:var(--green)">Grab & Go Lunch (Lunch Builder)</strong><br>
+      When you build a Lunch in the Meal Builder, the AI builds a fridge-based grab-and-go meal — wraps, sandwiches, pasta salad, bento boxes. 3 steps max, no scratch cooking. Make it the night before or morning of, pack it, done. These are not freezer meals.<br><br>
+      <strong style="color:var(--green)">Freezer Lunches (via Lunch Bank)</strong><br>
+      Want individual freezer lunches? Build a Dinner and use the Lunch Bank. Two options:<br><br>
+      <strong>Option 1 — Bank extras alongside dinner:</strong> Tap <strong>🧊 Also Banking Lunch?</strong> after building a dinner. Enter how many lunch portions to freeze. The recipe scales up to cover dinner for your household PLUS the bank in one cook. Serve dinner tonight, portion the extras into individual takeout containers, label with today's date, freeze. Pull oldest first.<br><br>
+      <strong>Option 2 — Dedicate the whole batch to lunches:</strong> Tap <strong>🧊 Also Banking Lunch?</strong> then tap <strong>Bank the whole batch.</strong> The entire recipe becomes individual lunch portions — nothing is served as dinner. Perfect for batch-cook days when you want a week of freezer lunches from one cook session.<br><br>
+      <strong>To track:</strong> Your dashboard shows your current count against your monthly target (household size × 20 work days).<br>
+      <strong>To use:</strong> Pull oldest first. Thaw overnight or heat from frozen in 1-2 minutes. Tap <strong>−</strong> on the dashboard each time you eat a portion.
+    </div>
   </div>
 
   <div style="text-align:center;padding:24px 0;font-size:13px;color:var(--text-muted);line-height:1.6">
@@ -4256,7 +4300,8 @@ function _printRecipeObj(r,dateStr,slot){
     +'<div class="hdr"><div class="hdr-b">Prep &amp; Purpose</div><div style="font-size:12px;color:#888">'+(dateStr||new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}))+(slot?' · '+slot:'')+'</div></div>'
     +'<div class="rtitle">'+title+'</div>'
     +(r.description?'<div class="rdesc">'+r.description+'</div>':'')
-    +(r.macros?'<div class="macros"><span>'+r.macros.cal+' cal</span><span>'+r.macros.protein+'g protein</span><span>'+r.macros.carbs+'g carbs</span><span>'+r.macros.fat+'g fat</span></div>':'')
+    +(r.servings||r.servingSize?'<div style="font-size:12px;color:#666;margin-bottom:10px">'+(r.servings?'Serves: <strong>'+r.servings+'</strong>':'')+((r.servings&&r.servingSize)?' · ':'')+( r.servingSize?'Serving size: <strong>'+r.servingSize+'</strong>':'')+'</div>':'')
+    +(r.macros?'<div class="macros"><span>'+r.macros.cal+' cal</span><span>'+r.macros.protein+'g protein</span><span>'+r.macros.carbs+'g carbs</span><span>'+r.macros.fat+'g fat</span><span style="color:#888;font-size:11px">per serving</span></div>':'')
     +(fromStock.length>0?'<div class="sh">❄️ From Your Stock</div><ul class="pl">'+fromStock.map(p=>'<li><strong>'+p.item+'</strong> — '+p.qty+(p.prepNote?' ('+p.prepNote+')':'')+'</li>').join('')+'</ul>':'')
     +(fromKitchen.length>0?'<div class="sh">🧂 From Your Kitchen</div><ul class="pl">'+fromKitchen.map(p=>'<li><strong>'+p.item+'</strong> — '+p.qty+'</li>').join('')+'</ul>':'')
     +(steps.length>0?'<div class="sh">🥄 Steps</div><ol class="sl">'+steps.map(s=>'<li>'+s+'</li>').join('')+'</ol>':'')
@@ -4266,18 +4311,14 @@ function _printRecipeObj(r,dateStr,slot){
   const win=window.open('','_blank');win.document.write(html);win.document.close();setTimeout(()=>win.print(),400);
 }
 function printGroc(){
-  const out=A.grocery.filter(g=>g.urgency==='out'&&!g.done);
-  const low=A.grocery.filter(g=>g.urgency!=='out'&&!g.done);
-  const allItems=[...out,...low];
+  const allItems=A.grocery.filter(g=>!g.done);
   if(allItems.length===0&&(!A.cookList||A.cookList.length===0)){alert('Your grocery list is empty.');return;}
-  const section=(t,color,items)=>items.length===0?'':'<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:'+color+';margin:16px 0 8px">'+t+'</div><table style="width:100%;border-collapse:collapse">'+items.map(g=>'<tr style="border-bottom:1px solid #f0f0f0"><td style="width:24px;font-size:16px;padding:8px 0;color:#ccc">☐</td><td style="font-size:14px;padding:8px 6px;font-weight:500">'+g.name+'</td><td style="font-size:12px;color:#888;text-align:right;padding:8px 0">'+(g.qty||'')+'</td></tr>').join('')+'</table>';
-  const cookSection=A.cookList&&A.cookList.length>0?'<div style="margin-bottom:16px;padding:12px;background:#1e4d35;border-radius:8px;color:#fff"><div style="font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:8px">🍳 Maintenance Day Cook List</div>'+A.cookList.map(c=>'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.1);font-size:13px"><span>'+c.protein+'</span><span>'+c.bags+' bags · buy '+c.rawLbs+' raw</span></div>').join('')+'</div>':'';
+  const cookSection=A.cookList&&A.cookList.length>0?'<div style="margin-bottom:16px;padding:12px;background:#1e4d35;border-radius:8px;color:#fff"><div style="font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:8px">🍳 Cook List — What to Prepare</div>'+A.cookList.map(c=>'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.1);font-size:13px"><span>'+c.protein+'</span><span>'+c.bags+' bags · buy '+c.rawLbs+' raw</span></div>').join('')+'</div>':'';
   const html='<html><head><title>Prep & Purpose — Grocery List</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Georgia,serif;background:#fff;color:#1a1a1a;padding:32px 28px;max-width:680px;margin:0 auto}.hdr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid #1e4d35;padding-bottom:10px;margin-bottom:24px}.hdr-b{font-size:20px;font-weight:700;color:#1e4d35}.tip{margin-top:24px;background:#fff8e1;border-left:3px solid #b5850a;padding:12px 14px;font-size:13px;color:#6b5100;border-radius:0 6px 6px 0}.ftr{margin-top:28px;border-top:1px solid #eee;padding-top:10px;font-size:11px;color:#bbb;text-align:center}@media print{body{padding:16px}}</style></head><body>'
     +'<div class="hdr"><div class="hdr-b">Prep &amp; Purpose — Grocery List</div><div style="font-size:12px;color:#888">'+new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})+'</div></div>'
     +cookSection
-    +section('🚨 Out — Need Now','#c62828',out)
-    +section('⚠️ Needed','#f57f17',low)
-    +'<div class="tip">📏 Protein Shrinkage Rule: Always buy 30% more raw than you think you need. 1 quart bag = 1.5 lbs cooked. For '+A.householdSize+' people: 5 lbs raw ≈ 2–3 full quart bags.</div>'
+    +(allItems.length>0?'<table style="width:100%;border-collapse:collapse">'+allItems.map(g=>'<tr style="border-bottom:1px solid #f0f0f0"><td style="width:24px;font-size:16px;padding:8px 0;color:#ccc">☐</td><td style="font-size:14px;padding:8px 6px;font-weight:500">'+g.name+'</td><td style="font-size:12px;color:#888;text-align:right;padding:8px 0">'+(g.qty||'')+'</td></tr>').join('')+'</table>':'')
+    +'<div class="tip">📏 Check long term storage first — chest freezer, pantry overflow — before buying anything. Protein shrinkage rule: buy 30% more raw than you think you need. 1 quart bag = 1.5 lbs cooked.</div>'
     +'<div class="ftr">Prep & Purpose — steward what you have, serve where you are.</div>'
     +'</body></html>';
   const win=window.open('','_blank');win.document.write(html);win.document.close();setTimeout(()=>win.print(),400);
@@ -4338,17 +4379,17 @@ function printBlankInventory(){
   }).join('');
 
   let pantryQtyRows='';
-  ['baking','fridge','fresh'].forEach(cat=>{
+  ['baking','fridge','fresh','oils','condiments'].forEach(cat=>{
     pantryQtyRows+=`<tr><td colspan="2" style="padding:8px 8px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1e4d35;background:#f0faf2">${catLabels[cat]}</td></tr>`;
-    (A.pantry[cat]||[]).forEach(item=>{
+    (A.pantry[cat]||[]).filter(i=>!i.ppBlend).forEach(item=>{
       pantryQtyRows+=`<tr><td style="padding:7px 8px;font-size:12px;border-bottom:1px solid #eee">${item.name}${item.fresh?' <span style="font-size:9px;color:#2e7d32;font-weight:700">FRESH</span>':''}</td><td style="padding:7px 8px;border-bottom:1px solid #eee;width:80px"><div style="border-bottom:2px solid #333;height:18px"></div><div style="font-size:9px;color:#999;margin-top:1px">${item.unit||''}</div></td></tr>`;
     });
   });
 
   let pantryToggleRows='';
-  ['oils','condiments','spices'].forEach(cat=>{
+  ['spices'].forEach(cat=>{
     pantryToggleRows+=`<tr><td style="padding:8px 8px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1e4d35;background:#f0faf2">${catLabels[cat]}</td></tr>`;
-    (A.pantry[cat]||[]).forEach(item=>{
+    (A.pantry[cat]||[]).filter(i=>!i.ppBlend).forEach(item=>{
       pantryToggleRows+=`<tr><td style="padding:6px 8px;font-size:12px;border-bottom:1px solid #eee"><span style="display:inline-block;width:12px;height:12px;border:1.5px solid #333;border-radius:2px;margin-right:7px;vertical-align:middle"></span>${item.name}</td></tr>`;
     });
   });
