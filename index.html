@@ -485,26 +485,21 @@ async function sbGet(email){
 async function sbSave(email,data){
   try{
     const e=email.toLowerCase().trim();
-    const payload={...data,updated_at:new Date().toISOString()};
-    // Try PATCH first (update existing row)
-    const patchUrl=`${SUPA_URL}/rest/v1/user_data?email=eq.${encodeURIComponent(e)}`;
-    const r=await fetch(patchUrl,{
-      method:'PATCH',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+    const payload={...data,email:e,updated_at:new Date().toISOString()};
+    const r=await fetch(`${SUPA_URL}/rest/v1/user_data`,{
+      method:'POST',
+      headers:{
+        'apikey':SUPA_KEY,
+        'Authorization':'Bearer '+SUPA_KEY,
+        'Content-Type':'application/json',
+        'Prefer':'resolution=merge-duplicates,return=minimal'
+      },
       body:JSON.stringify(payload)
     });
-    if(r.status===404||r.status===0){
-      // No existing row — INSERT new one
-      const r2=await fetch(`${SUPA_URL}/rest/v1/user_data`,{
-        method:'POST',
-        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-        body:JSON.stringify({email:e,...payload})
-      });
-      if(!r2.ok){const err=await r2.text();console.error('Supabase INSERT error:',r2.status,err);showSaveStatus('❌ Save failed — '+r2.status);return;}
-    } else if(!r.ok){
+    if(!r.ok){
       const err=await r.text();
-      console.error('Supabase PATCH error:',r.status,err);
-      showSaveStatus('❌ Save failed — '+r.status+' '+err.substring(0,60));
+      console.error('Supabase upsert error:',r.status,err);
+      showSaveStatus('❌ Save failed — '+r.status+' '+err.substring(0,80));
       return;
     }
     showSaveStatus('✅ Saved');
