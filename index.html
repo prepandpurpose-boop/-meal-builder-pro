@@ -426,6 +426,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
       <button class="nav-item" id="nav-inventory" onclick="showPage('inventory')"><span class="nav-icon">📦</span>Inventory</button>
       <button class="nav-item" id="nav-pantry" onclick="showPage('pantry')"><span class="nav-icon">🧂</span>Kitchen Staples</button>
       <button class="nav-item" id="nav-emergency" onclick="showPage('inventory');A.invTab='emergency';render()"><span class="nav-icon">🚨</span>Emergency Meals</button>
+      <button class="nav-item" id="nav-maintenance" onclick="showPage('maintenance')"><span class="nav-icon">🍳</span>Maintenance Day</button>
       <div class="nav-section">Meals</div>
       <button class="nav-item" id="nav-builder" onclick="showPage('builder')"><span class="nav-icon">🤖</span>Meal Builder</button>
       <button class="nav-item" id="nav-favorites" onclick="showPage('favorites')"><span class="nav-icon">⭐</span>Favorites</button>
@@ -554,6 +555,10 @@ const DEF_SUPPORTS=[
   {id:62,name:'Penne',icon:'🍝',frozen:0,dry:0,fresh:0,storageTypes:['dry','fresh'],dryUnit:'lbs'},
   {id:63,name:'Macaroni',icon:'🍝',frozen:0,dry:0,fresh:0,storageTypes:['dry','fresh'],dryUnit:'lbs'},
   {id:64,name:'Egg Noodles',icon:'🍝',frozen:0,dry:0,fresh:0,storageTypes:['dry','fresh'],dryUnit:'lbs'},
+  {id:73,name:'Couscous',icon:'🌾',frozen:0,dry:0,storageTypes:['dry'],dryUnit:'boxes'},
+  {id:74,name:'Farro',icon:'🌾',frozen:0,dry:0,storageTypes:['dry'],dryUnit:'lbs'},
+  {id:75,name:'Bulgur Wheat',icon:'🌾',frozen:0,dry:0,storageTypes:['dry'],dryUnit:'lbs'},
+  {id:76,name:'Orzo',icon:'🍝',frozen:0,dry:0,fresh:0,storageTypes:['dry','fresh'],dryUnit:'lbs'},
   {id:22,name:'Black Beans',icon:'🫘',frozen:0,canned:0,dry:0,storageTypes:['frozen','canned','dry'],dryUnit:'lbs'},
   {id:23,name:'Pinto Beans',icon:'🫘',frozen:0,canned:0,dry:0,storageTypes:['frozen','canned','dry'],dryUnit:'lbs'},
   {id:24,name:'Kidney Beans',icon:'🫘',frozen:0,canned:0,dry:0,storageTypes:['frozen','canned','dry'],dryUnit:'lbs'},
@@ -656,6 +661,9 @@ const DEF_PANTRY={
     {id:'c9',name:'Tortilla Chips',qty:0,unit:'oz',have:false},
     {id:'c10',name:'Peanut Butter',qty:0,unit:'oz',have:false},
     {id:'c11',name:'Maple Syrup',qty:0,unit:'oz',have:false},
+    {id:'c12',name:'Bread',qty:0,unit:'loaves',have:false},
+    {id:'c13',name:'Pizza Crust',qty:0,unit:'each',have:false},
+    {id:'c14',name:'Pie Dough',qty:0,unit:'each',have:false},
   ],
   spices:[
     {id:'sp1',name:'Salt & Pepper',have:false},
@@ -685,7 +693,7 @@ let A={
   page:'dashboard',invTab:'bases',
   calSelDate:null,weekOffset:0,
   generating:false,stretchingIt:false,recipe:null,stretchResult:null,
-  ppSpices:true,buildFromStock:true,kidFriendly:false,buildEmergency:false,grabAndGo:false,includeSoups:true,
+  ppSpices:true,kidFriendly:false,buildEmergency:false,grabAndGo:false,includeSoups:true,pantryMode:false,deletedIds:[],
   lastBuiltMeal:'',lastBuiltBreakfast:'',lastBuiltProtein:'',
   favorites:[],homeCanned:[],grocWindow:1,emergencyCookList:[],
   householdSize:4,lastMealType:'Dinner',
@@ -732,59 +740,6 @@ function executeLunchBank(){
   save();render();
   showToast('Recipe scaled for '+totalPortions+' total \u2014 cook once, freeze '+bankQty+' for lunch!');
 }
-function openLunchBankModal(){
-  if(!A.recipe){return showToast('Build a recipe first');}
-  const hs=A.householdSize||4;
-  openModal(`<div class="modal-header"><div class="modal-title">🧊 Bank for Lunch</div><button class="modal-close" onclick="closeModal()">×</button></div>
-    <div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:16px">Cook extra portions with this dinner and freeze in takeout containers. The app will scale up the ingredients and deduct them from your inventory. Label with today's date — pull oldest first.</div>
-    <div class="fg"><label class="lbl">How many lunch portions to bank?</label>
-    <input class="inp" id="lb-qty" type="number" value="${hs}" min="1" max="20" style="font-size:20px;font-weight:700;text-align:center;padding:12px" oninput="previewLBScale(${hs})">
-    <div style="font-size:12px;color:#888;margin-top:6px;text-align:center">Cooking for ${hs} for dinner — how many extra for the lunch bank?</div></div>
-    <div id="lb-preview" style="margin:12px 0;padding:10px;background:#f5f5f5;border-radius:8px;font-size:12px;color:#555;line-height:1.6">
-      Enter a number above to see scaled ingredients
-    </div>
-    <button class="btn btn-primary" style="margin-top:8px;background:#2980b9" onclick="confirmBankForLunch(${hs})">Scale Up, Deduct Inventory & Bank</button>`);
-}
-
-function previewLBScale(hs){
-  const qty=parseInt(document.getElementById('lb-qty')?.value)||hs;
-  const factor=qty/hs;
-  const preview=document.getElementById('lb-preview');
-  if(!preview||!A.recipe?.pull)return;
-  const scaled=(A.recipe.pull||[]).filter(p=>p.item&&p.qty).slice(0,6).map(p=>{
-    const newQty=scaleQty(p.qty,factor);
-    return `<div>• ${p.item}: <strong>${newQty}</strong> (extra for bank)</div>`;
-  }).join('');
-  preview.innerHTML=`<div style="font-weight:700;margin-bottom:6px">Extra ingredients needed (${qty} bank portions at ${factor.toFixed(1)}x):</div>${scaled}${(A.recipe.pull||[]).length>6?`<div style="color:#888">...and ${(A.recipe.pull.length-6)} more</div>`:''}`;
-}
-
-function confirmBankForLunch(hs){
-  const qty=parseInt(document.getElementById('lb-qty')?.value)||hs;
-  if(!qty||qty<1)return showToast('Enter at least 1 portion');
-  const factor=qty/hs;
-  // Scale the pull list for extra portions
-  const scaledPull=(A.recipe.pull||[]).map(p=>({...p,qty:scaleQty(p.qty,factor)}));
-  // Deduct extra inventory
-  deductInventory(scaledPull);
-  deductPantryItems(scaledPull);
-  // Save banked meal record
-  const bankedMeal={
-    id:'lb_'+Date.now(),
-    title:A.recipe.title,
-    dateBanked:new Date().toISOString().split('T')[0],
-    qty,
-    scaleFactor:factor,
-    pull:scaledPull
-  };
-  if(!A.lunchBankMeals)A.lunchBankMeals=[];
-  A.lunchBankMeals.push(bankedMeal);
-  A.lunchBank=(A.lunchBank||0)+qty;
-  save();
-  closeModal();
-  showToast(qty+' lunch portion'+(qty!==1?'s':'')+' banked — label and freeze!');
-  render();
-}
-
 function removeLunchBankMeal(mealId,portionsToRemove){
   const meal=(A.lunchBankMeals||[]).find(m=>m.id===mealId);
   if(!meal)return;
@@ -830,6 +785,7 @@ function save(){
       onboarded:A.onboarded,
       lunch_bank:A.lunchBank||0,
       lunch_bank_meals:A.lunchBankMeals||[],
+      deleted_ids:A.deletedIds||[],
       // weekProteins session-only
     };
     sbSave(A.email,data);
@@ -853,7 +809,10 @@ function mergeWithDefaults(saved,defaults){
     }
     if(item.fresh==null)item.fresh=0;
   });
+  const deletedIds=A.deletedIds||[];
   defaults.forEach(def=>{
+    // Skip items the user has deliberately deleted
+    if(deletedIds.includes(String(def.id)))return;
     if(!merged.find(s=>s.id==def.id)){
       merged.push(JSON.parse(JSON.stringify(def)));
     }
@@ -863,6 +822,7 @@ function mergeWithDefaults(saved,defaults){
 function mergePantryWithDefaults(saved,defaults){
   if(!saved)return JSON.parse(JSON.stringify(defaults));
   const merged={};
+  const deletedIds=A.deletedIds||[];
   Object.keys(defaults).forEach(cat=>{
     merged[cat]=saved[cat]?JSON.parse(JSON.stringify(saved[cat])):[];
     // Migrate old toggle-only oils/condiments to qty items
@@ -870,7 +830,6 @@ function mergePantryWithDefaults(saved,defaults){
       merged[cat].forEach(item=>{
         if(item.qty==null){
           item.qty=item.have?1:0;
-          // find default unit
           const def=defaults[cat].find(d=>d.id===item.id);
           if(def&&def.unit)item.unit=def.unit;
           else if(!item.unit)item.unit='oz';
@@ -878,6 +837,7 @@ function mergePantryWithDefaults(saved,defaults){
       });
     }
     defaults[cat].forEach(def=>{
+      if(deletedIds.includes(String(def.id)))return;
       if(!merged[cat].find(i=>i.id===def.id)){
         merged[cat].push(JSON.parse(JSON.stringify(def)));
       }
@@ -909,6 +869,7 @@ async function loadUserData(email){
   }
 
   if(source){
+    A.deletedIds=source.deleted_ids||[];
     A.bases=mergeWithDefaults(source.bases,DEF_BASES);
     A.supports=mergeWithDefaults(source.supports,DEF_SUPPORTS);
     A.pantry=mergePantryWithDefaults(source.pantry,DEF_PANTRY);
@@ -945,6 +906,7 @@ async function loadUserData(email){
   if(local){
     try{
       const d=JSON.parse(local);
+      A.deletedIds=d.deleted_ids||[];
       A.bases=mergeWithDefaults(d.bases,DEF_BASES);
       A.supports=mergeWithDefaults(d.supports,DEF_SUPPORTS);
       A.pantry=mergePantryWithDefaults(d.pantry,DEF_PANTRY);
@@ -1045,6 +1007,7 @@ function render(){
   else if(A.page==='grocery')m.innerHTML=rGrocery();
   else if(A.page==='guide')m.innerHTML=rGuide();
   else if(A.page==='favorites')m.innerHTML=rFavorites();
+  else if(A.page==='maintenance')m.innerHTML=rMaintenance();
   updateBadges();
 }
 function updateBadges(){
@@ -1231,7 +1194,7 @@ function rCannedDry(){
       <td>
         ${hasFresh&&(item.fresh||0)>0?`<span class="stag stag-fresh" style="margin-right:4px">🌿 ${item.fresh} lbs fresh/homemade <span style="font-size:9px;font-weight:800;background:#2e7d32;color:#fff;padding:1px 4px;border-radius:4px;margin-left:2px">USE FIRST</span></span> `:''}
         ${hasCanned?`<span class="${item.canned>0?'stag stag-canned':'stag stag-zero'}">🥫 ${item.canned} cans</span> `:''}
-        ${hasDry?`<span class="${item.dry>0?'stag stag-dry':'stag stag-zero'}">🌾 ${item.dry} lbs</span>`:''}
+        ${hasDry?`<span class="${item.dry>0?'stag stag-dry':'stag stag-zero'}">🌾 ${item.dry} ${item.dryUnit||'lbs'}</span>`:''}
         ${hasEach?`<span class="${item.each>0?'qty-badge':'stag stag-zero'}">${item.each} ${item.eachUnit||'each'}</span>`:''}
       </td>
       <td style="text-align:right">
@@ -1516,6 +1479,10 @@ function rBuilderForm(){
           <label class="lbl">Anchor Ingredient (optional)</label>
           <input class="inp" id="anchor" placeholder="Override — build around this specifically" value="${A.anchorIngredient||''}">
         </div>
+        <div class="mode-row" style="background:var(--green-xpale);border-radius:8px;padding:10px 12px;margin:4px 0">
+          <div><div style="font-size:14px;font-weight:700;color:var(--green)">🏠 Use What I Have</div><div style="font-size:12px;color:var(--green-mid)">${A.pantryMode?'ON — building from inventory only, no store run':'Build from inventory first, suggest extras after'}</div></div>
+          <div class="tog ${A.pantryMode?'on':''}" onclick="toggleBuilderOption('pantryMode')"><div class="tog-th"></div></div>
+        </div>
         <div class="mode-row">
           <div><div style="font-size:14px;font-weight:600">P&P Spice Blends</div><div style="font-size:12px;color:var(--text-muted)">I have the Prep & Purpose spice kit</div></div>
           <div class="tog ${A.ppSpices?'on':''}" onclick="toggleBuilderOption('ppSpices')"><div class="tog-th"></div></div>
@@ -1586,6 +1553,7 @@ async function generateRecipe(){
   const buildEmergency=A.buildEmergency||false;
   const grabAndGo=A.grabAndGo||false;
   const includeSoups=A.includeSoups!==false;
+  const pantryMode=A.pantryMode||false;
   const dietaryGoals=A.dietaryGoals||[];
   A.lastMealType=mealType;save();
   A.generating=true;A.recipe=null;
@@ -1626,14 +1594,45 @@ PROTEIN RULES:
 - Frozen protein = ALREADY COOKED. Say "heat gently 3-4 min over medium heat." NEVER say "cook until done."
 - Never partial bags. 1 quart bag = 1.5 lbs cooked. For ${A.householdSize} people use ${A.householdSize<=4?'1-2':'2-3'} bags.
 
-INVENTORY FIRST — MANDATORY:
-If frozen protein bags are logged in the user's inventory, USE THEM. Do not choose a different protein because it fits the cuisine or flavor direction better. The protein on hand drives everything else. Adapt the cuisine, flavor profile, and dish format to the protein available — not the other way around.
-- Pork in inventory → build pork dishes. Carnitas, pork verde, pulled pork tacos, smothered pork chops, pork fried rice, pork pasta, pork stir fry.
-- Chicken in inventory → build chicken dishes in any cuisine that fits.
-- Beef in inventory → build beef dishes. Tacos, rice bowls, pasta bolognese, smothered beef, stir fry.
-- Turkey in inventory → build turkey dishes. Turkey soup, turkey rice bake, turkey tacos, turkey pasta.
-- If MULTIPLE proteins are in inventory → rotate through them across the week. Never use the same one every meal.
-- Only when NO protein is in inventory does the seasonal budget hierarchy apply.
+INVENTORY FIRST — THE ONLY RULE THAT MATTERS:
+Every component of the meal — protein, starch, vegetable, sauce, dairy, oil, condiment — is chosen from what is already logged in inventory. The dish emerges from what she has. The AI's creative job is making that combination taste outstanding, not designing a recipe and shopping for it.
+
+- Protein in inventory → that protein. No substitutions.
+- Dry pasta in inventory → pasta dish is always a primary option. Spaghetti bolognese, baked pasta, pasta skillet, creamy pasta, pasta e fagioli. Do not ignore pasta sitting in inventory.
+- Rice in inventory → rice dish is a primary option.
+- Canned tomatoes in inventory → that is the sauce base.
+- Jarred pasta sauce in inventory → use it directly, do not rebuild the sauce from scratch.
+- Bread logged → use it for sandwiches, sides, or casserole topping.
+- Pizza crust logged → build pizza or flatbread.
+- Pie dough logged → build pot pie, quiche, or hand pies.
+- Dairy in fridge with qty (milk, cream cheese, sour cream, heavy cream, shredded cheese) → USE FIRST before it spoils. Actively find dishes that absorb these.
+- Condiments and sauces with qty → use them in the dish before flagging anything.
+- Fresh produce logged → USE FIRST rule applies. Always.
+
+INVENTORY CONSTRAINTS ARE NOT A REASON TO SIMPLIFY. They are a creative challenge. Build the most flavorful, well-executed dish possible from what is available. Bold flavors, proper technique, real seasoning — the ingredients come from her kitchen, the quality comes from the cooking.
+
+${pantryMode?`PANTRY MODE — ON:
+She is NOT going to the store. Build exclusively from what is logged above.
+- groceryFlags must be EMPTY or contain ONLY items that make the meal physically impossible to complete without (e.g. no protein of any kind in inventory).
+- If a component is missing, substitute from what IS in inventory. No fresh bell peppers? Use frozen peppers, canned corn, or whatever vegetable is available. Adapt — never flag optional extras.
+- NEVER flag seasonal produce, garnishes, or "would be nice" additions.
+- Do NOT use the seasonal guide to drive dish selection under any circumstances.
+- After the recipe, populate the "suggestions" field with 1-2 optional items that would make the dish more complete, written naturally. Example: "Fresh bell peppers would add great color and crunch — in season right now." These are suggestions only, never requirements.`:`PANTRY MODE — OFF:
+Build from inventory first. Only flag an ingredient if the dish genuinely cannot be made without it AND it is not available in any form in inventory.
+- Do NOT flag seasonal produce just because it would be nice to have.
+- Do NOT build a dish around seasonal produce she does not have logged.
+- If she has enough in inventory to make a complete meal, groceryFlags should be empty or minimal.
+- Seasonal produce belongs in suggestions only — never as the reason to build a specific dish.
+- Populate the "suggestions" field with 1-2 optional seasonal or complementary items she could add if she chooses to shop. Written naturally, never as requirements.`}
+
+SEASONAL PRODUCE RULE — APPLIES IN BOTH MODES:
+Seasonal produce NEVER drives dish selection. It belongs only in the suggestions field as an optional enhancement. The dish is built from inventory. Seasonal produce is a smart shopping tip, not a recipe requirement.
+Current season produce for ${new Date().toLocaleString('en-US',{month:'long'})} in North Carolina: ${['citrus, sweet potatoes, potatoes, carrots, cabbage, onions','citrus, sweet potatoes, carrots, cabbage, broccoli','broccoli, cauliflower, cabbage, carrots, potatoes','asparagus, peas, spinach, lettuce, strawberries','asparagus, peas, spinach, strawberries, green onions','corn, cucumbers, zucchini, squash, tomatoes, blueberries','corn, cucumbers, zucchini, tomatoes, peaches, blueberries','corn, tomatoes, bell peppers, eggplant, summer squash','butternut squash, sweet potatoes, apples, broccoli, kale','sweet potatoes, apples, pears, Brussels sprouts, cauliflower','sweet potatoes, apples, pears, Brussels sprouts, kale','citrus, sweet potatoes, potatoes, carrots, cabbage'][new Date().getMonth()]}. Use this ONLY for the suggestions field.
+
+MISSING COMMON DISHES — actively rotate through these when inventory supports them:
+Sloppy Joes, American Goulash (ground beef + elbow macaroni + canned tomatoes), Tuna Noodle Casserole, Chicken and Dumplings, Chicken Alfredo, Baked Ziti, Swedish Meatballs over Egg Noodles, Salisbury Steak with Gravy, Cabbage and Beef Skillet, Chicken and Rice Casserole, Pasta e Fagioli, Hamburger Helper Skillet, Loaded Potato Soup, Smothered Pork Chops over Rice, White Chicken Chili, Chicken Piccata.
+
+NEVER-SCRATCH baked goods — the app does not build from-scratch bread, pizza dough, or pie crust recipes. If logged in inventory, use them. If not logged and she anchors to a dish that needs them, flag them on groceryFlags. prepNote: "Store-bought or homemade — you need [qty]."
 
 DINNER PROTEIN RULE (non-negotiable):
 - Standard diet: dinner centerpiece MUST be real meat — beef, pork, chicken, turkey, fish. No exceptions.
@@ -1743,8 +1742,9 @@ FLAVOR INTENSITY — every recipe must have personality:
 - Use the flavor direction aggressively: if someone picks Southern, go deep — smothered, peppered, honey-butter, cast iron. If Tex-Mex, go bold — chipotle crema, charred corn, lime, cilantro.
 - Bland food is a recipe failure. Build flavor in layers: fat + aromatics + spice + acid + finish.
 MILK POWDER: Pull list "X cups powder + Y cups water = Z cups milk". Steps say only "Z cups milk."
-GROCERY FLAGS: Include reason. urgency "out"=needed · "low"=optional.
-
+GROCERY FLAGS: Include reason. urgency always "out" — only flag items that are genuinely missing and required.
+INGREDIENT DEDUPLICATION: Before finalizing the pull list, check for duplicate or near-duplicate ingredient names. "Fresh Cilantro" and "Cilantro (fresh)" are the same thing. "Ground beef" and "ground beef (80/20)" are the same thing. Consolidate into one entry with the correct combined quantity. Never list the same ingredient twice under different names.
+OPTIONAL INGREDIENTS: Optional garnishes (cilantro, parsley, green onion, sour cream drizzle, hot sauce) must be marked as optional in the pull list AND must NEVER appear in groceryFlags. Do not put optional ingredients on the grocery list. They are nice to have, not required.
 ${(()=>{
   if(buildEmergency)return'';
   const mo=new Date().getMonth();
@@ -1754,8 +1754,19 @@ ${(()=>{
 })()}
 
 DISH VARIETY — never repeat same format twice in a row. Rotate: tacos, enchiladas, burritos, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, quesadillas, pot pie, skillet meals, rice bowls, smothered chicken, soups, stews, sandwiches, sliders, wraps, hash, curry, flatbread pizza, meatloaf, lasagna, sheet pan meals, stir-fry noodles, kabobs, stuffed baked potatoes, grain bowls, chili, taco bowls, fajitas.
-INGREDIENT DEDUPLICATION: Before finalizing the pull list, check for duplicate or near-duplicate ingredient names. "Fresh Cilantro" and "Cilantro (fresh)" are the same thing. "Ground beef" and "ground beef (80/20)" are the same thing. Consolidate into one entry with the correct combined quantity. Never list the same ingredient twice under different names.
-OPTIONAL INGREDIENTS: Optional garnishes (cilantro, parsley, green onion, sour cream drizzle, hot sauce) must be marked as optional in the pull list AND must NEVER appear in groceryFlags. Do not put optional ingredients on the grocery list. They are nice to have, not required.
+ONE PROTEIN PER MEAL — MANDATORY:
+Pick the single protein that best fits the dish. Do NOT combine multiple proteins at full bag quantities in one meal.
+- If Ground Beef AND Pepperoni are both in inventory, pick one. Ground beef for a pasta bake. Pepperoni as a flavoring accent (a few slices, not a full bag).
+- Pepperoni, bacon, and sausage used as flavor accents (not primary protein) should be listed as 2-4 oz, never a full bag.
+- Only exception: a dish specifically designed for two proteins (surf and turf, mixed meat pizza, combo burrito) — and even then each portion is reduced proportionally.
+
+PROTEIN QUANTITY — RIGHT-SIZE TO SERVINGS:
+A mixed dish (pasta, casserole, rice bowl, stew) for 4-6 people needs 1–1.5 lbs cooked protein total. Not per protein type — total.
+- 4 people dinner pasta: 1–1.5 lbs cooked protein = 1 bag max
+- 6 people dinner casserole: 1.5–2 lbs cooked protein = 1-2 bags
+- Do NOT use 2 full bags of protein PLUS a second protein. That is 4.5 lbs of meat in one pasta dish — excessive and wasteful.
+- Scale protein quantity to match the servings requested. If she asks for 8 servings, 2 bags is appropriate. For 4 servings, 1 bag is almost always enough.
+- NEVER waste inventory by pulling more than the dish needs.
 
 COOKED PROTEIN FORM RULES — what frozen bags can and cannot become:
 Pre-cooked frozen protein is ALREADY COOKED in shredded, ground, or diced form. It CANNOT be reformed into shaped products. Specifically:
@@ -1786,8 +1797,6 @@ FROZEN SUPPORTS — cannot become fresh-texture dishes: Frozen corn cannot becom
 
 KITCHEN STAPLES FLAGGING RULE: The user prompt shows exactly what is in the user's Kitchen Staples AND Supports inventory. Any ingredient the recipe uses that is NOT in those lists MUST be added to groceryFlags. EXCEPTION: if an ingredient appears in the Dry, Fresh/Homemade, Canned, or Frozen supports lists above with a quantity greater than zero, it is IN INVENTORY — do NOT flag it on groceryFlags. This includes all pasta shapes (spaghetti, penne, rotini, macaroni, egg noodles), rice, beans, lentils, and any other item already logged. Do not flag what she already has. Basic exceptions always assumed: water, table salt, black pepper.
 
-INGREDIENT COMMON SENSE: Never put fruit on savory dishes unless a known classic. Frozen fruit = breakfast/desserts only.
-SEASONAL PRODUCE IN DINNER: Actively build seasonal produce into dinner dishes. If abundant produce is listed in the seasonal guide, include it in the vegetable component of dinner — corn in summer dishes, butternut squash in fall, sweet potatoes in winter, asparagus in spring. The meal should feel like the season.
 BAKING SCALE: For baked items, leaveners and salt scale ~1.4x on a double batch, not 2x. Flour, sugar, butter, eggs scale normally.
 
 ${buildEmergency?`EMERGENCY MEAL MODE:
@@ -1816,9 +1825,14 @@ RESPOND WITH VALID JSON ONLY:
   ],
   "steps": ["Step with real measurements and timing"],
   "tip": "One specific useful tip",
+  "suggestions": [
+    {"item": "Fresh zucchini", "qty": "2 medium", "reason": "Would add great color and texture — in season right now"},
+    {"item": "Parmesan cheese", "qty": "1/2 cup grated", "reason": "A little on top takes this to the next level"}
+  ],
   "groceryFlags": [{"name": "Slider Buns", "qty": "18", "urgency": "out", "reason": "Buy — or make from scratch if you prefer"}],
   "cookList": [{"protein": "name", "bags": 2, "rawLbs": "4.3 lbs raw", "note": "cook and bag"}]
 }
+suggestions: 1-2 optional items only. Written naturally, never as requirements. Empty array [] if nothing meaningful to suggest.
 PULL LIST: Every ingredient — frozen bags, canned/jarred by container count, buns/bread by count, pantry, fridge, spices.
 QUANTITY RULES: Meat=weight only. No piece counts. Eggs=whole numbers round up. Bags=whole only. Canned=container count. Buns/bread=count. FD items=cup/tbsp. Spices=tsp/tbsp.`
   const userPrompt=`MEAL TYPE: ${mealType} — build an appropriate ${mealType.toLowerCase()} dish. NOT breakfast food for dinner.
@@ -1923,7 +1937,7 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
       alert('Could not parse recipe. Try again.');
       showPage('builder');return;
     }
-    A.recipe={...recipe,servings:servings,id:Date.now(),title:recipe.title||'Your Meal',description:recipe.description||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:(recipe.pull||[]).map(p=>({...p,qty:cleanQty(p.qty),item:cleanQty(p.item),prepNote:p.prepNote?cleanQty(p.prepNote):p.prepNote})),steps:recipe.steps||[],tip:recipe.tip||''};
+    A.recipe={...recipe,servings:servings,id:Date.now(),title:recipe.title||'Your Meal',description:recipe.description||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:(recipe.pull||[]).map(p=>({...p,qty:cleanQty(p.qty),item:cleanQty(p.item),prepNote:p.prepNote?cleanQty(p.prepNote):p.prepNote})),steps:recipe.steps||[],tip:recipe.tip||'',suggestions:recipe.suggestions||[]};
     // Track last built for variety enforcement
     if(mealType==='Breakfast')A.lastBuiltBreakfast=recipe.title||'';
     else{
@@ -1995,9 +2009,21 @@ function rRecipe(){
       ${r.tip?`<div class="tip-box">${r.tip}</div>`:''}
     </div>
 
+    ${r.suggestions&&r.suggestions.length>0?`<div class="card card-pad" style="margin-bottom:16px;border-left:4px solid var(--green-light)">
+      <div class="section-head" style="color:var(--green)">💡 Want to Make This More Complete?</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">These are optional — the meal above is complete as built. Add any of these if you decide to shop.</div>
+      ${r.suggestions.map((s,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600">${s.item}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${s.reason||''}</div>
+          ${s.qty?`<div style="font-size:11px;color:var(--green);font-weight:600;margin-top:2px">${s.qty}</div>`:''}
+        </div>
+        <button class="btn btn-sm btn-outline" style="white-space:nowrap;flex-shrink:0" onclick="addSuggestionToList(${i})">＋ Add to List</button>
+      </div>`).join('')}
+    </div>`:''}
+
     <div class="card card-pad">
-      ${isEmergency?`
-      <div class="section-head">🚨 Log This Emergency Meal</div>
+      ${isEmergency?`      <div class="section-head">🚨 Log This Emergency Meal</div>
       <div class="alert alert-green" style="margin-bottom:14px"><span>✅</span><div>This goes straight to your Emergency supply — not on the dinner calendar. Deducts inventory for 2 full batches.</div></div>
       <div class="fg"><label class="lbl">Date Made</label><input class="inp" type="date" id="em-made-date" value="${new Date().toISOString().slice(0,10)}" style="cursor:pointer"></div>
       <div class="fg"><label class="lbl">Gallon Bags</label><input class="inp" type="number" id="em-made-qty" value="2" min="1" max="10"></div>
@@ -3514,7 +3540,7 @@ function rGrocery(){
   const done=consolidated.filter(g=>g.done&&inWindow(g));
 
   let html=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-    <div><div class="page-title" style="font-size:18px">Shopping List</div><div style="font-size:13px;color:var(--text-muted)">${out.length+low.length} items needed</div></div>
+    <div><div class="page-title" style="font-size:18px">Shopping List</div><div style="font-size:13px;color:var(--text-muted)">${out.length+low.length} item${out.length+low.length!==1?'s':''} to get</div></div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-outline btn-sm" onclick="printGroc()">🖨️ Print</button>
       <button class="btn btn-primary btn-sm" onclick="openAddGroc()">+ Add Item</button>
@@ -3527,7 +3553,7 @@ function rGrocery(){
   <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Showing meals planned for: <strong>${grocWindow===1?weekLabel:grocWindow===2?'next 2 weeks':grocWindow===3?'next 3 weeks':'the month'}</strong></div>
   <div style="display:flex;gap:8px;margin-bottom:12px">
     <button class="btn btn-outline btn-sm" onclick="A.grocery=A.grocery.filter(g=>!g.done);save();render()" style="font-size:11px;padding:6px 10px">Clear Completed</button>
-    <button class="btn btn-outline btn-sm" onclick="if(confirm('Clear your entire grocery list? Re-place meals on the calendar to rebuild it.')){{A.grocery=[];save();render();}}" style="font-size:11px;padding:6px 10px;color:var(--red);border-color:var(--red)">Clear All</button>
+    <button class="btn btn-outline btn-sm" onclick="if(confirm('Clear your entire grocery list? Re-place meals on the calendar to rebuild it.')){A.grocery=[];save();render();}" style="font-size:11px;padding:6px 10px;color:var(--red);border-color:var(--red)">Clear All</button>
     ${(out.length+low.length)===0&&done.length>0?'':''}
   </div>
   <div class="alert alert-gold" style="margin-bottom:16px"><span>🏠</span><div><strong>Check long term storage first</strong> — chest freezer, pantry overflow, bulk storage — before purchasing anything.</div></div>`;
@@ -3535,13 +3561,9 @@ function rGrocery(){
   if(out.length===0&&low.length===0&&done.length===0){
     html+=`<div class="empty"><div style="font-size:48px;margin-bottom:10px">✅</div><div style="font-size:15px;font-weight:600;margin-bottom:6px">Your list is empty</div><div>Items are added automatically when the Meal Builder flags missing ingredients.</div></div>`;
   }
-  if(out.length>0){
-    html+=`<div style="font-size:11px;font-weight:700;color:#c62828;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">🚨 Out — Need Now</div>
-    <div class="card" style="margin-bottom:16px;padding:0">${out.map(g=>grocRow(g)).join('')}</div>`;
-  }
-  if(low.length>0){
-    html+=`<div style="font-size:11px;font-weight:700;color:#f57f17;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">🛒 Needed</div>
-    <div class="card" style="margin-bottom:16px;padding:0">${low.map(g=>grocRow(g)).join('')}</div>`;
+  const allNeeded=[...out,...low];
+  if(allNeeded.length>0){
+    html+=`<div class="card" style="margin-bottom:16px;padding:0">${allNeeded.map(g=>grocRow(g)).join('')}</div>`;
   }
   html+=`<div class="alert alert-gold"><span>📏</span><div><strong>Protein Shrinkage Rule:</strong> Always buy 30% more raw than you think you need. 1 quart bag = 1.5 lbs cooked. For ${A.householdSize} people: 5 lbs raw ≈ 2–3 full quart bags.</div></div>`;
   if(done.length>0){
@@ -3552,14 +3574,14 @@ function rGrocery(){
   return html;
 }
 function grocRow(g){
+  const isSuggestion=g.urgency==='suggestion';
   return`<div class="groc-row">
     <div class="groc-chk ${g.done?'done':''}" data-id="${g.id}" onclick="toggleGroc(this.dataset.id)">${g.done?'✓':''}</div>
     <div style="flex:1">
       <div style="font-size:14px;font-weight:600;${g.done?'text-decoration:line-through;color:var(--text-hint)':''}">${g.name}</div>
-      ${g.qty?`<div style="font-size:12px;color:var(--green);font-weight:600">${g.qty}</div>`:''}
-      ${g.reason?`<div style="font-size:11px;color:var(--text-muted);margin-top:2px">${g.reason}</div>`:''}
+      ${g.qty?`<div style="font-size:12px;color:var(--text-muted);margin-top:1px">${g.qty}</div>`:''}
+      ${isSuggestion&&g.reason?`<div style="font-size:11px;color:var(--text-hint);margin-top:1px;font-style:italic">${g.reason}</div>`:''}
     </div>
-    <span class="utag ${g.urgency==='out'?'uout':'ulow'}" style="margin-right:8px">${g.urgency==='out'?'Out':'Needed'}</span>
     <button style="background:none;border:none;font-size:18px;color:var(--text-muted);cursor:pointer;padding:4px" data-id="${g.id}" onclick="dismissGroc(this.dataset.id)">×</button>
   </div>`;
 }
@@ -3569,16 +3591,13 @@ function clearDone(){A.grocery=A.grocery.filter(g=>!g.done);save();render();}
 function openAddGroc(){
   openModal(`<div class="modal-header"><div class="modal-title">Add to Grocery List</div><button class="modal-close" onclick="closeModal()">×</button></div>
     <div class="fg"><label class="lbl">Item Name</label><input class="inp" id="ag-name" placeholder="e.g. Ground beef, flour, eggs"></div>
-    <div class="r2">
-      <div class="fg"><label class="lbl">Quantity</label><input class="inp" id="ag-qty" placeholder="e.g. 3 lbs, 2 boxes"></div>
-      <div class="fg"><label class="lbl">Priority</label><select class="sel" id="ag-urg"><option value="low">Needed</option><option value="out">Out — Need Now</option></select></div>
-    </div>
+    <div class="fg"><label class="lbl">Quantity</label><input class="inp" id="ag-qty" placeholder="e.g. 3 lbs, 2 boxes"></div>
     <button class="btn btn-primary btn-full btn-lg" style="margin-top:8px" onclick="saveAddGroc()">Add to List</button>`);
 }
 function saveAddGroc(){
   const name=document.getElementById('ag-name')?.value.trim();
   if(!name)return;
-  A.grocery.push({id:Date.now(),name,qty:document.getElementById('ag-qty')?.value.trim()||'',urgency:document.getElementById('ag-urg')?.value||'low',done:false,manualAdd:true});
+  A.grocery.push({id:Date.now(),name,qty:document.getElementById('ag-qty')?.value.trim()||'',urgency:'out',done:false,manualAdd:true});
   save();closeModal();render();
 }
 
@@ -3603,17 +3622,25 @@ function openEditItem(id,list){
         </div>
       </div>`;
     }
-    const unit=st==='frozen'?'bags':st==='canned'?'cans/pint jars':st==='each'?item.eachUnit||'each':item.dryUnit||'lbs';
+    const unit=st==='frozen'?'bags':st==='canned'?'cans/pint jars':st==='each'?item.eachUnit||'each':_editItem.dryUnit||'lbs';
     const conv=st==='frozen'?(isBase?` = ${(_editItem[st]||0)*1.5} lbs cooked`:` = ${(_editItem[st]||0)*3} cups cooked`):'';
+    const isDry=st==='dry';
     return`<div class="qty-row">
       <div class="qty-label">${storageLabel(st)}<div class="qty-sub" id="conv-${st}">${unit}${conv}</div></div>
-      <div class="qty-controls">
-        <input type="number" min="0" value="${_editItem[st]||0}" id="qv-${st}"
-          oninput="setItem('${st}',+this.value,'${isBase}','${unit}')"
-          style="width:100px;text-align:center;font-size:22px;font-weight:700;color:var(--green);border:2px solid var(--border-strong);border-radius:var(--radius-sm);padding:8px 12px;font-family:'Playfair Display',serif;outline:none"
-          onfocus="this.style.borderColor='var(--green)'"
-          onblur="this.style.borderColor='var(--border-strong)'">
-        <span style="font-size:12px;color:var(--text-muted);min-width:40px">${unit}</span>
+      <div class="qty-controls" style="flex-direction:column;align-items:flex-end;gap:6px">
+        ${isDry?`<select id="qv-dry-unit" style="font-size:12px;padding:4px 8px;border:1px solid var(--border-strong);border-radius:var(--radius-xs);color:var(--green)" onchange="_editItem.dryUnit=this.value;document.getElementById('conv-dry').textContent=this.value">
+          <option value="lbs" ${(_editItem.dryUnit||'lbs')==='lbs'?'selected':''}>lbs</option>
+          <option value="boxes" ${(_editItem.dryUnit)==='boxes'?'selected':''}>boxes</option>
+          <option value="oz" ${(_editItem.dryUnit)==='oz'?'selected':''}>oz</option>
+        </select>`:''}
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="number" min="0" value="${_editItem[st]||0}" id="qv-${st}"
+            oninput="setItem('${st}',+this.value,'${isBase}','${unit}')"
+            style="width:100px;text-align:center;font-size:22px;font-weight:700;color:var(--green);border:2px solid var(--border-strong);border-radius:var(--radius-sm);padding:8px 12px;font-family:'Playfair Display',serif;outline:none"
+            onfocus="this.style.borderColor='var(--green)'"
+            onblur="this.style.borderColor='var(--border-strong)'">
+          <span style="font-size:12px;color:var(--text-muted);min-width:40px">${unit}</span>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -3637,9 +3664,10 @@ function setItem(st,val,isBase,unit){
 }
 function saveEditItem(){
   if(!_editItem||!_editList)return;
-  // read fresh field if present
   const freshEl=document.getElementById('qv-fresh');
   if(freshEl)_editItem.fresh=Math.max(0,parseFloat(freshEl.value)||0);
+  const dryUnitEl=document.getElementById('qv-dry-unit');
+  if(dryUnitEl)_editItem.dryUnit=dryUnitEl.value;
   const items=_editList==='bases'?A.bases:A.supports;
   const idx=items.findIndex(i=>i.id==_editItem.id);
   if(idx>=0)items[idx]={...items[idx],..._editItem};
@@ -3649,13 +3677,16 @@ function deleteItem(id,list){
   if(!confirm('Remove this item from your inventory?'))return;
   if(list==='bases')A.bases=A.bases.filter(i=>i.id!=id);
   else A.supports=A.supports.filter(i=>i.id!=id);
+  // Track deletion so mergeWithDefaults never re-adds it
+  if(!A.deletedIds)A.deletedIds=[];
+  if(!A.deletedIds.includes(String(id)))A.deletedIds.push(String(id));
   save();render();
 }
 function promptAddToGroc(id,list){
   const items=list==='bases'?A.bases:A.supports;
   const item=items.find(i=>i.id==id);if(!item)return;
   if(!A.grocery.find(g=>g.name===item.name)){
-    A.grocery.push({id:Date.now(),name:item.name,urgency:'low',qty:'',done:false});
+    A.grocery.push({id:Date.now(),name:item.name,urgency:'out',qty:'',done:false});
     save();alert(`${item.name} added to your grocery list.`);
   }else{alert(`${item.name} is already on your list.`);}
 }
@@ -3685,24 +3716,33 @@ function saveAddFrozenSupport(){
 }
 function openAddPantrySupport(){
   openModal(`<div class="modal-header"><div class="modal-title">Add Canned or Dry Item</div><button class="modal-close" onclick="closeModal()">×</button></div>
-    <div class="fg"><label class="lbl">Item Name</label><input class="inp" id="aps-name" placeholder="e.g. Lentils, Tomato Sauce"></div>
-    <div class="fg"><label class="lbl">Type</label><select class="sel" id="aps-type"><option value="canned">🥫 Canned / Pint Jars</option><option value="dry">🌾 Dry / Bulk</option></select></div>
-    <div class="fg"><label class="lbl">Quantity on Hand</label><input class="inp" type="number" id="aps-qty" value="0" min="0"></div>
+    <div class="fg"><label class="lbl">Item Name</label><input class="inp" id="aps-name" placeholder="e.g. Couscous, Lentils, Tomato Sauce"></div>
+    <div class="fg"><label class="lbl">Type</label>
+      <select class="sel" id="aps-type" onchange="document.getElementById('aps-unit-row').style.display=this.value==='dry'?'block':'none'">
+        <option value="canned">🥫 Canned / Pint Jars</option>
+        <option value="dry">🌾 Dry / Bulk</option>
+      </select>
+    </div>
+    <div class="fg" id="aps-unit-row" style="display:none">
+      <label class="lbl">Unit</label>
+      <select class="sel" id="aps-unit">
+        <option value="lbs">lbs (rice, beans, flour, bulk)</option>
+        <option value="boxes">boxes (couscous, pasta, mac)</option>
+        <option value="oz">oz (small packages)</option>
+      </select>
+    </div>
+    <div class="fg"><label class="lbl">Quantity on Hand</label><input class="inp" type="number" id="aps-qty" value="0" min="0" step="0.5"></div>
     <button class="btn btn-primary btn-full btn-lg" style="margin-top:12px" onclick="saveAddPantrySupport()">Add</button>`);
 }
 function saveAddPantrySupport(){
   const name=document.getElementById('aps-name')?.value.trim();if(!name)return;
   const type=document.getElementById('aps-type').value;
   const qty=+document.getElementById('aps-qty').value||0;
-  const newItem={id:Date.now(),name,icon:'🥫',frozen:0,canned:0,dry:0,storageTypes:[type],dryUnit:'lbs'};
+  const dryUnit=type==='dry'?(document.getElementById('aps-unit')?.value||'lbs'):'lbs';
+  const newItem={id:Date.now(),name,icon:type==='dry'?'🌾':'🥫',frozen:0,canned:0,dry:0,fresh:0,storageTypes:[type],dryUnit};
   newItem[type]=qty;A.supports.push(newItem);
   save();closeModal();render();
 }
-function setSupportState(id,state){
-  const item=A.supports.find(s=>s.id==id);
-  if(item){item.state=state;save();}
-}
-
 // ─── EMERGENCY ─────────────────────────────────────────────────────────────────
 function openAddEmergency(){
   const today=new Date().toISOString().slice(0,10);
@@ -3941,6 +3981,17 @@ function rGuide(){
         <div style="font-size:14px;font-weight:700;margin-bottom:4px">Kitchen Staples</div>
         <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Your pantry, fridge, and fresh produce. Track what you have — flour, butter, spices, fresh vegetables. <strong>Fresh items are used first</strong> so nothing goes to waste. Update this when you shop.</div>
       </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px;background:var(--green);color:white;border:none;padding:20px">
+    <div style="font-size:15px;font-weight:800;margin-bottom:12px">🏠 The Stewardship Principle</div>
+    <div style="font-size:13px;line-height:1.8;opacity:.92">
+      The Meal Builder always starts with what you have. It looks at your freezer, your pantry, your canned goods, and your fridge — and builds the best meal it can from what is already there. Nothing gets flagged for the store unless it is genuinely missing and the meal cannot be made without it.<br><br>
+      <strong style="color:var(--gold-light)">Use What I Have toggle</strong> — when you flip this on before building, the AI builds exclusively from inventory. Zero grocery flags for extras. The meal is complete as built from what's there.<br><br>
+      <strong style="color:var(--gold-light)">Want a specific meal you don't have everything for?</strong> Type it in the Anchor field. The app builds it and tells you exactly what to grab. Pizza, pot pie, sandwiches — anchor it and the app handles the rest.<br><br>
+      <strong style="color:var(--gold-light)">Optional suggestions</strong> — after every recipe, the app may suggest one or two things that would make the dish more complete. These are never requirements. If you want them, tap Add to List. If not, ignore them — the meal is complete as built.<br><br>
+      Cook from what you have. Shop only for what you need. That is stewardship.
     </div>
   </div>
 
@@ -4247,14 +4298,23 @@ function removeCookItem(protein,type){
   save();render();
 }
 
+function addSuggestionToList(idx){
+  const s=A.recipe?.suggestions?.[idx];
+  if(!s)return;
+  // Add as plain grocery item — no urgency tag, just name and qty
+  if(!A.grocery.find(g=>g.name===s.item)){
+    A.grocery.push({id:Date.now()+Math.random()*1000|0,name:s.item,qty:s.qty||'',urgency:'suggestion',done:false,manualAdd:true,reason:s.reason||''});
+    save();render();showToast(s.item+' added to your list');
+  }else{
+    showToast(s.item+' is already on your list');
+  }
+}
 function addProteinToGroc(name,rawLbs){
   if(!A.grocery.find(g=>g.name.toLowerCase().includes(name.toLowerCase()))){
     A.grocery.push({id:Date.now(),name,qty:rawLbs+' lbs raw',urgency:'out',done:false,reason:'Cook and bag — needed for the week'});
     save();render();
   }
 }
-function openEditBase(id){openEditItem(id,'bases');}
-function openEditSupport(id){openEditItem(id,'supports');}
 
 // ─── PRINT BLANK INVENTORY ─────────────────────────────────────────────────────
 function printBlankInventory(){
