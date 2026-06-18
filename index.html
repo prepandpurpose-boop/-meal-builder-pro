@@ -2178,21 +2178,32 @@ function openMealDetail(dk,sl){
       ${tip?`<div style="background:var(--gold-pale);border-left:3px solid var(--gold);padding:10px 14px;border-radius:0 6px 6px 0;font-size:12px;color:#6b5100;margin-top:8px">💡 ${tip}</div>`:''}
     </div>`:''}
     <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
-      <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Move to different slot</div>
-      <div class="r2" style="margin-bottom:12px">
-        <div class="fg"><label class="lbl">Date</label><input class="inp" type="date" id="move-date" value="${dk}" style="cursor:pointer"></div>
-        <div class="fg"><label class="lbl">Slot</label><select class="sel" id="move-slot">
-          <option value="breakfast" ${sl==='breakfast'?'selected':''}>Breakfast</option>
-          <option value="lunch" ${sl==='lunch'?'selected':''}>Lunch</option>
-          <option value="dinner" ${sl==='dinner'?'selected':''}>Dinner</option>
-          <option value="snack" ${sl==='snack'?'selected':''}>Snack</option>
-        </select></div>
-      </div>
-      <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="moveMeal()">↕️ Move Meal</button>
+      <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="closeModal();setTimeout(()=>openMoveModal('${dk}','${sl}'),100)">↕️ Move to Different Day</button>
       <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="closeModal();setTimeout(()=>printCalMeal('${dk}','${sl}'),100)">🖨️ Print Recipe</button>
       <button class="btn btn-gold btn-full" style="margin-bottom:8px" onclick="saveCalMealToFavorites('${dk}','${sl}')">⭐ Save to Favorites</button>
-      <button class="btn btn-danger btn-full" onclick="removeMeal('${dk}','${sl}')">Remove from Calendar</button>
+      <button class="btn btn-danger btn-full" onclick="removeMeal('${dk}','${sl}')">🗑️ Remove from Calendar</button>
     </div>`);
+}
+function openMoveModal(dk,sl){
+  A._moveFrom={date:dk,slot:sl};
+  const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
+  const tomorrowStr=tomorrow.toISOString().split('T')[0];
+  openModal(`<div class="modal-header"><div class="modal-title">↕️ Move Meal</div><button class="modal-close" onclick="closeModal()">×</button></div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5">Pick a new date and slot. The meal moves there and your calendar updates.</div>
+    <div class="fg" style="margin-bottom:12px">
+      <label class="lbl">New Date</label>
+      <input class="inp" type="date" id="move-date" value="${tomorrowStr}" style="font-size:16px;padding:12px;cursor:pointer">
+    </div>
+    <div class="fg" style="margin-bottom:20px">
+      <label class="lbl">Meal Slot</label>
+      <select class="sel" id="move-slot">
+        <option value="breakfast">Breakfast</option>
+        <option value="lunch">Lunch</option>
+        <option value="dinner" selected>Dinner</option>
+        <option value="snack">Snack</option>
+      </select>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="moveMeal()">Move Meal →</button>`);
 }
 function moveMeal(){
   const fromDate=A._moveFrom?.date,fromSlot=A._moveFrom?.slot;
