@@ -495,7 +495,7 @@ async function sbSave(email,data){
     // Prefer: resolution=merge-duplicates prevents 409 duplicate key errors entirely
     const ctrl=new AbortController();
     const tid=setTimeout(()=>ctrl.abort(),10000);
-    const r=await fetch(`${SUPA_URL}/rest/v1/user_data`,{
+    const r=await fetch(`${SUPA_URL}/rest/v1/user_data?on_conflict=email`,{
       method:'POST',
       headers:{
         'apikey':SUPA_KEY,
