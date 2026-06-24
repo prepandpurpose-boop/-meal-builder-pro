@@ -240,11 +240,6 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .ulow{background:var(--gold-pale);color:#f57f17}
 
 /* ── DRAWER (mobile) ── */
-#overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;opacity:0;pointer-events:none;transition:opacity .25s}
-#overlay.show{opacity:1;pointer-events:all}
-#drawer{position:fixed;bottom:0;left:50%;transform:translate(-50%,100%);width:100%;max-width:520px;background:var(--white);border-radius:20px 20px 0 0;z-index:501;transition:transform .28s cubic-bezier(.32,0,.67,0);padding:0 20px 40px;max-height:88vh;overflow-y:auto}
-#drawer.open{transform:translate(-50%,0)}
-.dh{width:36px;height:4px;background:var(--border-strong);border-radius:2px;margin:14px auto 18px;cursor:pointer}
 .dt{font-family:'Playfair Display',serif;font-size:20px;font-weight:600;margin-bottom:16px}
 
 /* ── MODAL (desktop) ── */
@@ -259,9 +254,6 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 
 /* ── ONBOARDING ── */
 #onboarding{display:none;position:fixed;inset:0;background:#fff;z-index:1100;overflow-y:auto}
-.ob-wrap{max-width:520px;margin:0 auto;padding:40px 24px 60px}
-.ob-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .2s}
-.ob-dot.active{background:var(--green)}
 .diet-chip{padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;text-align:center;transition:all .2s}
 .diet-chip.selected{background:var(--green);color:#fff;border-color:var(--green)}
 
@@ -332,85 +324,6 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 </div>
 
 <!-- ONBOARDING -->
-<div id="onboarding">
-  <div class="ob-wrap">
-    <div style="text-align:center;margin-bottom:28px">
-      <div style="font-size:44px;margin-bottom:10px">🥩❄️📦</div>
-      <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:var(--green);margin-bottom:8px">Welcome to Meal Builder Pro</div>
-      <div style="font-size:14px;color:#666;line-height:1.6">You don't have a food problem. You have a system problem. Let's fix that in 3 minutes.</div>
-    </div>
-    <div style="display:flex;gap:6px;justify-content:center;margin-bottom:28px" id="ob-dots">
-      <div class="ob-dot active" id="dot-0"></div>
-      <div class="ob-dot" id="dot-1"></div>
-      <div class="ob-dot" id="dot-2"></div>
-      <div class="ob-dot" id="dot-3"></div>
-      <div class="ob-dot" id="dot-4"></div>
-    </div>
-    <!-- Step 0 -->
-    <div id="ob-0">
-      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:16px">How the system works</div>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
-        <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f9f7f4;border-radius:10px"><div style="font-size:22px;width:34px;flex-shrink:0">🥩</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Layer 2 — Bases</div><div style="font-size:13px;color:#666">Cooked proteins stored in quart bags. 1 bag = 1.5 lbs cooked. Log what's in your freezer and the app tracks what you use.</div></div></div>
-        <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f9f7f4;border-radius:10px"><div style="font-size:22px;width:34px;flex-shrink:0">📦</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Layer 3 — Supports</div><div style="font-size:13px;color:#666">Cooked grains, vegetables, and beans in quart bags (1 bag = 3 cups), plus canned, dry, and fresh pantry items.</div></div></div>
-        <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f9f7f4;border-radius:10px"><div style="font-size:22px;width:34px;flex-shrink:0">🚨</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Layer 4 — Emergency Meals</div><div style="font-size:13px;color:#666">Complete cooked meals in gallon bags. Pull, heat, eat. Magic number is 6. Always.</div></div></div>
-      </div>
-      <button class="btn btn-primary btn-full btn-lg" onclick="obNext(1)">Got it — Next →</button>
-    </div>
-    <!-- Step 1: Household -->
-    <div id="ob-1" style="display:none">
-      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px">Your household</div>
-      <div style="font-size:13px;color:#666;margin-bottom:20px">Helps the app calculate quantities and portion sizes.</div>
-      <div class="fg" style="margin-bottom:20px">
-        <label class="lbl">How many people are you feeding?</label>
-        <select class="sel" id="ob-size">
-          <option value="1">Just me (1)</option>
-          <option value="2">2 people</option>
-          <option value="3">3 people</option>
-          <option value="4" selected>4 people</option>
-          <option value="5">5 people</option>
-          <option value="6">6 people</option>
-          <option value="7">7 people</option>
-          <option value="8">8+ people</option>
-        </select>
-      </div>
-      <button class="btn btn-primary btn-full btn-lg" onclick="obNext(2)">Next →</button>
-    </div>
-    <!-- Step 2: Dietary -->
-    <div id="ob-2" style="display:none">
-      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px">Dietary preferences</div>
-      <div style="font-size:13px;color:#666;margin-bottom:20px">The AI will never suggest meals that conflict with these.</div>
-      <div id="ob-dietary" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px"></div>
-      <div class="fg" style="margin-bottom:20px">
-        <label class="lbl">Other restrictions (optional)</label>
-        <input class="inp" id="ob-other" placeholder="e.g. No cilantro, extra spicy, tree nut allergy">
-      </div>
-      <button class="btn btn-primary btn-full btn-lg" onclick="obNext(3)">Next →</button>
-      <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="obNext(3)">Skip — No restrictions</button>
-    </div>
-    <!-- Step 3: Kitchen staples -->
-    <div id="ob-3" style="display:none">
-      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px">What is in your kitchen?</div>
-      <div style="font-size:13px;color:#666;margin-bottom:20px">Tell us what you have on hand so the AI can build complete meals.</div>
-      <div id="ob-pantry-setup" style="max-height:380px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);padding:4px 0;margin-bottom:16px"></div>
-      <button class="btn btn-primary btn-full btn-lg" onclick="obNext(4)">Next →</button>
-      <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="obNext(4)">Set up later in Settings</button>
-    </div>
-    <!-- Step 4: Ready -->
-    <div id="ob-4" style="display:none">
-      <div style="text-align:center;margin-bottom:24px">
-        <div style="font-size:52px;margin-bottom:12px">✅</div>
-        <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--green);margin-bottom:8px">You are set up</div>
-        <div style="font-size:14px;color:#666;line-height:1.6">Go to Meal Builder, pick your proteins for the week, and hit Build. The app will tell you exactly what to cook and buy.</div>
-      </div>
-      <div style="background:var(--green-xpale);border-radius:var(--radius);padding:16px;margin-bottom:24px">
-        <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:8px">Your first 3 steps:</div>
-        <div style="font-size:13px;color:#1b5e20;line-height:2">1. Go to Meal Builder → pick proteins for the week<br>2. Build your meals → get your cook list and buy list<br>3. Log frozen inventory if you already have cooked bags</div>
-      </div>
-      <button class="btn btn-primary btn-full btn-lg" onclick="finishOnboarding()">Start Using Meal Builder Pro →</button>
-    </div>
-  </div>
-</div>
-
 <!-- APP -->
 <div id="app">
   <div class="sidebar" id="sidebar">
@@ -457,8 +370,6 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
   </div>
 </div>
 
-<div id="overlay" onclick="closeDrawer()"></div>
-<div id="drawer"><div class="dh" onclick="closeDrawer()"></div><div id="db"></div></div>
 <div id="modal-overlay" onclick="closeModal()"></div>
 <div id="modal"><div id="modal-content"></div></div>
 
@@ -681,7 +592,7 @@ let A={
   page:'dashboard',invTab:'bases',
   calSelDate:null,weekOffset:0,
   generating:false,recipe:null,
-  ppSpices:true,buildFromStock:true,kidFriendly:false,buildEmergency:false,grabAndGo:false,includeSoups:true,pantryMode:false,freezerMode:false,
+  ppSpices:true,kidFriendly:false,buildEmergency:false,grabAndGo:false,includeSoups:true,pantryMode:false,freezerMode:false,
   lastBuiltMeal:'',lastBuiltBreakfast:'',lastBuiltProtein:'',
   favorites:[],homeCanned:[],grocWindow:1,emergencyCookList:[],
   householdSize:4,lastMealType:'Dinner',
@@ -702,10 +613,10 @@ let A={
 // ─── SAVE / LOAD ───────────────────────────────────────────────────────────────
 let _saveTimer=null;
 function executeLunchBank(){
-  if(!A.recipe)return showToast('No recipe to bank');
+  if(!A.recipe)return showSaveStatus('No recipe to bank');
   const hs=A.householdSize||4;
   const bankQty=parseInt(document.getElementById('lb-qty')?.value)||hs;
-  if(bankQty<1)return showToast('Enter at least 1 portion');
+  if(bankQty<1)return showSaveStatus('Enter at least 1 portion');
   const totalPortions=hs+bankQty;
   const totalFactor=totalPortions/hs;
 
@@ -726,78 +637,7 @@ function executeLunchBank(){
   A.lunchBank=(A.lunchBank||0)+bankQty;
   A._lunchBankOpen=false;
   save();render();
-  showToast('Recipe scaled for '+totalPortions+' total \u2014 cook once, freeze '+bankQty+' for lunch!');
-}
-function openLunchBankModal(){
-  if(!A.recipe){return showToast('Build a recipe first');}
-  const hs=A.householdSize||4;
-  openModal(`<div class="modal-header"><div class="modal-title">🧊 Bank for Lunch</div><button class="modal-close" onclick="closeModal()">×</button></div>
-    <div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:16px">Cook extra portions with this dinner and freeze in takeout containers. The app will scale up the ingredients and deduct them from your inventory. Label with today's date — pull oldest first.</div>
-    <div class="fg"><label class="lbl">How many lunch portions to bank?</label>
-    <input class="inp" id="lb-qty" type="number" value="${hs}" min="1" max="20" style="font-size:20px;font-weight:700;text-align:center;padding:12px" oninput="previewLBScale(${hs})">
-    <div style="font-size:12px;color:#888;margin-top:6px;text-align:center">Cooking for ${hs} for dinner — how many extra for the lunch bank?</div></div>
-    <div id="lb-preview" style="margin:12px 0;padding:10px;background:#f5f5f5;border-radius:8px;font-size:12px;color:#555;line-height:1.6">
-      Enter a number above to see scaled ingredients
-    </div>
-    <button class="btn btn-primary" style="margin-top:8px;background:#2980b9" onclick="confirmBankForLunch(${hs})">Scale Up, Deduct Inventory & Bank</button>`);
-}
-
-function previewLBScale(hs){
-  const qty=parseInt(document.getElementById('lb-qty')?.value)||hs;
-  const factor=qty/hs;
-  const preview=document.getElementById('lb-preview');
-  if(!preview||!A.recipe?.pull)return;
-  const scaled=(A.recipe.pull||[]).filter(p=>p.item&&p.qty).slice(0,6).map(p=>{
-    const newQty=scaleQty(p.qty,factor);
-    return `<div>• ${p.item}: <strong>${newQty}</strong> (extra for bank)</div>`;
-  }).join('');
-  preview.innerHTML=`<div style="font-weight:700;margin-bottom:6px">Extra ingredients needed (${qty} bank portions at ${factor.toFixed(1)}x):</div>${scaled}${(A.recipe.pull||[]).length>6?`<div style="color:#888">...and ${(A.recipe.pull.length-6)} more</div>`:''}`;
-}
-
-function confirmBankForLunch(hs){
-  const qty=parseInt(document.getElementById('lb-qty')?.value)||hs;
-  if(!qty||qty<1)return showToast('Enter at least 1 portion');
-  const factor=qty/hs;
-  // Scale the pull list for extra portions
-  const scaledPull=(A.recipe.pull||[]).map(p=>({...p,qty:scaleQty(p.qty,factor)}));
-  // Deduct extra inventory
-  deductInventory(scaledPull);
-  deductPantryItems(scaledPull);
-  // Save banked meal record
-  const bankedMeal={
-    id:'lb_'+Date.now(),
-    title:A.recipe.title,
-    dateBanked:new Date().toISOString().split('T')[0],
-    qty,
-    scaleFactor:factor,
-    pull:scaledPull
-  };
-  if(!A.lunchBankMeals)A.lunchBankMeals=[];
-  A.lunchBankMeals.push(bankedMeal);
-  A.lunchBank=(A.lunchBank||0)+qty;
-  save();
-  closeModal();
-  showToast(qty+' lunch portion'+(qty!==1?'s':'')+' banked — label and freeze!');
-  render();
-}
-
-function removeLunchBankMeal(mealId,portionsToRemove){
-  const meal=(A.lunchBankMeals||[]).find(m=>m.id===mealId);
-  if(!meal)return;
-  const removePct=(portionsToRemove||meal.qty)/meal.qty;
-  // Restore proportional inventory
-  const restoredPull=(meal.pull||[]).map(p=>({...p,qty:scaleQty(p.qty,removePct)}));
-  restoreInventoryFromPull(restoredPull);
-  restorePantryItems(restoredPull);
-  const remaining=meal.qty-(portionsToRemove||meal.qty);
-  if(remaining<=0){
-    A.lunchBankMeals=(A.lunchBankMeals||[]).filter(m=>m.id!==mealId);
-  }else{
-    meal.qty=remaining;
-  }
-  A.lunchBank=Math.max(0,(A.lunchBank||0)-(portionsToRemove||meal.qty));
-  save();render();
-  showToast('Portions removed — inventory restored');
+  showSaveStatus('Recipe scaled for '+totalPortions+' total \u2014 cook once, freeze '+bankQty+' for lunch!');
 }
 function save(){
   clearTimeout(_saveTimer);
@@ -914,8 +754,6 @@ async function loadUserData(email){
     A.lastMealType=source.last_meal_type||'Dinner';
     A.onboarded=source.onboarded||false;
     A.weekProteins=[];
-  A.lunchBank=A.lunchBank||0;
-  A.lunchBankMeals=A.lunchBankMeals||[];
     // Cook list is always recalculated from calendar — never loaded from storage
     return;
   }
@@ -1121,13 +959,6 @@ function getTimeOfDay(){const h=new Date().getHours();return h<12?'morning':h<17
 
 // ─── INVENTORY ─────────────────────────────────────────────────────────────────
 function hasAny(item){return(item.frozen||0)>0||(item.canned||0)>0||(item.dry||0)>0||(item.each||0)>0;}
-function getBestStorage(item){
-  if((item.frozen||0)>0)return{qty:item.frozen,unit:'bags',storage:'frozen'};
-  if((item.canned||0)>0)return{qty:item.canned,unit:'cans',storage:'canned'};
-  if((item.dry||0)>0)return{qty:item.dry,unit:item.dryUnit||'lbs',storage:'dry'};
-  if((item.each||0)>0)return{qty:item.each,unit:item.eachUnit||'each',storage:'each'};
-  return null;
-}
 function storageLabel(st){return st==='frozen'?'❄️ Frozen bags':st==='canned'?'🥫 Canned/pint jars':st==='dry'?'🌾 Dry':st==='each'?'🥚 Count (each)':'🌿 Fresh';}
 
 function rInventory(){
@@ -2027,16 +1858,13 @@ function rRecipe(){
         </div>
       </div>`
     }
+      <button class="btn btn-gold btn-full" style="margin-bottom:8px" onclick="saveToFavorites()">⭐ Save to Favorites</button>
       <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="printRecipe()">🖨️ Print This Recipe</button>
       <button class="btn btn-ghost btn-full" onclick="A.recipe=null;render()">↩ Generate a Different Meal</button>
       `}
     </div>
   </div>`;
 }
-
-// ─── STRETCH IT ────────────────────────────────────────────────────────────────
-
-
 
 function getWeekStart(offset){
   const today=new Date();today.setHours(0,0,0,0);
@@ -3107,249 +2935,6 @@ function removeFavorite(idx){
   save();render();
 }
 
-// ─── MAINTENANCE DAY ──────────────────────────────────────────────────────────
-function rMaintenance(){
-  const weekStart=getWeekStart(A.weekOffset||0);
-  const weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+6);
-  const weekLabel=weekStart.toLocaleDateString('en-US',{month:'long',day:'numeric'})+' – '+weekEnd.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  const cookList=A.cookList||[];
-
-  // Build Pull to Fridge list — Layer 2 proteins only, all meals this week
-  const pullToFridge={};
-  const PROTEIN_KEYWORDS=['chicken','beef','turkey','pork','salmon','tuna','shrimp','sausage','steak','ground','shredded','tuna'];
-  const baseNames=A.bases.map(b=>b.name.toLowerCase());
-
-  for(let i=0;i<7;i++){
-    const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
-    const dk=dateKey(d);
-    const slots=A.calendarByDate[dk]||{};
-    Object.entries(slots).forEach(([slot,meal])=>{
-      if(!meal)return;
-      const dayLabel=d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-      const slotLabel=slot.charAt(0).toUpperCase()+slot.slice(1);
-
-      if(meal.pull&&meal.pull.length>0){
-        // New meal with pull list — find protein items (Layer 2 only)
-        meal.pull.forEach(p=>{
-          if(!p.item)return;
-          const itemL=p.item.toLowerCase();
-          const isProtein=PROTEIN_KEYWORDS.some(kw=>itemL.includes(kw));
-          const isBase=baseNames.some(b=>itemL.includes(b.split(' ')[0]));
-          if(!isProtein&&!isBase)return;
-          // Skip Layer 3 supports
-          const isSupport=A.supports.some(s=>s.name.toLowerCase()===itemL);
-          if(isSupport)return;
-          const key=p.item;
-          if(!pullToFridge[key])pullToFridge[key]={qty:p.qty,icon:p.icon||'🥩',meals:[]};
-          else if(p.qty&&p.qty!==pullToFridge[key].qty){
-            // Accumulate quantities — add bags
-            const existing=parseInt(pullToFridge[key].qty)||0;
-            const adding=parseInt(p.qty)||0;
-            if(existing&&adding)pullToFridge[key].qty=(existing+adding)+' quart bags';
-          }
-          pullToFridge[key].meals.push({day:dayLabel,slot:slotLabel,meal:meal.title});
-        });
-      } else if(meal.title){
-        // Old meal — match against bases inventory
-        A.bases.forEach(b=>{
-          const titleL=meal.title.toLowerCase();
-          const nameL=b.name.toLowerCase();
-          const nameWords=nameL.split(' ');
-          if(nameWords.some(w=>w.length>3&&titleL.includes(w))){
-            const key=b.name;
-            if(!pullToFridge[key])pullToFridge[key]={qty:'check inventory',icon:b.icon||'🥩',meals:[]};
-            pullToFridge[key].meals.push({day:dayLabel,slot:slotLabel,meal:meal.title});
-          }
-        });
-      }
-    });
-  }
-
-  // Add emergency builds to pull list
-  (A.emergencyCookList||[]).forEach(c=>{
-    if(!c.needsCooking){
-      const key=c.protein;
-      if(!pullToFridge[key])pullToFridge[key]={qty:c.bags+' quart bag'+(c.bags!==1?'s':''),icon:'🚨',meals:[]};
-      pullToFridge[key].meals.push({day:'Emergency Build',slot:'',meal:c.mealName||'Emergency Meal'});
-    }
-  });
-
-  let html=`<div class="page-title">Maintenance Day</div>
-  <div class="page-sub">Everything you need to cook, bag, and stock your kitchen for the week.</div>`;
-
-  html+=`<div class="alert alert-gold" style="margin-bottom:20px"><span>🏠</span><div><strong>Before you buy anything</strong> — check your chest freezer, long term storage, and pantry overflow first. You may already have what you need.</div></div>`;
-
-  // Week selector
-  html+=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-    <button class="btn btn-outline btn-sm" onclick="A.weekOffset=Math.max(0,(A.weekOffset||0)-1);render()" ${(A.weekOffset||0)===0?'disabled':''}>‹ Prev</button>
-    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:var(--green)">${weekLabel}</div>
-    <button class="btn btn-outline btn-sm" onclick="A.weekOffset=Math.min(4,(A.weekOffset||0)+1);render()" ${(A.weekOffset||0)===4?'disabled':''}>Next ›</button>
-  </div>`;
-
-  // ── PULL TO FRIDGE ────────────────────────────────────────────────────
-  const pullItems=Object.entries(pullToFridge);
-  if(pullItems.length>0){
-    html+=`<div class="card card-pad" style="margin-bottom:20px;border-left:4px solid var(--green)">
-      <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:var(--green);margin-bottom:4px">🧊 Pull to Fridge</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Move these from freezer to fridge today so they're thawed and ready when you need them</div>
-      ${pullItems.map(([item,data])=>`
-        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
-          <div style="font-size:24px">${data.icon}</div>
-          <div style="flex:1">
-            <div style="font-size:15px;font-weight:600;color:var(--text)">${item}</div>
-            <div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:4px">${data.qty}</div>
-            <div style="font-size:12px;color:var(--text-muted)">Needed for: ${data.meals.map(m=>`${m.day}${m.slot?' ('+m.slot+')':''} — ${m.meal}`).join(' · ')}</div>
-          </div>
-          <div style="background:var(--green-light);color:var(--green);font-size:11px;font-weight:700;padding:4px 8px;border-radius:20px;white-space:nowrap">Pull Now</div>
-        </div>`).join('')}
-      <div style="font-size:11px;color:var(--text-hint);margin-top:12px">❄️ Thaw in fridge overnight · Never thaw on counter · Use within 3-4 days of thawing</div>
-    </div>`;
-  }
-
-  // ── COOK LIST ─────────────────────────────────────────────────────────
-  if(cookList.length===0){
-    html+=`<div class="card card-pad" style="margin-bottom:16px">
-      <div style="text-align:center;padding:24px 0">
-        <div style="font-size:40px;margin-bottom:10px">🍳</div>
-        <div style="font-size:15px;font-weight:600;margin-bottom:6px">No cook list yet</div>
-        <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Go to Meal Builder, select your proteins for the week, and build your meals. The cook list will appear here.</div>
-        <button class="btn btn-primary" onclick="showPage('builder')">Go to Meal Builder →</button>
-      </div>
-    </div>`;
-    const weeklyBases=cookList.filter(c=>c.bags>0&&c.type!=='emergency');
-    const emergencyItems=cookList.filter(c=>c.bags>0&&c.type==='emergency');
-
-    // ── WEEKLY BASES ──────────────────────────────────────────────────
-    if(weeklyBases.length>0){
-      html+=`<div class="cook-list-card" style="margin-bottom:12px">
-        <div class="cook-list-title">🍳 Weekly Bases — What to Cook</div>
-        <div class="cook-list-sub">Cook on maintenance day · Cool completely · Bag in quart bags · Label and freeze</div>
-        ${weeklyBases.map(c=>{
-          const rawLbs=c.rawLbs||(c.bags*1.5*1.43).toFixed(1)+' lbs raw';
-          const cookedLbs=c.cookedLbs||(c.bags*1.5).toFixed(1);
-          const form=c.form||'cooked';
-          const cookMethod=c.cookMethod||getCookMethod(form);
-          const rawNum=parseFloat(rawLbs);
-          return`<div class="cook-item" style="border-bottom:1px solid rgba(255,255,255,.1);padding-bottom:14px;margin-bottom:14px">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start">
-              <div style="flex:1">
-                <div class="cook-item-name">${c.protein}</div>
-                <div class="cook-item-detail" style="margin-bottom:8px">Buy <strong>${rawNum.toFixed(1)} lbs raw</strong> → Cook → Yields <strong>${c.bags} quart bags</strong> (${cookedLbs} lbs cooked)</div>
-                <div style="font-size:12px;color:rgba(255,255,255,.8);background:rgba(0,0,0,.15);border-radius:6px;padding:8px 10px;line-height:1.7">
-                  <div>📦 <strong>Form needed:</strong> ${form}</div>
-                  <div>🔥 <strong>How to cook:</strong> ${cookMethod}</div>
-                  <div>❄️ <strong>After cooking:</strong> Cool completely → bag ${c.bags} quart bags → label → freeze</div>
-                </div>
-              </div>
-              <button class="btn btn-sm btn-ghost" onclick="removeCookItem('${c.protein}','weekly')" style="color:#c62828;font-size:18px;padding:4px 8px;margin-left:8px" title="Remove">×</button>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>`;
-    }
-
-    // ── EMERGENCY MEAL BUILDS ──────────────────────────────────────────
-    if(emergencyItems.length>0){
-      html+=`<div class="cook-list-card" style="margin-bottom:12px;background:linear-gradient(135deg,#7b1a1a 0%,#a32020 100%)">
-        <div class="cook-list-title">🚨 Emergency Meal Builds</div>
-        <div class="cook-list-sub">Protein needed to assemble your gallon bag emergency meals</div>
-        ${emergencyItems.map(c=>{
-          const rawLbs=c.rawLbs?parseFloat(c.rawLbs):(c.bags*1.5*1.43);
-          const cookedLbs=(c.bags*1.5).toFixed(1);
-          const form=c.form||'cooked';
-          const cookMethod=c.cookMethod||getCookMethod(form);
-          const needsCooking=c.needsCooking;
-          return`<div class="cook-item" style="border-bottom:1px solid rgba(255,255,255,.15);padding-bottom:14px;margin-bottom:14px">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start">
-              <div style="flex:1">
-                <div class="cook-item-name">${c.mealName||'Emergency Meal'}</div>
-                <div class="cook-item-detail" style="margin-bottom:8px">${c.protein} · ${c.qty||c.bags+' quart bags'}</div>
-                <div style="font-size:12px;color:rgba(255,255,255,.8);background:rgba(0,0,0,.2);border-radius:6px;padding:8px 10px;line-height:1.8">
-                  ${needsCooking?`
-                  <div>🔥 <strong>Need to cook:</strong> Buy ${rawLbs.toFixed(1)} lbs raw → ${cookedLbs} lbs cooked</div>
-                  <div>📦 <strong>How:</strong> ${cookMethod}</div>
-                  <div>⚡ <strong>Building today:</strong> Use cooked protein directly in gallon bag meal</div>
-                  `:`
-                  <div>✅ <strong>Already stocked</strong> — pull from freezer to assemble</div>
-                  `}
-                  <div style="margin-top:4px">📅 <strong>Building today:</strong> Assemble and portion into gallon bags → freeze</div>
-                  <div>📅 <strong>Building later:</strong> Pull ${c.bags} quart bag${c.bags!==1?'s':''} from freezer when ready</div>
-                </div>
-              </div>
-              <button class="btn btn-sm btn-ghost" onclick="removeCookItem('${c.protein}','emergency')" style="color:#ffaaaa;font-size:18px;padding:4px 8px;margin-left:8px" title="Remove">×</button>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>`;
-    }
-
-    html+=`<div style="display:flex;gap:8px;margin-bottom:20px">
-      <button class="btn btn-outline btn-sm" onclick="A.emergencyCookList=[];recalcCookListFromCalendar();save();render()">Clear All</button>
-      <button class="btn btn-outline btn-sm" onclick="showPage('builder')">Add More Meals</button>
-    </div>`;
-
-    // ── GROCERY LIST / WHAT TO BUY ────────────────────────────────────
-    const allItems=cookList.filter(c=>c.bags>0);
-    if(allItems.length>0){
-      html+=`<div class="card card-pad" style="margin-bottom:20px">
-        <div style="font-size:15px;font-weight:700;color:var(--green);margin-bottom:4px">🛒 What to Buy</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Everything you need for this week's meals and emergency builds combined</div>
-        ${allItems.map(c=>{
-          const rawLbs=parseFloat(c.rawLbs)||(c.bags*1.5*1.43);
-          const form=c.form||'cooked';
-          const isEmergency=c.type==='emergency';
-          const onList=A.grocery.find(g=>g.name.toLowerCase().includes(c.protein.toLowerCase().split(' ')[0]));
-          return`<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
-            <div style="flex:1">
-              <div style="font-size:14px;font-weight:600">${c.protein}
-                ${isEmergency?'<span style="font-size:10px;background:#c62828;color:#fff;padding:1px 6px;border-radius:3px;margin-left:6px">Emergency Build</span>':'<span style="font-size:10px;background:var(--green);color:#fff;padding:1px 6px;border-radius:3px;margin-left:6px">Weekly Base</span>'}
-              </div>
-              <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Need: ${form} · Buy ${rawLbs.toFixed(1)} lbs raw · ${isEmergency?'For gallon bag emergency meal':'For '+c.bags+' quart bags'}</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px">
-              <div style="font-size:16px;font-weight:700;color:var(--green)">${rawLbs.toFixed(1)} lbs</div>
-              ${!onList?`<button class="btn btn-sm btn-outline" onclick="addProteinToGroc('${c.protein}','${rawLbs.toFixed(1)}')">+ List</button>`:`<span style="font-size:11px;color:var(--text-muted)">On list ✓</span>`}
-            </div>
-          </div>`;
-        }).join('')}
-        <div style="font-size:11px;color:var(--text-hint);margin-top:10px">30% shrinkage factored in · Always round up at the store · Check long term storage first</div>
-      </div>`;
-    }
-  }
-
-  // This week's planned meals
-  const weekStart2=getWeekStart(A.weekOffset||0);
-  const days=[];
-  for(let i=0;i<7;i++){const d=new Date(weekStart2);d.setDate(weekStart2.getDate()+i);days.push(d);}
-  const weekMeals=[];
-  days.forEach(d=>{
-    const key=dateKey(d);
-    const dayCal=A.calendarByDate[key]||{};
-    ['breakfast','lunch','dinner','snack'].forEach(slot=>{
-      const meal=dayCal[slot];
-      if(meal){
-        const title=typeof meal==='object'?meal.title:meal;
-        weekMeals.push({day:d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}),slot,title});
-      }
-    });
-  });
-
-  if(weekMeals.length>0){
-    html+=`<div class="card" style="margin-bottom:16px">
-      <div class="card-header"><div class="card-title">📅 Meals Planned This Week</div></div>
-      <table class="inv-table"><tbody>
-        ${weekMeals.map(m=>`<tr>
-          <td style="font-size:13px;color:var(--text-muted);width:140px">${m.day}</td>
-          <td style="font-size:12px;color:var(--text-hint);width:80px;text-transform:capitalize">${m.slot}</td>
-          <td style="font-size:14px;font-weight:600">${m.title}</td>
-        </tr>`).join('')}
-      </tbody></table>
-    </div>`;
-  }
-
-  return html;
-}
-
 // ─── GROCERY ───────────────────────────────────────────────────────────────────
 function rGrocery(){
   // Deduplicate — fuzzy match on protein names
@@ -3576,10 +3161,6 @@ function saveAddPantrySupport(){
   const newItem={id:Date.now(),name,icon:'🥫',frozen:0,canned:0,dry:0,storageTypes:[type],dryUnit:'lbs'};
   newItem[type]=qty;A.supports.push(newItem);
   save();closeModal();render();
-}
-function setSupportState(id,state){
-  const item=A.supports.find(s=>s.id==id);
-  if(item){item.state=state;save();}
 }
 
 // ─── EMERGENCY ─────────────────────────────────────────────────────────────────
@@ -3997,66 +3578,6 @@ function saveSettings(){
 }
 
 // ─── ONBOARDING ────────────────────────────────────────────────────────────────
-function showOnboarding(){
-  document.getElementById('onboarding').style.display='block';
-  const container=document.getElementById('ob-dietary');
-  if(container){
-    const prefs=['No Pork','No Beef','No Seafood','No Shellfish','Gluten Free','Dairy Free','No Nuts','Vegetarian','Halal','Kosher','Low Sodium','Diabetic Friendly'];
-    container.innerHTML=prefs.map(d=>`<div class="diet-chip" data-pref="${d}" onclick="toggleDietChip(this)">${d}</div>`).join('');
-  }
-  const pantrySetup=document.getElementById('ob-pantry-setup');
-  if(pantrySetup){
-    const cats={baking:{label:'🍞 Baking',type:'qty'},fridge:{label:'🧈 Fridge & Dairy',type:'qty'},fresh:{label:'🌿 Fresh Produce',type:'qty'},oils:{label:'🫙 Oils & Acids',type:'toggle'},condiments:{label:'🥫 Condiments',type:'toggle'},spices:{label:'🧂 Spices',type:'toggle'}};
-    let html='';
-    Object.keys(cats).forEach(cat=>{
-      const {label,type}=cats[cat];
-      html+=`<div style="padding:8px 14px;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;background:var(--cream);border-bottom:1px solid var(--border)">${label}</div>`;
-      (DEF_PANTRY[cat]||[]).forEach(item=>{
-        if(type==='qty'){
-          html+=`<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border)">
-            <div style="flex:1;font-size:13px;font-weight:500">${item.name}${item.fresh?`<span class="pantry-fresh-badge">FRESH</span>`:''}</div>
-            <input type="number" min="0" value="0" data-cat="${cat}" data-id="${item.id}" style="width:64px;padding:5px 8px;border:1px solid var(--border-strong);border-radius:var(--radius-xs);font-size:13px;font-weight:600;text-align:center;color:var(--green)" onchange="obSetQty(this)">
-            <span style="font-size:11px;color:var(--text-muted);min-width:32px">${item.unit||''}</span>
-          </div>`;
-        } else {
-          html+=`<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border)">
-            <div class="tog" data-cat="${cat}" data-id="${item.id}" onclick="obTogglePantry(this)"><div class="tog-th"></div></div>
-            <div style="flex:1;font-size:13px;font-weight:500">${item.name}</div>
-          </div>`;
-        }
-      });
-    });
-    pantrySetup.innerHTML=html;
-  }
-  obGoTo(0);
-}
-function obGoTo(step){
-  [0,1,2,3,4].forEach(i=>{
-    const el=document.getElementById('ob-'+i);if(el)el.style.display=i===step?'block':'none';
-    const dot=document.getElementById('dot-'+i);if(dot)dot.className='ob-dot'+(i<=step?' active':'');
-  });
-}
-function obNext(step){
-  if(step===2){A.householdSize=+document.getElementById('ob-size')?.value||4;}
-  if(step===3){
-    const selected=[...document.querySelectorAll('#ob-dietary .diet-chip.selected')].map(d=>d.dataset.pref);
-    const other=document.getElementById('ob-other')?.value.trim();
-    A.dietary=other?[...selected,other]:selected;
-    save();
-  }
-  if(step===4){save();}
-  obGoTo(step);
-}
-function obTogglePantry(el){
-  const cat=el.dataset.cat,id=el.dataset.id;
-  const item=(A.pantry[cat]||[]).find(i=>i.id===id);
-  if(item){item.have=!item.have;el.classList.toggle('on');}
-}
-function obSetQty(input){
-  const cat=input.dataset.cat,id=input.dataset.id;
-  const item=(A.pantry[cat]||[]).find(i=>i.id===id);
-  if(item){item.qty=+input.value||0;if(item.qty>0)item.have=true;}
-}
 function finishOnboarding(){
   A.onboarded=true;save();
   const ob=document.getElementById('onboarding');if(ob)ob.style.display='none';
@@ -4114,8 +3635,6 @@ function printGroc(){
 }
 
 // ─── DRAWER / MODAL ────────────────────────────────────────────────────────────
-function openDrawer(html){document.getElementById('db').innerHTML=html;document.getElementById('drawer').classList.add('open');document.getElementById('overlay').classList.add('show');}
-function closeDrawer(){document.getElementById('drawer').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
 function openModal(html){document.getElementById('modal-content').innerHTML=html;document.getElementById('modal').classList.add('show');document.getElementById('modal-overlay').classList.add('show');}
 function closeModal(){document.getElementById('modal').classList.remove('show');document.getElementById('modal-overlay').classList.remove('show');}
 function removeCookItem(protein,type){
@@ -4134,8 +3653,6 @@ function addProteinToGroc(name,rawLbs){
     save();render();
   }
 }
-function openEditBase(id){openEditItem(id,'bases');}
-function openEditSupport(id){openEditItem(id,'supports');}
 
 // ─── PRINT BLANK INVENTORY ─────────────────────────────────────────────────────
 function printBlankInventory(){
