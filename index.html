@@ -277,9 +277,9 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .qty-unit{font-size:11px;color:var(--text-muted);min-width:30px}
 
 /* ── STRETCH IT ── */
-.stretch-result{background:var(--green-xpale);border:1px solid var(--green-pale);border-radius:var(--radius);padding:16px 18px}
-.stretch-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--green-pale)}
-.stretch-item:last-child{border-bottom:none}
+
+
+
 
 /* ── MISC ── */
 .empty{text-align:center;padding:40px 20px;color:var(--text-muted)}
@@ -312,7 +312,6 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     <div class="pw-feats">
       <div class="pw-feat"><div class="pw-dot">✓</div>Full kitchen inventory — frozen, pantry, fresh</div>
       <div class="pw-feat"><div class="pw-dot">✓</div>AI meal builder from what you actually have</div>
-      <div class="pw-feat"><div class="pw-dot">✓</div>Stretch It — extend any meal without a store run</div>
       <div class="pw-feat"><div class="pw-dot">✓</div>Weekly calendar with conflict detection</div>
       <div class="pw-feat"><div class="pw-dot">✓</div>Smart grocery list — auto-populates from your week</div>
       <div class="pw-feat"><div class="pw-dot">✓</div>Cross-device sync — your data everywhere</div>
@@ -681,8 +680,8 @@ const DEF_PANTRY={
 let A={
   page:'dashboard',invTab:'bases',
   calSelDate:null,weekOffset:0,
-  generating:false,stretchingIt:false,recipe:null,stretchResult:null,
-  ppSpices:true,buildFromStock:true,kidFriendly:false,buildEmergency:false,grabAndGo:false,includeSoups:true,
+  generating:false,recipe:null,
+  ppSpices:true,buildFromStock:true,kidFriendly:false,buildEmergency:false,grabAndGo:false,includeSoups:true,pantryMode:false,freezerMode:false,
   lastBuiltMeal:'',lastBuiltBreakfast:'',lastBuiltProtein:'',
   favorites:[],homeCanned:[],grocWindow:1,emergencyCookList:[],
   householdSize:4,lastMealType:'Dinner',
@@ -819,6 +818,8 @@ function save(){
       pp_spices:A.ppSpices,
       kid_friendly:A.kidFriendly,
       grab_and_go:A.grabAndGo||false,
+      pantry_mode:A.pantryMode||false,
+      freezer_mode:A.freezerMode||false,
       include_soups:A.includeSoups!==false,
       favorites:A.favorites||[],
       home_canned:A.homeCanned||[],
@@ -903,6 +904,8 @@ async function loadUserData(email){
     A.ppSpices=source.pp_spices!==false;
     A.kidFriendly=source.kid_friendly||false;
     A.grabAndGo=source.grab_and_go||false;
+    A.pantryMode=source.pantry_mode||false;
+    A.freezerMode=source.freezer_mode||false;
     A.includeSoups=source.include_soups!==false;
     A.favorites=source.favorites||[];
     A.homeCanned=source.home_canned||[];
@@ -934,6 +937,8 @@ async function loadUserData(email){
       A.ppSpices=d.pp_spices!==false;
       A.kidFriendly=d.kid_friendly||false;
       A.grabAndGo=d.grab_and_go||false;
+      A.pantryMode=d.pantry_mode||false;
+      A.freezerMode=d.freezer_mode||false;
       A.includeSoups=d.include_soups!==false;
       A.favorites=d.favorites||[];
       A.homeCanned=d.home_canned||[];
@@ -1392,19 +1397,13 @@ function saveAddPantryItem(cat){
 // ─── MEAL BUILDER ──────────────────────────────────────────────────────────────
 function rBuilder(){
   if(A.generating)return rGenerating();
-  if(A.stretchingIt)return rStretchingIt();
-  if(A.stretchResult)return rStretchResult();
   if(A.recipe)return rRecipe();
   return rBuilderForm();
 }
 function rGenerating(){
   return`<div class="generating-box"><div class="spinner" style="margin-bottom:20px"></div><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;margin-bottom:8px">Building your meal…</div><div style="font-size:14px;color:var(--text-muted)" id="gen-msg">Reading your inventory</div></div><script>const msgs=["Reading your inventory","Picking the best dish for what you have","Checking your kitchen staples","Writing your recipe","Almost ready…"];let mi=0;const iv=setInterval(()=>{mi=(mi+1)%msgs.length;const el=document.getElementById("gen-msg");if(el)el.textContent=msgs[mi];else clearInterval(iv);},2000);<\/script>`;
 }
-function rStretchingIt(){
-  return`<div class="generating-box"><div class="spinner" style="margin-bottom:20px"></div><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;margin-bottom:8px">Stretching your meal…</div><div style="font-size:14px;color:var(--text-muted)">Looking at your inventory for ways to extend it</div></div>`;
-}
 
-// ─── PROTEIN SELECTOR ─────────────────────────────────────────────────────────
 function rBuilderForm(){
   const frozenBases=A.bases.filter(b=>(b.frozen||0)>0);
   const zeroBases=A.bases.filter(b=>(b.frozen||0)===0);
@@ -1467,6 +1466,15 @@ function rBuilderForm(){
           <div class="tog ${A.ppSpices?'on':''}" onclick="toggleBuilderOption('ppSpices')"><div class="tog-th"></div></div>
         </div>
         <div class="mode-row">
+          <div><div style="font-size:14px;font-weight:600">🥫 Pantry Mode — Use What I Have</div><div style="font-size:12px;color:var(--text-muted)">${A.pantryMode?'No buy suggestions — builds only from what is logged, tells you honestly if stock is thin':'Toggle on to build only from inventory — no store run'}</div></div>
+          <div class="tog ${A.pantryMode?'on':''}" onclick="toggleBuilderOption('pantryMode')"><div class="tog-th"></div></div>
+        </div>
+        ${(A.lastMealType==='Breakfast'||A.lastMealType==='Lunch'||!A.lastMealType)?`
+        <div class="mode-row">
+          <div><div style="font-size:14px;font-weight:600">🧊 Freezer Mode</div><div style="font-size:12px;color:var(--text-muted)">${A.freezerMode?'Only freezer-stable formats — make once, slice, freeze, grab all week':'Off — includes same-day fresh options too'}</div></div>
+          <div class="tog ${A.freezerMode?'on':''}" onclick="toggleBuilderOption('freezerMode')"><div class="tog-th"></div></div>
+        </div>`:''}
+        <div class="mode-row">
           <div><div style="font-size:14px;font-weight:600">👶 Kid Friendly</div><div style="font-size:12px;color:var(--text-muted)">${A.kidFriendly?'All meals — mild, nut-free, fun formats, kid portions':'Toggle on for kid-friendly meals across all types'}</div></div>
           <div class="tog ${A.kidFriendly?'on':''}" onclick="toggleBuilderOption('kidFriendly')"><div class="tog-th"></div></div>
         </div>
@@ -1484,7 +1492,7 @@ function rBuilderForm(){
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
           <button class="btn btn-primary btn-lg btn-full" onclick="generateRecipe()">🤖 Build My Meal</button>
-          <button class="btn btn-outline btn-lg btn-full" onclick="openStretchIt()">💪 Stretch It</button>
+          
         </div>
       </div>
     </div>
@@ -1529,6 +1537,8 @@ async function generateRecipe(){
   const anchor=document.getElementById('anchor')?.value?.trim()||'';
   const ppSpices=A.ppSpices;
   const kidFriendly=A.kidFriendly||false;
+  const pantryMode=A.pantryMode||false;
+  const freezerMode=A.freezerMode||false;
   const buildEmergency=A.buildEmergency||false;
   const grabAndGo=A.grabAndGo||false;
   const includeSoups=A.includeSoups!==false;
@@ -1579,6 +1589,12 @@ If frozen protein bags are logged in the user's inventory, USE THEM. Do not choo
 - If MULTIPLE proteins are in inventory → rotate through them across the week. Never use the same one every meal.
 - Only when NO protein is in inventory does the seasonal budget hierarchy apply.
 
+PANTRY MODE PROTEIN FALLBACK (only applies when PANTRY MODE is ON):
+- Vegetarian/Vegan household → plant protein is the real centerpiece, exactly like any other day. No special handling needed.
+- Standard diet, real meat protein on hand → build with it normally.
+- Standard diet, NO real meat protein on hand → it is acceptable to build a vegetarian-style dinner from beans, lentils, chickpeas, or eggs as the centerpiece, but this MUST be clearly flagged in the description — something like "No meat in stock tonight — here's a vegetarian dinner from what's on hand." Never silently substitute without saying so.
+- If there is truly not enough on hand for a complete, satisfying meal (no protein of any kind, no real starch) → say so honestly in the description. Build the closest good option from what exists. Never pretend a thin meal is a full success.
+
 FINISHED PANTRY GOODS — USE WHAT IS LOGGED:
 If a finished or prepared ingredient is in the user's kitchen staples, USE IT instead of building from scratch. NEVER combine a finished product with its raw components in the same dish.
 - Pasta sauce or marinara logged → use it as the ONLY tomato sauce in the dish. Do NOT also add crushed tomatoes, diced tomatoes, or tomato sauce alongside it. One or the other — never both.
@@ -1620,16 +1636,30 @@ MEAL TYPE RULES:
     Pasta Salad: cold cooked pasta + protein + veggies + dressing — batch for the week
     Quesadilla: cheese + protein, press and slice cold or warm
     Tacos: protein + toppings in hard or soft shell — pack shells and filling separately so nothing gets soggy
-    Burritos: protein + rice or beans + cheese + sauce, wrapped tight in foil — eat cold or warm cold or hot
+    Burritos: protein + rice or beans + cheese + sauce, wrapped tight in foil — eat cold or warm
+    Empanadas: meat or cheese filled pastry, baked, freezes and reheats beautifully
+    Samosas: potato/pea or meat filled, crisps back up from frozen
+    Spanakopita Triangles: spinach and feta in phyllo, freezer staple
+    Pierogi: potato/cheese or meat filled dumplings, freeze raw or cooked
+    Dumplings/Potstickers: freeze raw, steam or pan-fry straight from frozen
+    Vegetable Paratha: stuffed flatbread, freezes flat, reheats in a skillet
+    Onigiri: rice balls with savory filling, wrapped individually, great cold
+    Fried Rice: uses leftover rice plus whatever protein/veg is on hand, batches and freezes
+    Calzones: pizza dough folded over cheese/meat/veggies, freezes and reheats like a pizza pocket
+    Stromboli: rolled pizza dough with fillings, sliced into portions, freezes well
+    Arancini: fried or baked rice balls stuffed with cheese or meat, reheats crisp in the oven
+    Panzerotti: smaller fried/baked calzone, classic freezer-friendly hand pie
+    Caprese Sandwich (fresh, not freezer): fresh mozzarella, tomato, basil, quick and no cooking
+    Panini (fresh, not freezer): pressed sandwich, fast lunch
     Lunch Bank Pull: portion from a banked dinner container — thaw overnight, heat if needed
 - Kid-friendly ON → grilled cheese, PB&J, pinwheels, or bento box first.
 - Lunch Bank: when dinner is built with extra portions, tip says "Portion X extras into individual takeout containers, label with date, freeze. Pull from your lunch bank throughout the week — oldest first."
 - Breakfast = 5 groups, rotate — never same group back to back:
-    A(grain): baked oatmeal, oat bars, granola bars, overnight oats
-    B(egg savory): scrambled bowl, omelette, frittata, egg muffin cups, breakfast casserole, breakfast quesadilla, migas
-    C(bread/batter): pancakes, french toast, waffles, crepes, biscuits and gravy, muffins, breakfast tacos, breakfast burritos
+    A(grain): baked oatmeal, oat bars, granola bars, overnight oats, congee, upma, poha
+    B(egg savory): scrambled bowl, omelette, frittata (bake/slice/freeze), egg muffin cups, breakfast casserole (bake/slice/freeze), breakfast quesadilla, migas, masala omelette, shakshuka, huevos rancheros, chilaquiles
+    C(bread/batter): pancakes, french toast, waffles, crepes, biscuits and gravy, muffins, breakfast tacos, breakfast burritos, breakfast pockets, akara
     D(no-cook): yogurt parfait, smoothie pack, fruit and cheese, overnight oats
-    E(hash/skillet): breakfast hash, potato sausage skillet, sheet pan breakfast, loaded hash browns
+    E(hash/skillet): breakfast hash, potato sausage skillet, sheet pan breakfast, loaded hash browns, saltfish and bake
   Last breakfast: "${A.lastBuiltBreakfast||'none'}" — build from a DIFFERENT group. All groups valid, just rotate.
 - Snack = small, light, no cooking. SNACK GROUPS — rotate, never same group back to back:
     A(cheese/dairy): cheese and crackers, cottage cheese with fruit, string cheese, yogurt cup with granola
@@ -1642,7 +1672,7 @@ MEAL TYPE RULES:
 ${!includeSoups?'SOUPS OFF: No soups, stews, chili, or broth-based dishes.':''}
 
 ${grabAndGo?`GRAB AND GO: Batchable item, made once, grabbed all week. Rotate formats — last: "${A.lastBuiltBreakfast||'none'}":
-Formats: freezer burritos, breakfast tacos (wrapped in foil), egg muffin cups, baked oatmeal bars, granola bars, banana oat muffins, overnight oats jars, yogurt parfait cups, smoothie packs, sheet pan hash, pancakes, waffles, french toast sticks, muffins.
+Formats: freezer burritos, breakfast tacos (wrapped in foil), breakfast pockets, pizza pockets, egg muffin cups, baked oatmeal bars, granola bars, banana oat muffins, overnight oats jars, yogurt parfait cups, smoothie packs, sheet pan hash, pancakes, waffles, french toast sticks, muffins, empanadas, samosas, spanakopita triangles, pierogi, dumplings/potstickers, calzones, stromboli, arancini, panzerotti, onigiri, breakfast casserole (bake/slice/freeze), quiche (bake/slice/freeze), frittata (bake/slice/freeze).
 Stock guidance: sausage→burritos/egg cups · hash browns→hash bake · oats→bars/overnight oats · yogurt→parfait · frozen fruit→smoothie packs · bananas→banana muffins · flour+eggs+butter→pancakes/waffles/muffins.
 Yield in pieces, storage, how long keeps, grab size. BAKING SCALE TIP in tip: "~1.4x baking powder/soda/salt when scaling up — not 2x."`:''}
 
@@ -1656,7 +1686,7 @@ LOW CARB: Reduce grain portions or use lower-carb swaps where natural. Do not el
 KETO: No grains, no sugar, no starchy vegetables. Carbs from vegetables only.
 HIGH PROTEIN + LOW FAT together: Lean proteins, normal carb bases (crust/tortilla/pasta/rice), high-protein toppings and fillings. Never sacrifice the structure of a dish to add more protein.`:''}
 
-FLAVOR GUIDE: Classic American=meat+potatoes/casseroles · Comfort=creamy/cheesy/hearty · Southern=gravy/cornbread/grits · Tex-Mex=cumin/cheese/tortillas · Mexican=authentic(carnitas/barbacoa/mole) · Italian=tomato/pasta/olive oil · BBQ=smoked/chipotle · Cajun=holy trinity/bold spice · Asian=soy/ginger/sesame · Mediterranean=olive oil/lemon/feta · Caribbean=allspice/jerk · Surprise Me=rotate freely.
+FLAVOR GUIDE: Classic American=meat+potatoes/casseroles · Comfort=creamy/cheesy/hearty · Southern=gravy/cornbread/grits · Tex-Mex=cumin/cheese/tortillas · Mexican=authentic(carnitas/barbacoa/mole) · Italian=tomato/pasta/olive oil · BBQ=smoked/chipotle · Cajun=holy trinity/bold spice · Asian=soy/ginger/sesame · Mediterranean=olive oil/lemon/feta · Caribbean=allspice/jerk · Surprise Me=randomly select ONE of these real cuisine directions and build fully committed to it: Classic American, Comfort Food, Southern & Soul Food, Tex-Mex, Mexican, Italian, BBQ & Smoky, Cajun, Asian-Style, Mediterranean, or Caribbean. Never invent a cuisine outside this list. Never blend multiple directions together.
 
 STORAGE FORM HONESTY — match form to actual inventory:
 1. FROZEN bags > 0 → frozen. Step: "add mid-cook, 3-4 min to heat."
@@ -1721,6 +1751,20 @@ Pre-cooked frozen protein is ALREADY COOKED in shredded, ground, or diced form. 
 - Diced/cubed protein → works in: stir fry, soups, curries, pot pies, casseroles. Does NOT work for: pulled dishes, sushi.
 
 NAMED-CUT TITLING RULE: If the protein on hand is shredded or ground, the dish title and description can NEVER use words that promise an intact cut — no "chops," "cutlets," "fillets," "steaks," "breasts," "tenders," or "loin" in the title. Shredded pork is "pulled pork" or "shredded pork," never "pork chops." Ground beef is "ground beef" in a sauce or filling, never "steak." The title must accurately describe the actual form of the protein being used — what is in the bag is what goes in the name.
+
+GLOBAL FREEZER-FRIENDLY FORMAT TECHNIQUE NOTES:
+- Empanadas/Samosas/Panzerotti/Calzones/Stromboli: dough or pastry wrapped around filling, baked or fried, sliced/portioned individually, frozen. Reheat in oven or air fryer from frozen for best texture — never microwave (goes soggy).
+- Spanakopita Triangles: phyllo dough is delicate — brush layers with melted butter or oil, fold into triangles, freeze raw or baked. If frozen raw, bake straight from frozen, do not thaw first (phyllo gets soggy).
+- Pierogi/Dumplings/Potstickers: freeze raw on a tray until solid, then transfer to a bag — prevents sticking together. Cook straight from frozen (boil, steam, or pan-fry), never thaw first.
+- Vegetable Paratha: cook on a dry or lightly oiled skillet, cool completely, stack with parchment between layers, freeze flat. Reheat in a dry skillet.
+- Onigiri: shape rice while warm (it binds as it cools), wrap each one individually. Best fresh or fridge-stable 1-2 days — these do NOT freeze well due to rice texture changing. Use only when freezerMode is OFF.
+- Arancini: form risotto-style rice balls around a cheese or meat center, bread and fry or bake. Freeze after cooking, reheat in oven to keep coating crisp.
+- Breakfast Casserole/Quiche/Frittata for freezing: bake the whole dish first, cool completely, slice into individual portions, wrap each slice separately, freeze flat. Reheat one slice at a time in microwave or oven.
+- Congee: rice simmered low and slow in broth until porridge-like, topped with protein/scallion/egg. Fresh-made, not a freezer item.
+- Upma/Poha: quick-cook semolina or flattened rice dishes, ready in under 15 minutes, fresh same-day only.
+- Chilaquiles/Huevos Rancheros: tortilla-based egg dishes, must be made and eaten fresh — tortillas go soggy if frozen.
+- Akara: black-eyed pea fritters — the raw bean batter can be portioned and frozen, fry fresh from frozen batter for best texture.
+- Saltfish and Bake: fried dough (bake) with seasoned saltfish filling, best fresh, dough does not hold up frozen.
 
 PROTEIN COMBINING: Prefer one protein per dish. Exception: if inventory requires combining two proteins to reach the needed weight, combine proteins of COMPATIBLE texture and flavor only — two ground proteins together (ground beef + ground turkey), two shredded proteins together (shredded chicken + shredded pork in a mixed taco batch). Never combine incompatible textures (shredded pork + diced chicken, ground beef + whole chicken pieces). The dish title and steps should reflect the combined proteins naturally.
 
@@ -1787,6 +1831,8 @@ ${mealType!=='Breakfast'?`LAST MEAL BUILT: "${A.lastBuiltMeal||'none'}" — buil
 ${A.lastBuiltProtein&&mealType!=='Breakfast'?`LAST PROTEIN USED: "${A.lastBuiltProtein}" — use a DIFFERENT protein this time. Rotate.`:''}
 ${buildEmergency?'EMERGENCY MEAL MODE: ON — dinner only, double batch, gallon bags or freezer containers, complete meal, reheats perfectly':''}
 ${kidFriendly?'KID FRIENDLY MODE: ON — mild flavors, nut-free, kid-friendly formats for all meal types, kid portions':''}
+${pantryMode?'PANTRY MODE: ON — build ONLY from what is logged below in PROTEINS AVAILABLE and KITCHEN STAPLES. Do NOT suggest a seasonal protein to buy. Do NOT flag missing ingredients as "buy this." If there is genuinely not enough on hand for a solid meal, say so honestly in the description and build the closest good option from what exists — never silently serve a thin meal without saying so.':''}
+${freezerMode&&(mealType==='Breakfast'||mealType==='Lunch')?'FREEZER MODE: ON — this must be a genuinely freezer-stable format only. Choose from: burritos, breakfast burritos, quesadillas, breakfast pockets, pizza pockets, empanadas, samosas, spanakopita triangles, pierogi, dumplings/potstickers, vegetable paratha, calzones, stromboli, arancini, panzerotti, egg muffin cups, breakfast casserole (bake whole, slice into portions, freeze individually), quiche (bake whole, slice into portions, freeze individually), frittata (same — bake, slice, freeze), baked oatmeal bars, fried rice, PB&J/uncrustable style. Do NOT choose anything that requires fresh same-day assembly or contains mayo-based fillings, fresh delicate produce, or anything that breaks down when frozen and thawed.':''}
 ${mealType==='Lunch'&&!grabAndGo?'LUNCH = GRAB AND GO — 3 steps max, no scratch cooking, always include PACK IT note in tip':''}
 ${dietaryGoals.length>0?`DIETARY GOALS: ${dietaryGoals.join(', ')} — hit these targets, do not just gesture at them`:''}
 Flavor: ${flavor}
@@ -1989,96 +2035,9 @@ function rRecipe(){
 }
 
 // ─── STRETCH IT ────────────────────────────────────────────────────────────────
-function openStretchIt(){
-  openModal(`<div class="modal-header"><div class="modal-title">💪 Stretch It</div><button class="modal-close" onclick="closeModal()">×</button></div>
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.6">What meal are you already planning? The AI will look at your inventory and tell you exactly how to extend it without a store run.</div>
-    <div class="fg"><label class="lbl">What are you making?</label><input class="inp" id="stretch-meal" placeholder="e.g. meatloaf, pasta sauce, chili, pancakes"></div>
-    <div class="fg"><label class="lbl">How many are you trying to feed?</label><select class="sel" id="stretch-servings"><option>2</option><option selected>4</option><option>6</option><option>8</option><option>10</option></select></div>
-    <div class="fg"><label class="lbl">Goal</label><select class="sel" id="stretch-goal"><option value="volume">More volume — feed more people</option><option value="cost">Lower cost — stretch the budget</option><option value="nutrition">More complete — add nutrition without changing flavor</option></select></div>
-    <button class="btn btn-primary btn-full btn-lg" onclick="runStretchIt()" style="margin-top:8px">💪 Stretch It →</button>`);
-}
 
-async function runStretchIt(){
-  const meal=document.getElementById('stretch-meal')?.value.trim();
-  if(!meal){alert('Tell me what you are making first.');return;}
-  const servings=document.getElementById('stretch-servings')?.value||'4';
-  const goal=document.getElementById('stretch-goal')?.value||'volume';
-  closeModal();
-  A.stretchingIt=true;A.stretchResult=null;
-  showPage('builder');
 
-  const pantryFlat=getPantryFlat().filter(p=>p.have);
-  const freshList=pantryFlat.filter(p=>p.fresh).map(p=>`${p.name}: ${p.qty} ${p.unit}`);
-  const fridgeList=pantryFlat.filter(p=>!p.fresh&&p.qty).map(p=>`${p.name}: ${p.qty} ${p.unit}`);
-  const toggleList=pantryFlat.filter(p=>!p.qty&&p.have).map(p=>p.name);
-  const basesList=A.bases.filter(b=>hasAny(b)).map(b=>{const s=getBestStorage(b);return`${b.name}: ${s?s.qty+' '+s.unit:'none'}`;});
-  const supportsList=A.supports.filter(s=>hasAny(s)).map(s=>{const best=getBestStorage(s);return`${s.name}: ${best?best.qty+' '+best.unit:'none'}`;});
 
-  const systemPrompt=`You are a kitchen assistant for Prep & Purpose. A user is already planning to make a specific meal and wants to know how to stretch it using ONLY what they already have. Do not suggest a new meal. Do not suggest buying anything unless no stretch is possible without it.
-
-Respond ONLY with valid JSON:
-{
-  "meal": "the meal name",
-  "originalServes": "estimated original servings",
-  "stretchedServes": "servings after stretching",
-  "additions": [{"ingredient": "name", "amount": "specific amount", "reason": "why this works", "warning": "texture/taste change or null"}],
-  "tips": ["specific tip"],
-  "storeList": ["only if absolutely necessary"]
-}`;
-
-  const userPrompt=`I am making: ${meal} for ${servings} people. Goal: ${goal}
-
-FROZEN BASES: ${basesList.join(', ')||'none'}
-FROZEN/CANNED SUPPORTS: ${supportsList.join(', ')||'none'}
-FRESH ITEMS: ${freshList.join(', ')||'none'}
-FRIDGE ITEMS: ${fridgeList.join(', ')||'none'}
-PANTRY ON HAND: ${toggleList.join(', ')||'none'}
-Dietary: ${A.dietary.length>0?A.dietary.join(', '):'none'}`;
-
-  try{
-    const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemPrompt,userPrompt})});
-    const data=await r.json();
-    A.stretchingIt=false;
-    let raw=data.content?.[0]?.text||'';
-    raw=raw.replace(/```json|```/g,'').trim();
-    if(!raw.startsWith('{'))raw=raw.substring(raw.indexOf('{'));
-    const lastBrace=raw.lastIndexOf('}');
-    if(lastBrace>=0)raw=raw.substring(0,lastBrace+1);
-    A.stretchResult=JSON.parse(raw);
-    showPage('builder');
-  }catch(e){
-    A.stretchingIt=false;
-    alert('Could not analyze your meal. Try again.');
-    showPage('builder');
-  }
-}
-
-function rStretchResult(){
-  const r=A.stretchResult;
-  if(!r)return rBuilderForm();
-  return`<div style="max-width:700px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div><div class="page-title">${r.meal}</div><div style="font-size:13px;color:var(--text-muted)">Originally serves ~${r.originalServes} → Stretched to serve ~${r.stretchedServes}</div></div>
-      <button class="btn btn-outline" onclick="A.stretchResult=null;render()">← Back</button>
-    </div>
-    <div class="stretch-result card-pad card" style="margin-bottom:16px">
-      <div style="font-size:13px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">💪 What to Add</div>
-      ${r.additions.map(a=>`<div class="stretch-item">
-        <div style="width:8px;height:8px;border-radius:50%;background:var(--green);margin-top:6px;flex-shrink:0"></div>
-        <div style="flex:1">
-          <div style="font-size:14px;font-weight:600">${a.ingredient} — <span style="color:var(--green)">${a.amount}</span></div>
-          <div style="font-size:13px;color:var(--text-muted);margin-top:3px">${a.reason}</div>
-          ${a.warning?`<div style="font-size:12px;color:#f57f17;margin-top:3px">⚠️ ${a.warning}</div>`:''}
-        </div>
-      </div>`).join('')}
-    </div>
-    ${r.tips&&r.tips.length>0?`<div class="tip-box" style="margin-bottom:16px">💡 ${r.tips.join(' ')}</div>`:''}
-    ${r.storeList&&r.storeList.length>0?`<div class="alert alert-gold"><span>🛒</span><div>If you want to go further: ${r.storeList.join(', ')}</div></div>`:''}
-    <button class="btn btn-primary" onclick="A.stretchResult=null;render()">Build a Full Meal Instead</button>
-  </div>`;
-}
-
-// ─── CALENDAR ──────────────────────────────────────────────────────────────────
 function getWeekStart(offset){
   const today=new Date();today.setHours(0,0,0,0);
   const sun=new Date(today);sun.setDate(today.getDate()-today.getDay()+(offset*7));
