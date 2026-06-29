@@ -596,7 +596,7 @@ let A={
   page:'dashboard',invTab:'bases',
   calSelDate:null,weekOffset:0,
   generating:false,recipe:null,
-  ppSpices:true,kidFriendly:false,buildEmergency:false,grabAndGo:false,includeSoups:true,pantryMode:false,freezerMode:false,
+  ppSpices:true,kidFriendly:false,buildEmergency:false,grabAndGo:false,includeSoups:true,pantryMode:false,freezerMode:false,stretchIt:false,
   lastBuiltMeal:'',lastBuiltBreakfast:'',lastBuiltProtein:'',
   favorites:[],homeCanned:[],grocWindow:1,emergencyCookList:[],
   householdSize:4,lastMealType:'Dinner',
@@ -664,6 +664,7 @@ function save(){
       grab_and_go:A.grabAndGo||false,
       pantry_mode:A.pantryMode||false,
       freezer_mode:A.freezerMode||false,
+      stretch_it:A.stretchIt||false,
       include_soups:A.includeSoups!==false,
       favorites:A.favorites||[],
       home_canned:A.homeCanned||[],
@@ -750,6 +751,7 @@ async function loadUserData(email){
     A.grabAndGo=source.grab_and_go||false;
     A.pantryMode=source.pantry_mode||false;
     A.freezerMode=source.freezer_mode||false;
+    A.stretchIt=source.stretch_it||false;
     A.includeSoups=source.include_soups!==false;
     A.favorites=source.favorites||[];
     A.homeCanned=source.home_canned||[];
@@ -781,6 +783,7 @@ async function loadUserData(email){
       A.grabAndGo=d.grab_and_go||false;
       A.pantryMode=d.pantry_mode||false;
       A.freezerMode=d.freezer_mode||false;
+      A.stretchIt=d.stretch_it||false;
       A.includeSoups=d.include_soups!==false;
       A.favorites=d.favorites||[];
       A.homeCanned=d.home_canned||[];
@@ -1309,6 +1312,11 @@ function rBuilderForm(){
           <div><div style="font-size:14px;font-weight:600">🧊 Freezer Mode</div><div style="font-size:12px;color:var(--text-muted)">${A.freezerMode?'Only freezer-stable formats — make once, slice, freeze, grab all week':'Off — includes same-day fresh options too'}</div></div>
           <div class="tog ${A.freezerMode?'on':''}" onclick="toggleBuilderOption('freezerMode')"><div class="tog-th"></div></div>
         </div>`:''}
+${A.lastMealType==='Dinner'||!A.lastMealType?`
+        <div class="mode-row">
+          <div><div style="font-size:14px;font-weight:600">🥣 Stretch It</div><div style="font-size:12px;color:var(--text-muted)">${A.stretchIt?'Half the usual protein, stretched with a matching support — same flavor, lower cost':'Off — toggle on to stretch protein with beans, oats, lentils, or rice where it fits naturally'}</div></div>
+          <div class="tog ${A.stretchIt?'on':''}" onclick="toggleBuilderOption('stretchIt')"><div class="tog-th"></div></div>
+        </div>`:''}
         <div class="mode-row">
           <div><div style="font-size:14px;font-weight:600">👶 Kid Friendly</div><div style="font-size:12px;color:var(--text-muted)">${A.kidFriendly?'All meals — mild, nut-free, fun formats, kid portions':'Toggle on for kid-friendly meals across all types'}</div></div>
           <div class="tog ${A.kidFriendly?'on':''}" onclick="toggleBuilderOption('kidFriendly')"><div class="tog-th"></div></div>
@@ -1374,6 +1382,7 @@ async function generateRecipe(){
   const kidFriendly=A.kidFriendly||false;
   const pantryMode=A.pantryMode||false;
   const freezerMode=A.freezerMode||false;
+  const stretchIt=A.stretchIt||false;
   const buildEmergency=A.buildEmergency||false;
   const grabAndGo=A.grabAndGo||false;
   const includeSoups=A.includeSoups!==false;
@@ -1423,6 +1432,20 @@ PROTEIN RULES:
 - Frozen protein = ALREADY COOKED. Say "heat gently 3-4 min over medium heat." NEVER say "cook until done."
 - Never partial bags. 1 quart bag = 1.5 lbs cooked. For ${A.householdSize} people use ${A.householdSize<=4?'1-2':'2-3'} bags.
 
+${stretchIt?`STRETCH IT MODE — ON:
+Use HALF the normal protein amount for this household size (round up to the nearest whole bag/lb if needed, never zero). Fill the gap with a complementary stretcher that already has a natural reason to exist in this specific dish:
+- Meatloaf, meatballs, burger patties → oats or breadcrumbs blended INTO the ground meat, invisible texturally
+- Chili, tacos, burritos, taco bowls → black beans or pinto beans, since beans already belong in these dishes
+- Bolognese, taco filling, sloppy joes → lentils, finely textured to match the ground meat
+- Stuffed peppers, casseroles, rice bowls → rice or extra grain folded through the filling
+- Soups and stews → beans or lentils added to the broth, same seasoning throughout
+RAILS — do not violate:
+- The stretcher must take on the SAME seasoning as the rest of the dish. Never a separate flavor note or a "side" ingredient — it disappears into the dish completely.
+- Texture must stay consistent with what the dish is supposed to be. If beans would sit oddly next to distinct ground meat texture, blend or mash them in instead of leaving them whole and visible.
+- NEVER stretch a dish where the protein IS the dish with no natural binder or filler role — steaks, plain grilled or roasted chicken breast, fish fillets, standalone pork chops. If the anchor or dish concept is one of these, IGNORE Stretch It mode entirely and build the dish normally at full protein. Do not force a bad stretch.
+- NEVER use the words "stretched," "stretcher," or "extended" in the title or description. The recipe should read like any other normal recipe.
+- In the tip field only, add one quiet, factual line noting the stretch: "Uses half the usual [protein], stretched with [stretcher] — same flavor, lower cost." Keep it practical, never apologetic.`:''}
+
 INVENTORY FIRST — MANDATORY (only applies when no anchor is set):
 If frozen protein bags are logged in the user's inventory, USE THEM. Do not choose a different protein because it fits the cuisine or flavor direction better. The protein on hand drives everything else. Adapt the cuisine, flavor profile, and dish format to the protein available — not the other way around.
 - Pork in inventory → build pork dishes. Carnitas, pork verde, pulled pork tacos, smothered pork chops, pork fried rice, pork pasta, pork stir fry.
@@ -1450,8 +1473,9 @@ If a finished or prepared ingredient is in the user's kitchen staples, USE IT in
 - Home canned goods (crushed tomatoes, diced tomatoes, tomato sauce, jars of broth) → these ARE finished goods from the user's own canning. Use them. They appear in FROM YOUR STOCK.
 
 
-- Standard diet: dinner centerpiece MUST be real meat — beef, pork, chicken, turkey, fish. No exceptions.
-- Beans, chickpeas, lentils = supports that go ALONGSIDE meat. Never the dinner centerpiece for standard diet.
+- Standard diet, NO anchor set: dinner centerpiece MUST be real meat — beef, pork, chicken, turkey, fish. No exceptions.
+- Standard diet, ANCHOR SET: follow the anchor exactly — see ANCHOR OVERRIDES EVERYTHING at the top of this prompt. A vegetarian anchor means no meat, full stop.
+- Beans, chickpeas, lentils = supports that go ALONGSIDE meat for standard diet WITH NO ANCHOR. Never the dinner centerpiece in that case.
 - Eggs = breakfast only for standard diet. Never a dinner protein.
 - IF NO FROZEN PROTEIN STOCKED AND NO ANCHOR SET: Choose the most affordable seasonal protein using the BUDGET HIERARCHY below. Flag it on groceryFlags urgency "out" with reason "Buy this before cooking." Build the full recipe as if they have it. Do NOT substitute eggs, chickpeas, or beans as the protein.
 
@@ -1709,7 +1733,7 @@ HOME CANNED: ${(A.homeCanned||[]).length>0?(A.homeCanned||[]).map(hc=>{const cup
 FRIDGE: ${fridgeQty.length>0?fridgeQty.join(' | '):'None'}
 PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}
 
-${(mealType==='Dinner'||mealType==='Lunch')&&!A.dietary.includes('Vegetarian')?`FINAL INSTRUCTION — READ THIS LAST:
+${(mealType==='Dinner'||mealType==='Lunch')&&!A.dietary.includes('Vegetarian')&&!anchor?`FINAL INSTRUCTION — READ THIS LAST:
 This is ${mealType}. It MUST contain animal protein. No exceptions.
 ${allProteins.length===0?`No protein is stocked. Do ALL of the following:
 1. Pick the most seasonal protein for ${new Date().toLocaleString('en-US',{month:'long'})} — ${A.lastBuiltProtein?`DO NOT pick ${A.lastBuiltProtein} again, rotate to something different`:'chicken breasts are a safe default in grilling season'}
@@ -1718,7 +1742,8 @@ ${allProteins.length===0?`No protein is stocked. Do ALL of the following:
 4. Flag it in groceryFlags with urgency "out" and reason "Typically on sale this time of year — buy extra and freeze"
 5. The recipe title must include the protein name
 NEVER omit the protein from the recipe just because it is not in inventory.`:`Use one of the proteins listed above.`}
-DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese. That is a side dish.`:''}`;
+DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese. That is a side dish.`:anchor?`FINAL INSTRUCTION — READ THIS LAST:
+An anchor is set: "${anchor}". This is the final word — build exactly what the anchor describes. If the anchor is vegetarian or plant-based, the dish has NO meat in it whatsoever. Do not add ground beef, chicken, turkey, or any animal protein from inventory "just in case" or "for extra protein." If the anchor calls for a bean or lentil patty/burger, that bean or lentil mixture IS the complete protein — nothing else gets mixed in. Re-read the anchor text now and confirm your final recipe matches it exactly before responding.`:''}`;
 
   try{
     const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({systemPrompt,userPrompt})});
