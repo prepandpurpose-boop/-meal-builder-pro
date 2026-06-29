@@ -478,6 +478,8 @@ const DEF_SUPPORTS=[
   {id:57,name:'Red Lentils',icon:'🫘',frozen:0,dry:0,storageTypes:['dry'],dryUnit:'lbs'},
   {id:58,name:'Navy Beans',icon:'🫘',frozen:0,canned:0,dry:0,storageTypes:['frozen','canned','dry'],dryUnit:'lbs'},
   {id:59,name:'Split Peas',icon:'🫘',frozen:0,dry:0,storageTypes:['dry'],dryUnit:'lbs'},
+  {id:73,name:'Tofu',icon:'🧊',frozen:0,each:0,storageTypes:['frozen','each'],eachUnit:'blocks'},
+  {id:74,name:'Tempeh',icon:'🟫',frozen:0,each:0,storageTypes:['frozen','each'],eachUnit:'blocks'},
   {id:26,name:'Roasted Potatoes',icon:'🥔',frozen:0,storageTypes:['frozen']},
   {id:27,name:'Roasted Peppers & Onions',icon:'🫑',frozen:0,storageTypes:['frozen']},
   {id:41,name:'Bell Peppers (diced)',icon:'🫑',frozen:0,storageTypes:['frozen']},
@@ -570,6 +572,8 @@ const DEF_PANTRY={
     {id:'c7',name:'Honey',have:false},
     {id:'c8',name:'Tortillas',have:false},
     {id:'c9',name:'Tortilla Chips',have:false},
+    {id:'c10',name:'Tahini',have:false},
+    {id:'c11',name:'Hummus',have:false},
   ],
   spices:[
     {id:'sp1',name:'Salt & Pepper',have:false},
@@ -1407,11 +1411,19 @@ async function generateRecipe(){
 
 ${weekSelections.length>0?`SELECTED PROTEIN — NON-NEGOTIABLE: Build this meal using ONLY: ${weekSelections.join(', ')}. Do not substitute. Do not switch proteins.`:''}
 
+${anchor?`ANCHOR OVERRIDES EVERYTHING — READ FIRST:
+The user has specified an anchor: "${anchor}". This anchor is the single highest-priority instruction in this entire prompt. It overrides:
+- The dinner protein hard rule (real meat mandatory) — if the anchor specifies a vegetarian dish, build vegetarian. Do not add meat.
+- Inventory-first protein selection — if frozen protein is in stock but the anchor calls for something else (or no meat at all), follow the anchor. Do not substitute or add the stocked protein.
+- The seasonal budget hierarchy — irrelevant when an anchor is set.
+- The flavor/cuisine direction — infer the cuisine and flavor profile directly from what the anchor describes. Ignore the separately selected Flavor dropdown value entirely when an anchor is present.
+Build exactly what the anchor describes, using inventory and kitchen staples to fill in supporting ingredients. Flag anything not on hand to the grocery list as usual.`:''}
+
 PROTEIN RULES:
 - Frozen protein = ALREADY COOKED. Say "heat gently 3-4 min over medium heat." NEVER say "cook until done."
 - Never partial bags. 1 quart bag = 1.5 lbs cooked. For ${A.householdSize} people use ${A.householdSize<=4?'1-2':'2-3'} bags.
 
-INVENTORY FIRST — MANDATORY:
+INVENTORY FIRST — MANDATORY (only applies when no anchor is set):
 If frozen protein bags are logged in the user's inventory, USE THEM. Do not choose a different protein because it fits the cuisine or flavor direction better. The protein on hand drives everything else. Adapt the cuisine, flavor profile, and dish format to the protein available — not the other way around.
 - Pork in inventory → build pork dishes. Carnitas, pork verde, pulled pork tacos, smothered pork chops, pork fried rice, pork pasta, pork stir fry.
 - Chicken in inventory → build chicken dishes in any cuisine that fits.
@@ -1450,6 +1462,7 @@ BEEF: 80/20 ground beef first (most versatile, cheapest ground) → chuck roast 
 TURKEY: whole turkey first (best value per pound) → bone-in thighs second → ground turkey third.
 FISH: canned tuna/salmon first (cheapest) → frozen tilapia or catfish second → frozen salmon third → fresh fish last.
 LAMB/OTHER: only if specifically anchored — never as a default suggestion.
+PLANT PROTEIN HIERARCHY — for vegetarian households or vegetarian-anchored dishes, when no specific plant protein is anchored: dry beans first (cheapest, cook from scratch) → canned beans second → lentils third → chickpeas fourth → tofu fifth → tempeh last (most expensive). Always default to the cheapest option unless the anchor or inventory specifies otherwise.
 - Vegetarian selected: beans, chickpeas, lentils, tofu, tempeh, eggs ARE valid dinner centerpieces. Seasonal suggestion = most affordable plant protein.
 - Vegan selected: beans, chickpeas, lentils, tofu, tempeh ARE valid dinner centerpieces. No eggs.
 - Every dinner and lunch MUST have a protein centerpiece appropriate to the dietary setting.
@@ -1468,18 +1481,19 @@ MEAL TYPE RULES:
     Quesadilla: cheese + protein, press and slice cold or warm
     Tacos: protein + toppings in hard or soft shell — pack shells and filling separately so nothing gets soggy
     Burritos: protein + rice or beans + cheese + sauce, wrapped tight in foil — eat cold or warm
-    Empanadas: meat or cheese filled pastry, baked, freezes and reheats beautifully
-    Samosas: potato/pea or meat filled, crisps back up from frozen
-    Spanakopita Triangles: spinach and feta in phyllo, freezer staple
-    Pierogi: potato/cheese or meat filled dumplings, freeze raw or cooked
-    Dumplings/Potstickers: freeze raw, steam or pan-fry straight from frozen
-    Vegetable Paratha: stuffed flatbread, freezes flat, reheats in a skillet
+    Empanadas: meat side = beef or chicken filling · vegetarian side = black bean and cheese or roasted vegetable filling. Baked, freezes and reheats beautifully.
+    Samosas: meat side = spiced ground meat filling · vegetarian side = potato/pea filling. Crisps back up from frozen.
+    Spanakopita Triangles: spinach and feta in phyllo, freezer staple (naturally vegetarian).
+    Pierogi: meat side = ground meat filling · vegetarian side = potato/cheese filling. Freeze raw or cooked.
+    Dumplings/Potstickers: meat side = pork or chicken filling · vegetarian side = cabbage and mushroom filling. Freeze raw, steam or pan-fry straight from frozen.
+    Vegetable Paratha: meat side = keema (spiced ground meat) stuffed flatbread · vegetarian side = spiced potato stuffed flatbread. Freezes flat, reheats in a skillet.
     Onigiri: rice balls with savory filling, wrapped individually, great cold
     Fried Rice: uses leftover rice plus whatever protein/veg is on hand, batches and freezes
-    Calzones: pizza dough folded over cheese/meat/veggies, freezes and reheats like a pizza pocket
-    Stromboli: rolled pizza dough with fillings, sliced into portions, freezes well
+    Calzones: meat side = sausage and pepperoni filling · vegetarian side = spinach, ricotta, and mushroom filling. Freezes and reheats like a pizza pocket.
+    Stromboli: meat side = ham and salami filling · vegetarian side = roasted vegetable and cheese filling. Sliced into portions, freezes well.
     Arancini: fried or baked rice balls stuffed with cheese or meat, reheats crisp in the oven
-    Panzerotti: smaller fried/baked calzone, classic freezer-friendly hand pie
+    Panzerotti: smaller fried/baked calzone, classic freezer-friendly hand pie — same meat/vegetarian filling options as calzones above
+    Falafel Wrap: chickpea falafel, tahini sauce, fresh veg in a wrap or pita — naturally vegetarian, freezer-friendly if falafel is pre-formed and frozen raw
     Caprese Sandwich (fresh, not freezer): fresh mozzarella, tomato, basil, quick and no cooking
     Panini (fresh, not freezer): pressed sandwich, fast lunch
     Lunch Bank Pull: portion from a banked dinner container — thaw overnight, heat if needed
@@ -1517,7 +1531,7 @@ LOW CARB: Reduce grain portions or use lower-carb swaps where natural. Do not el
 KETO: No grains, no sugar, no starchy vegetables. Carbs from vegetables only.
 HIGH PROTEIN + LOW FAT together: Lean proteins, normal carb bases (crust/tortilla/pasta/rice), high-protein toppings and fillings. Never sacrifice the structure of a dish to add more protein.`:''}
 
-FLAVOR GUIDE: Classic American=meat+potatoes/casseroles · Comfort=creamy/cheesy/hearty · Southern=gravy/cornbread/grits · Tex-Mex=cumin/cheese/tortillas · Mexican=authentic(carnitas/barbacoa/mole) · Italian=tomato/pasta/olive oil · BBQ=smoked/chipotle · Cajun=holy trinity/bold spice · Asian=soy/ginger/sesame · Mediterranean=olive oil/lemon/feta · Caribbean=allspice/jerk · Surprise Me=randomly select ONE of these real cuisine directions and build fully committed to it: Classic American, Comfort Food, Southern & Soul Food, Tex-Mex, Mexican, Italian, BBQ & Smoky, Cajun, Asian-Style, Mediterranean, or Caribbean. Never invent a cuisine outside this list. Never blend multiple directions together.
+FLAVOR GUIDE: Classic American=meat+potatoes/casseroles · Comfort=creamy/cheesy/hearty · Southern=gravy/cornbread/grits · Tex-Mex=cumin/cheese/tortillas · Mexican=authentic(carnitas/barbacoa/mole) · Italian=tomato/pasta/olive oil · BBQ=smoked/chipotle · Cajun=holy trinity/bold spice · Asian=soy/ginger/sesame · Mediterranean=olive oil/lemon/feta · Caribbean=allspice/jerk · Surprise Me=${anchor?'IGNORED — the anchor already determines the flavor direction, see ANCHOR OVERRIDES section above.':'choose the SINGLE BEST cuisine direction for the protein and season on hand — not a random pick. Pick from: Classic American, Comfort Food, Southern & Soul Food, Tex-Mex, Mexican, Italian, BBQ & Smoky, Cajun, Asian-Style, Mediterranean, or Caribbean. Never invent a cuisine outside this list. Never blend multiple directions together.'}
 
 STORAGE FORM HONESTY — match form to actual inventory:
 1. FROZEN bags > 0 → frozen. Step: "add mid-cook, 3-4 min to heat."
@@ -1568,7 +1582,7 @@ ${(()=>{
   return`SEASONAL (this month): Proteins on sale: ${proteins}. Produce abundant: ${produce}. Year-round: canned tuna, salmon, chicken thighs, eggs, ground turkey.`;
 })()}
 
-DISH VARIETY — never repeat same format twice in a row. Rotate: tacos, enchiladas, burritos, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, quesadillas, pot pie, skillet meals, rice bowls, smothered chicken, soups, stews, sandwiches, sliders, wraps, hash, curry, flatbread pizza, meatloaf, lasagna, sheet pan meals, stir-fry noodles, kabobs, stuffed baked potatoes, grain bowls, chili, taco bowls, fajitas.
+DISH VARIETY — never repeat same format twice in a row. Rotate: tacos, enchiladas, burritos, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, quesadillas, pot pie, skillet meals, rice bowls, smothered chicken, soups, stews, sandwiches, sliders, wraps, hash, curry, flatbread pizza, meatloaf, lasagna, sheet pan meals, stir-fry noodles, kabobs, stuffed baked potatoes, grain bowls, chili, taco bowls, fajitas, falafel (chickpea-based, formed and fried or baked, served in pita or over a grain bowl with tahini sauce).
 INGREDIENT SUBSTITUTION NAMING: If the recipe substitutes an ingredient for a traditional one (cottage cheese for ricotta, turkey for beef, Greek yogurt for sour cream), the recipe title, description, AND all steps must use the actual ingredient used — never the traditional name. A recipe using cottage cheese is NOT called "Ricotta Lasagna." It is called "Cottage Cheese Lasagna." No phantom ingredients.
 
 INGREDIENT DEDUPLICATION: Before finalizing the pull list, check for duplicate or near-duplicate ingredient names. "Fresh Cilantro" and "Cilantro (fresh)" are the same thing. "Ground beef" and "ground beef (80/20)" are the same thing. Consolidate into one entry with the correct combined quantity. Never list the same ingredient twice under different names.
@@ -1580,6 +1594,9 @@ Pre-cooked frozen protein is ALREADY COOKED in shredded, ground, or diced form. 
 - Ground protein (cooked) → works in: pasta sauce, tacos, rice bowls, burritos, stuffed pepper filling, casseroles, soups, fried rice. Does NOT work for: hamburger patties, meatballs, meatloaf. These require RAW ground meat.
 - If a dish concept requires raw shaped protein (meatballs, burgers, meatloaf, patties) → change the dish concept to something that works with what's in the freezer, OR flag raw ground meat as a grocery item.
 - Diced/cubed protein → works in: stir fry, soups, curries, pot pies, casseroles. Does NOT work for: pulled dishes, sushi.
+
+FRESH BEAN/LEGUME PATTIES ARE LEGITIMATE — different rule from cooked meat above:
+This reshaping restriction applies ONLY to pre-cooked frozen/canned animal protein. It does NOT apply to beans, chickpeas, or lentils. Canned or cooked beans can be mashed fresh with a binder (egg, breadcrumb, oats, or flour) and seasoning, formed into a patty, and pan-fried fresh right before serving. A black bean burger, chickpea patty, or lentil patty built this way is a completely legitimate burger — it is not reshaping something already cooked into a final form, it is building a fresh patty from a mashable base ingredient. Build it with full real steps: mash, season, bind, form, chill if needed, pan-fry in oil until a crust forms on each side.
 
 NAMED-CUT TITLING RULE: If the protein on hand is shredded or ground, the dish title and description can NEVER use words that promise an intact cut — no "chops," "cutlets," "fillets," "steaks," "breasts," "tenders," or "loin" in the title. Shredded pork is "pulled pork" or "shredded pork," never "pork chops." Ground beef is "ground beef" in a sauce or filling, never "steak." The title must accurately describe the actual form of the protein being used — what is in the bag is what goes in the name.
 
