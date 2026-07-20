@@ -996,7 +996,7 @@ function verifyAccess(){
   .then(async data=>{
     if(data.access){
       const normalEmail=e.toLowerCase().trim();
-      localStorage.setItem('pp_user',normalEmail);
+      localStorage.setItem('pp_user',normalEmail.toLowerCase().trim());
       A.email=normalEmail;
       await loadUserData(normalEmail);
       grantAccess();
@@ -3791,27 +3791,47 @@ function openAddPantrySupport(){
   openModal(`<div class="modal-header"><div class="modal-title">Add Canned or Dry Item</div><button class="modal-close" onclick="closeModal()">×</button></div>
     <div class="fg"><label class="lbl">Item Name</label><input class="inp" id="aps-name" placeholder="e.g. Couscous, Lentils, Tomato Sauce"></div>
     <div class="fg"><label class="lbl">Type</label>
-      <select class="sel" id="aps-type" onchange="document.getElementById('aps-unit-row').style.display=this.value==='dry'?'block':'none'">
+      <select class="sel" id="aps-type" onchange="updateApsUnit()">
         <option value="canned">🥫 Canned / Pint Jars</option>
         <option value="dry">🌾 Dry / Bulk</option>
       </select>
     </div>
-    <div class="fg" id="aps-unit-row" style="display:none">
-      <label class="lbl">Unit</label>
-      <select class="sel" id="aps-unit">
-        <option value="lbs">lbs (rice, beans, flour, bulk)</option>
-        <option value="boxes">boxes (couscous, pasta, mac)</option>
-        <option value="oz">oz (small packages)</option>
+    <div class="fg">
+      <label class="lbl">Measured in</label>
+      <select class="sel" id="aps-unit" onchange="updateApsQtyLabel()">
+        <option value="cans">cans / jars</option>
       </select>
     </div>
-    <div class="fg"><label class="lbl">Quantity on Hand</label><input class="inp" type="number" id="aps-qty" value="0" min="0" step="0.5"></div>
+    <div class="fg"><label class="lbl" id="aps-qty-label">How many cans / jars do you have?</label><input class="inp" type="number" id="aps-qty" value="0" min="0" step="0.5"></div>
     <button class="btn btn-primary btn-full btn-lg" style="margin-top:12px" onclick="saveAddPantrySupport()">Add</button>`);
+}
+function updateApsUnit(){
+  const type=document.getElementById('aps-type')?.value;
+  const unitSel=document.getElementById('aps-unit');
+  if(!unitSel)return;
+  if(type==='dry'){
+    unitSel.innerHTML=`<option value="lbs">lbs — rice, beans, flour, sugar, oats</option>
+      <option value="boxes">boxes — pasta, couscous, mac & cheese</option>
+      <option value="oz">oz — small packages</option>`;
+  } else {
+    unitSel.innerHTML=`<option value="cans">cans / jars</option>`;
+  }
+  updateApsQtyLabel();
+}
+function updateApsQtyLabel(){
+  const unit=document.getElementById('aps-unit')?.value||'cans';
+  const lbl=document.getElementById('aps-qty-label');
+  if(lbl){
+    const labels={lbs:'How many lbs do you have?',boxes:'How many boxes do you have?',oz:'How many oz do you have?',cans:'How many cans / jars do you have?'};
+    lbl.textContent=labels[unit]||'Quantity on hand';
+  }
 }
 function saveAddPantrySupport(){
   const name=document.getElementById('aps-name')?.value.trim();if(!name)return;
   const type=document.getElementById('aps-type').value;
   const qty=+document.getElementById('aps-qty').value||0;
-  const dryUnit=type==='dry'?(document.getElementById('aps-unit')?.value||'lbs'):'lbs';
+  const selectedUnit=document.getElementById('aps-unit')?.value||'cans';
+  const dryUnit=type==='dry'?selectedUnit:'cans';
   const newItem={id:Date.now(),name,icon:type==='dry'?'🌾':'🥫',frozen:0,canned:0,dry:0,fresh:0,storageTypes:[type],dryUnit};
   newItem[type]=qty;A.supports.push(newItem);
   save();closeModal();render();
