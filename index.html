@@ -307,7 +307,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     </div>
     <div class="pw-feats">
       <div class="pw-feat"><div class="pw-dot">✓</div>Full kitchen inventory — frozen, pantry, fresh</div>
-      <div class="pw-feat"><div class="pw-dot">✓</div>AI meal builder from what you actually have</div>
+      <div class="pw-feat"><div class="pw-dot">✓</div>Smart meal builder from what you actually have</div>
             <div class="pw-feat"><div class="pw-dot">✓</div>Weekly calendar with conflict detection</div>
       <div class="pw-feat"><div class="pw-dot">✓</div>Smart grocery list — auto-populates from your week</div>
       <div class="pw-feat"><div class="pw-dot">✓</div>Cross-device sync — your data everywhere</div>
@@ -374,7 +374,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     <!-- Step 2: Dietary -->
     <div id="ob-2" style="display:none">
       <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px">Dietary preferences</div>
-      <div style="font-size:13px;color:#666;margin-bottom:20px">The AI will never suggest meals that conflict with these.</div>
+      <div style="font-size:13px;color:#666;margin-bottom:20px">These preferences are always respected when building meals.</div>
       <div id="ob-dietary" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px"></div>
       <div class="fg" style="margin-bottom:20px">
         <label class="lbl">Other restrictions (optional)</label>
@@ -386,7 +386,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     <!-- Step 3: Kitchen staples -->
     <div id="ob-3" style="display:none">
       <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px">What is in your kitchen?</div>
-      <div style="font-size:13px;color:#666;margin-bottom:20px">Tell us what you have on hand so the AI can build complete meals.</div>
+      <div style="font-size:13px;color:#666;margin-bottom:20px">Tell us what you have on hand so meals can be built from your kitchen.</div>
       <div id="ob-pantry-setup" style="max-height:380px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);padding:4px 0;margin-bottom:16px"></div>
       <button class="btn btn-primary btn-full btn-lg" onclick="obNext(4)">Next →</button>
       <button class="btn btn-outline btn-full" style="margin-top:8px" onclick="obNext(4)">Set up later in Settings</button>
@@ -423,7 +423,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
       <button class="nav-item" id="nav-emergency" onclick="showPage('inventory');A.invTab='emergency';render()"><span class="nav-icon">🚨</span>Emergency Meals</button>
       <button class="nav-item" id="nav-maintenance" onclick="showPage('maintenance')"><span class="nav-icon">🍳</span>Maintenance Day</button>
       <div class="nav-section">Meals</div>
-      <button class="nav-item" id="nav-builder" onclick="showPage('builder')"><span class="nav-icon">🤖</span>Meal Builder</button>
+      <button class="nav-item" id="nav-builder" onclick="showPage('builder')"><span class="nav-icon">🍳</span>Meal Builder</button>
       <button class="nav-item" id="nav-favorites" onclick="showPage('favorites')"><span class="nav-icon">⭐</span>Favorites</button>
       <button class="nav-item" id="nav-calendar" onclick="showPage('calendar')"><span class="nav-icon">📅</span>Calendar</button>
       <div class="nav-section">Shopping</div>
@@ -1150,7 +1150,7 @@ function rDashboard(){
     <div class="card">
       <div class="card-header"><div class="card-title">⚡ Quick Actions</div></div>
       <div class="card-pad" style="display:flex;flex-direction:column;gap:10px">
-        <button class="btn btn-primary btn-full" onclick="showPage('builder')">🤖 Build a Meal</button>
+        <button class="btn btn-primary btn-full" onclick="showPage('builder')">🍳 Build a Meal</button>
         <button class="btn btn-outline btn-full" onclick="showPage('inventory')">📦 Update Inventory</button>
         <button class="btn btn-outline btn-full" onclick="showPage('grocery')">🛒 View Grocery List</button>
         <button class="btn btn-outline btn-full" onclick="showPage('pantry')">🧂 Update Kitchen Staples</button>
@@ -1233,7 +1233,7 @@ function rFrozenSupports(){
     </tr>`;
   });
   html+=`</tbody></table></div>
-  <div class="alert alert-blue" style="margin-top:16px"><span>🌿</span><div>Have fresh vegetables on hand? Add them in <button onclick="showPage('pantry')" style="background:none;border:none;color:#1565c0;font-weight:700;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;font-size:13px;padding:0">Kitchen Staples → Fresh Produce</button> so the AI uses them first.</div></div>`;
+  <div class="alert alert-blue" style="margin-top:16px"><span>🌿</span><div>Have fresh vegetables on hand? Add them in <button onclick="showPage('pantry')" style="background:none;border:none;color:#1565c0;font-weight:700;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;font-size:13px;padding:0">Kitchen Staples → Fresh Produce</button> so they get used first.</div></div>`;
   return html;
 }
 
@@ -1365,7 +1365,7 @@ function rPantry(){
     condiments:{label:'🥫 Condiments & Sauces',type:'qty'},
     spices:{label:'🧂 Spices',type:'spices'},
   };
-  let html=`<div class="page-sub">Track what is in your kitchen. Fresh items are prioritized — the AI uses them first so nothing goes to waste.</div>
+  let html=`<div class="page-sub">Track what is in your kitchen. Fresh items are prioritized — they get used first so nothing goes to waste.</div>
     <div style="font-size:11px;color:var(--text-muted);background:white;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:16px;line-height:1.5">
       📦 <strong>What deducts automatically:</strong> Frozen bases, frozen/canned/dry supports, home canned jars, and measured kitchen items (butter, flour, sugar, fresh produce, milk, eggs) all deduct when you schedule a meal.<br>
       🧂 <strong>Oils, condiments, and spices:</strong> Now tracked by quantity so the AI knows exactly what you have. Update counts when you run out or restock.
@@ -1504,7 +1504,7 @@ function rBuilderForm(){
       </div>`;
     });
     proteinSection+=`</div>`;
-    proteinSection+=`<div style="font-size:11px;color:var(--text-hint);margin-bottom:4px">Tap to pick. Leave blank and the AI chooses from your freezer.</div>`;
+    proteinSection+=`<div style="font-size:11px;color:var(--text-hint);margin-bottom:4px">Tap to pick. Leave blank and the meal builder chooses from your freezer.</div>`;
   }
 
   return`<div class="builder-panel">
@@ -1512,7 +1512,7 @@ function rBuilderForm(){
       <div class="card card-pad" style="margin-bottom:16px">
         <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:600;margin-bottom:14px">Build Your Meal</div>
         ${emergencyCount<6?`<div class="alert alert-red" style="margin-bottom:12px"><span>🚨</span><div>${emergencyCount} emergency meal${emergencyCount!==1?'s':''} — build ${6-emergencyCount} more to reach 6</div></div>`:''}
-        ${A.buildEmergency?`<div class="alert alert-red" style="margin-bottom:12px"><span>🚨</span><div><strong>Emergency Meal Mode ON</strong> — AI will build a complete double-batch meal for 2 gallon bags. Inventory deducts for both batches. You will be prompted to log it when scheduled.</div></div>`:''}
+        ${A.buildEmergency?`<div class="alert alert-red" style="margin-bottom:12px"><span>🚨</span><div><strong>Emergency Meal Mode ON</strong> — The meal builder will create a complete double-batch meal for 2 gallon bags. Inventory deducts for both batches. You will be prompted to log it when scheduled.</div></div>`:''}
 
         ${proteinSection}
 
@@ -1566,13 +1566,13 @@ function rBuilderForm(){
           <div class="tog ${A.buildEmergency?'on':''}" onclick="toggleBuilderOption('buildEmergency')"><div class="tog-th"></div></div>
         </div>
         <div style="margin-top:14px">
-          <button class="btn btn-primary btn-lg btn-full" onclick="generateRecipe()">🤖 Build My Meal</button>
+          <button class="btn btn-primary btn-lg btn-full" onclick="generateRecipe()">🍳 Build My Meal</button>
         </div>
       </div>
     </div>
     <div>
       ${selectedProteins.length>0?`
-      <div class="alert alert-green" style="margin-bottom:16px"><span>✅</span><div><strong>Building with:</strong> ${selectedProteins.join(', ')}. The AI will use frozen stock first, then calculate what needs to be cooked.</div></div>`:''}
+      <div class="alert alert-green" style="margin-bottom:16px"><span>✅</span><div><strong>Building with:</strong> ${selectedProteins.join(', ')}. Frozen stock is used first, then the meal builder calculates what needs to be cooked.</div></div>`:''}
       
   ${freshItems.length>0?`<div class="alert alert-gold"><span>🌿</span><div><strong>Fresh items on hand — use these first:</strong> ${freshItems.map(f=>`${f.name} (${f.qty} ${f.unit})`).join(', ')}</div></div>`:''}
       ${frozenBases.length===0?`<div class="alert alert-blue"><span>🍳</span><div>No frozen protein bases yet. Add inventory then come back to build.</div></div>`:''}
@@ -1673,12 +1673,13 @@ Every component of the meal — protein, starch, vegetable, sauce, dairy, oil, c
 - Condiments and sauces with qty → use them in the dish before flagging anything.
 - Fresh produce logged → USE FIRST rule applies. Always.
 
-INVENTORY CONSTRAINTS ARE NOT A REASON TO SIMPLIFY. They are a creative challenge. Build the most flavorful, well-executed dish possible from what is available. Bold flavors, proper technique, real seasoning — the ingredients come from her kitchen, the quality comes from the cooking.
+INVENTORY CONSTRAINTS ARE NOT A REASON TO SIMPLIFY — they are a creative challenge. Bold flavors, proper technique, real seasoning. The ingredients come from her kitchen, the quality comes from the cooking.
 
 ${pantryMode?`PANTRY MODE — ON: No store run. Build exclusively from logged inventory.
-- groceryFlags MUST be empty unless a protein is physically missing and no substitute exists.
-- Missing a component? Substitute from what IS logged. Never flag optional extras or produce.
-- End with 1-2 natural suggestions in the "suggestions" field for items that would enhance the dish.`:`PANTRY MODE — OFF: Build from inventory first. Only flag items genuinely missing and required.
+- groceryFlags MUST BE COMPLETELY EMPTY. Zero flags. No exceptions. Not even for missing items.
+- If a component is missing, substitute something else from inventory. Always find a substitute. Never flag it.
+- If inventory is sparse, simplify the dish — do not add grocery flags.
+- End with 1-2 natural suggestions in the "suggestions" field only. Never requirements.`:`PANTRY MODE — OFF: Build from inventory first. Only flag items genuinely missing and required.
 - Seasonal produce belongs in suggestions only — never drives dish selection.
 - End with 1-2 natural suggestions in the "suggestions" field if relevant.`}
 
@@ -1730,7 +1731,7 @@ LOW CARB: Reduce grain portions or use lower-carb swaps where natural. Do not el
 KETO: No grains, no sugar, no starchy vegetables. Carbs from vegetables only.
 HIGH PROTEIN + LOW FAT together: Lean proteins, normal carb bases (crust/tortilla/pasta/rice), high-protein toppings and fillings. Never sacrifice the structure of a dish to add more protein.`:''}
 
-FLAVOR GUIDE: Classic American=meat+potatoes/casseroles · Comfort=creamy/cheesy/hearty · Southern=gravy/cornbread/grits · Tex-Mex=cumin/cheese/tortillas · Mexican=authentic(carnitas/barbacoa/mole) · Italian=tomato/pasta/olive oil · BBQ=smoked/chipotle · Cajun=holy trinity/bold spice · Asian=soy/ginger/sesame · Mediterranean=olive oil/lemon/feta · Caribbean=allspice/jerk · Surprise Me=rotate freely.
+FLAVOR GUIDE: Classic American=meat+potatoes · Comfort=creamy/cheesy · Southern=gravy/grits · Tex-Mex=cumin/cheese/tortillas · Mexican=carnitas/mole · Italian=tomato/pasta · BBQ=smoked/chipotle · Cajun=bold spice · Asian=soy/ginger · Mediterranean=lemon/feta · Caribbean=jerk · Surprise Me=rotate freely.
 
 STORAGE FORM HONESTY — match form to actual inventory:
 0. FRESH/HOMEMADE > 0 → USE THIS FIRST. Step: "cook fresh pasta 2-3 min in boiling salted water — do not overcook." Always mention it is fresh or homemade.
@@ -1783,7 +1784,7 @@ ${(()=>{
   return`SEASONAL (this month): Proteins on sale: ${proteins}. Produce abundant: ${produce}. Year-round: canned tuna, salmon, chicken thighs, eggs, ground turkey.`;
 })()}
 
-DISH VARIETY — never repeat same format twice in a row. Rotate: tacos, enchiladas, burritos, stir fry, pasta, casserole, shepherd's pie, fried rice, stuffed peppers, burrito bowls, quesadillas, pot pie, skillet meals, rice bowls, smothered chicken, soups, stews, sandwiches, sliders, wraps, hash, curry, flatbread pizza, meatloaf, lasagna, sheet pan meals, stir-fry noodles, kabobs, stuffed baked potatoes, grain bowls, chili, taco bowls, fajitas.
+DISH VARIETY — never repeat same format twice in a row. Rotate: tacos, burritos, pasta, casserole, fried rice, stuffed peppers, quesadillas, pot pie, skillet meals, rice bowls, soups, stews, sandwiches, wraps, curry, meatloaf, lasagna, sheet pan meals, chili, grain bowls, fajitas.
 ONE PROTEIN PER MEAL — MANDATORY:
 Pick the single protein that best fits the dish. Do NOT combine multiple proteins at full bag quantities in one meal.
 - If Ground Beef AND Pepperoni are both in inventory, pick one. Ground beef for a pasta bake. Pepperoni as a flavoring accent (a few slices, not a full bag).
@@ -3903,7 +3904,7 @@ function rGuide(){
       <div style="flex:1;min-width:120px;background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center">
         <div style="font-size:22px;margin-bottom:4px">2️⃣</div>
         <div style="font-size:12px;font-weight:700">Build Meals</div>
-        <div style="font-size:10px;opacity:.8;margin-top:2px">Pick a protein, choose a flavor, and let the AI build your recipe.</div>
+        <div style="font-size:10px;opacity:.8;margin-top:2px">Pick a protein, choose a flavor, and your meal gets built from what you have.</div>
       </div>
       <div style="flex:1;min-width:120px;background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center">
         <div style="font-size:22px;margin-bottom:4px">3️⃣</div>
@@ -3938,7 +3939,7 @@ function rGuide(){
       <div style="font-size:22px;flex-shrink:0">🥩</div>
       <div>
         <div style="font-size:14px;font-weight:700;margin-bottom:4px">Inventory — Bases</div>
-        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Frozen cooked proteins in quart bags. <strong>1 bag = 1.5 lbs cooked.</strong> This is the foundation — cook once, pull all week. Log what's in your freezer so the AI knows what to build with.</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Frozen cooked proteins in quart bags. <strong>1 bag = 1.5 lbs cooked.</strong> This is the foundation — cook once, pull all week. Log what's in your freezer so your meals are built from what you actually have.</div>
       </div>
     </div>
   </div>
@@ -3948,7 +3949,7 @@ function rGuide(){
       <div style="font-size:22px;flex-shrink:0">🥬</div>
       <div>
         <div style="font-size:14px;font-weight:700;margin-bottom:4px">Inventory — Supports</div>
-        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Frozen vegetables, canned goods, dry goods (rice, pasta, beans). These round out the meal. The AI picks from whatever form you actually have — frozen bags, cans, dry. If you're out, it flags it on the grocery list.</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Frozen vegetables, canned goods, dry goods (rice, pasta, beans). These round out the meal. The meal builder picks from whatever form you actually have — frozen bags, cans, dry. If you're out, it flags it on the grocery list.</div>
       </div>
     </div>
   </div>
