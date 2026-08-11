@@ -1560,6 +1560,8 @@ PROTEIN RULES:
 - Frozen protein = ALREADY COOKED. Say "heat gently 3-4 min over medium heat." NEVER say "cook until done."
 - Never partial bags. 1 quart bag = 1.5 lbs cooked. For ${A.householdSize} people use ${A.householdSize<=4?'1-2':'2-3'} bags.
 
+${anchor?`ANCHOR — NON-NEGOTIABLE: The user has specifically requested to build: "${anchor}". You MUST build this exact dish or a very close variation. Do not build something different. Do not ignore this instruction. If you cannot build it from inventory alone, flag the missing ingredients on groceryFlags and build it anyway.`:''}
+
 INVENTORY FIRST — MANDATORY:
 If frozen protein bags are logged in the user's inventory, USE THEM. Do not choose a different protein because it fits the cuisine or flavor direction better. The protein on hand drives everything else. Adapt the cuisine, flavor profile, and dish format to the protein available — not the other way around.
 - Pork in inventory → build pork dishes. Carnitas, pork verde, pulled pork tacos, smothered pork chops, pork fried rice, pork pasta, pork stir fry.
@@ -1724,7 +1726,13 @@ FROZEN SUPPORTS — cannot become fresh-texture dishes: Frozen corn cannot becom
 - This is standard recipe format. The pull list is the complete shopping/prep list. Steps only reference items already listed.
 - After building the pull list, cross-check every step and verify every ingredient mentioned is accounted for in the list.
 
-KITCHEN STAPLES FLAGGING RULE: The user prompt shows exactly what is in the user's Kitchen Staples. Any ingredient the recipe uses that is NOT in those lists MUST be added to groceryFlags — no exceptions for jarred goods (pasta sauce, coconut milk, tomato paste, salsa), dairy (cream cheese, sour cream, heavy cream, buttermilk), specialty dry goods (specific pasta shapes, bread crumbs, cornmeal if not listed), or any packaged/processed ingredient. Do NOT assume the user has something just because it is common. If it is not listed, flag it. Basic exceptions: water, table salt, black pepper.
+KITCHEN STAPLES FLAGGING RULE: The user prompt shows EXACTLY what is available. If an ingredient is not listed with a quantity greater than zero — it is NOT in the house. Flag it.
+
+DAIRY — NEVER ASSUME: Heavy cream, buttermilk, sour cream, cream cheese, milk, butter, shredded cheese, block cheese, yogurt — if not listed above with a quantity, she does not have it. FLAG IT on groceryFlags. Do not build a recipe around a dairy item that is not listed.
+
+Same rule applies to: jarred pasta sauce, coconut milk, tomato paste, salsa, broth, any packaged or processed ingredient. If it is not in the lists above with qty > 0, it goes on groceryFlags.
+
+Basic assumed staples (never flag): water, table salt, black pepper.
 
 INGREDIENT COMMON SENSE: Never put fruit on savory dishes unless a known classic. Frozen fruit = breakfast/desserts only.
 SEASONAL PRODUCE IN DINNER: Actively build seasonal produce into dinner dishes. If abundant produce is listed in the seasonal guide, include it in the vegetable component of dinner — corn in summer dishes, butternut squash in fall, sweet potatoes in winter, asparagus in spring. The meal should feel like the season.
@@ -1786,7 +1794,7 @@ ${mealType==='Lunch'&&!grabAndGo?'LUNCH = GRAB AND GO — 3 steps max, no scratc
 ${dietaryGoals.length>0?`DIETARY GOALS: ${dietaryGoals.join(', ')} — hit these targets, do not just gesture at them`:''}
 Flavor: ${flavor}
 Servings: ${servings}
-${anchor?`ANCHOR — build around this: ${anchor}`:''}
+${anchor?`ANCHOR OVERRIDE — MANDATORY: Build this specific meal: "${anchor}". This overrides all other dish selection logic. If ingredients for this dish are not in inventory, flag them on groceryFlags. Do not build a different dish.`:''}
 Dietary restrictions: ${A.dietary.length>0?A.dietary.join(', '):'none'}
 
 PROTEINS AVAILABLE:
@@ -1801,8 +1809,8 @@ Ready to use (each): ${eachList.length>0?eachList.join(' | '):'None'}
 FRESH ITEMS (USE FIRST): ${freshList.length>0?freshList.join(' | '):'None'}
 
 KITCHEN STAPLES (what user actually has in pantry/fridge — ONLY flag items NOT on these lists):
-Fridge: ${(()=>{const f=A.pantry?.fridge||[];return f.filter(i=>i.have).map(i=>i.qty?`${i.name} (${i.qty} ${i.unit||''})`.trim():i.name).join(', ')||'None';})()}
-Baking/Dry: ${(()=>{const b=A.pantry?.baking||[];return b.filter(i=>i.have).map(i=>i.qty?`${i.name} (${i.qty} ${i.unit||''})`.trim():i.name).join(', ')||'None';})()}
+Fridge: ${(()=>{const f=A.pantry?.fridge||[];return f.filter(i=>i.have&&(i.qty==null||(i.qty||0)>0)).map(i=>i.qty?`${i.name} (${i.qty} ${i.unit||''})`.trim():i.name).join(', ')||'None';})()}
+Baking/Dry: ${(()=>{const b=A.pantry?.baking||[];return b.filter(i=>i.have&&(i.qty==null||(i.qty||0)>0)).map(i=>i.qty?`${i.name} (${i.qty} ${i.unit||''})`.trim():i.name).join(', ')||'None';})()}
 Oils & Condiments: ${(()=>{const o=[...(A.pantry?.oils||[]),...(A.pantry?.condiments||[])];return o.filter(i=>i.have).map(i=>i.name).join(', ')||'None';})()}
 Spices: ${(()=>{const s=A.pantry?.spices||[];return s.filter(i=>i.have).map(i=>i.name).join(', ')||'None';})()}
 NOTE: Any ingredient NOT listed above AND NOT a basic assumed staple (water, standard salt, black pepper) MUST appear in groceryFlags.
@@ -3398,18 +3406,34 @@ function toggleGroc(id){const g=A.grocery.find(i=>i.id==id);if(g){g.done=!g.done
 function dismissGroc(id){A.grocery=A.grocery.filter(i=>i.id!=id);save();render();}
 function clearDone(){A.grocery=A.grocery.filter(g=>!g.done);save();render();}
 function openAddGroc(){
+  const today=new Date();
+  const sun=new Date(today);sun.setDate(today.getDate()-today.getDay());
+  const fmt=d=>d.toISOString().split('T')[0];
+  const wk1=fmt(sun);
+  const wk2=fmt(new Date(sun.getTime()+7*86400000));
+  const wk3=fmt(new Date(sun.getTime()+14*86400000));
+  const wk4=fmt(new Date(sun.getTime()+21*86400000));
+  const lbl=d=>{const dt=new Date(d+'T12:00:00');return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});};
   openModal(`<div class="modal-header"><div class="modal-title">Add to Grocery List</div><button class="modal-close" onclick="closeModal()">×</button></div>
     <div class="fg"><label class="lbl">Item Name</label><input class="inp" id="ag-name" placeholder="e.g. Ground beef, flour, eggs"></div>
-    <div class="r2">
-      <div class="fg"><label class="lbl">Quantity</label><input class="inp" id="ag-qty" placeholder="e.g. 3 lbs, 2 boxes"></div>
-      <div class="fg"><label class="lbl">Priority</label><select class="sel" id="ag-urg"><option value="low">Needed</option><option value="out">Out — Need Now</option></select></div>
+    <div class="fg"><label class="lbl">Quantity</label><input class="inp" id="ag-qty" placeholder="e.g. 1 qt, 16 oz, 2 lbs"></div>
+    <div class="fg"><label class="lbl">When do you need it?</label>
+      <select class="sel" id="ag-when">
+        <option value="${wk1}">This week (${lbl(wk1)})</option>
+        <option value="${wk2}">Next week (${lbl(wk2)})</option>
+        <option value="${wk3}">Week of ${lbl(wk3)}</option>
+        <option value="${wk4}">Week of ${lbl(wk4)}</option>
+        <option value="month">Anytime this month</option>
+      </select>
     </div>
     <button class="btn btn-primary btn-full btn-lg" style="margin-top:8px" onclick="saveAddGroc()">Add to List</button>`);
 }
 function saveAddGroc(){
   const name=document.getElementById('ag-name')?.value.trim();
   if(!name)return;
-  A.grocery.push({id:Date.now(),name,qty:document.getElementById('ag-qty')?.value.trim()||'',urgency:document.getElementById('ag-urg')?.value||'low',done:false,manualAdd:true});
+  const when=document.getElementById('ag-when')?.value||'month';
+  const scheduledDate=when==='month'?null:when;
+  A.grocery.push({id:Date.now(),name,qty:document.getElementById('ag-qty')?.value.trim()||'',urgency:'out',done:false,manualAdd:true,scheduledDate});
   save();closeModal();render();
 }
 
