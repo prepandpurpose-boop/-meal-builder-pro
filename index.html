@@ -672,7 +672,7 @@ let A={
   page:'dashboard',invTab:'bases',
   calSelDate:null,weekOffset:0,
   generating:false,stretchingIt:false,recipe:null,stretchResult:null,
-  buildFromStock:true,kidFriendly:false,buildEmergency:false,grabAndGo:false,includeSoups:true,pantryMode:false,
+  buildFromStock:true,kidFriendly:false,buildEmergency:false,grabAndGo:false,includeSoups:true,pantryMode:false,_emLogOpen:false,
   lastBuiltMeal:'',lastBuiltBreakfast:'',lastBuiltProtein:'',
   favorites:[],homeCanned:[],grocWindow:1,emergencyCookList:[],
   householdSize:4,lastMealType:'Dinner',
@@ -1563,6 +1563,9 @@ PROTEIN RULES:
 ${anchor?`ANCHOR — NON-NEGOTIABLE: The user has specifically requested to build: "${anchor}". You MUST build this exact dish or a very close variation. Do not build something different. Do not ignore this instruction. If you cannot build it from inventory alone, flag the missing ingredients on groceryFlags and build it anyway.`:''}
 
 INVENTORY FIRST — MANDATORY:
+SUPPORTS — USE FROZEN BAGS FIRST: When a recipe needs sweet potatoes, corn, peppers, rice, beans, or any support — check frozen bags first. If she has frozen sweet potato bags, use them (1 bag = 3 cups cooked). Do NOT call for 8 lbs of fresh sweet potatoes when she has frozen bags. Only call for fresh/raw if NO frozen or canned version exists in inventory.
+
+INVENTORY FIRST — MANDATORY:
 If frozen protein bags are logged in the user's inventory, USE THEM. Do not choose a different protein because it fits the cuisine or flavor direction better. The protein on hand drives everything else. Adapt the cuisine, flavor profile, and dish format to the protein available — not the other way around.
 - Pork in inventory → build pork dishes. Carnitas, pork verde, pulled pork tacos, smothered pork chops, pork fried rice, pork pasta, pork stir fry.
 - Chicken in inventory → build chicken dishes in any cuisine that fits.
@@ -1755,6 +1758,16 @@ FINAL STEPS — always the last 3 steps:
 2. "Portion into gallon freezer bags [OR 9x13 pan]. Remove air, seal tight, lay flat to freeze."
 3. "Label: [MEAL NAME] — [TODAY'S DATE] — Reheat: [specific instructions]. Keeps 3-6 months."
 
+REHEAT FROM FROZEN — MANDATORY FOR ALL EMERGENCY MEAL STEPS AND TIPS:
+Emergency meals are ALWAYS reheated from frozen. Never thawed first. Every step and tip must reflect this.
+WRONG: "Bake at 375°F for 25 minutes until heated through"
+RIGHT: "REHEAT FROM FROZEN: Bake covered at 375°F for 75-90 minutes, uncover last 15-20 minutes until bubbly and golden. Do not thaw first."
+
+Dense casseroles (shepherd's pie, baked pasta, enchiladas, pot pie): 75-90 min covered + 15-20 min uncovered from frozen.
+Soups, stews, chili (gallon bags): Transfer to pot, heat medium 20-25 min stirring. Or microwave 8-10 min stirring halfway.
+Rice/grain dishes (gallon bags): Heat in pot with 2 tbsp water, medium-low 15-20 min covered. Or microwave 5-7 min.
+
+The tip field MUST contain FROM FROZEN reheat instructions — this is what goes on the freezer label.
 REHEAT FROM FROZEN — THIS IS HOW EMERGENCY MEALS ARE USED:
 Emergency meals are NEVER thawed first. They go straight from freezer to oven or stovetop. Give FROM FROZEN times only.
 - 9x13 pan casseroles: Bake covered at 375°F for 60-75 min from frozen, uncover last 15-20 min until bubbly and golden. Total: 75-90 min.
@@ -1950,6 +1963,18 @@ function rRecipe(){
     <div class="card card-pad" style="margin-bottom:16px">
       ${fromStock.length>0?`<div class="pull-section"><div class="pull-section-title">❄️ From Your Stock — Pull These First</div>${fromStock.map(p=>`<div class="pull-row"><div class="pull-icon">${p.icon||'🍱'}</div><div style="flex:1"><div class="pull-name">${p.item}</div><div class="pull-note">${p.prepNote||''}</div></div><span class="pull-qty">${p.qty}</span></div>`).join('')}</div>`:''}
       ${fromKitchen.length>0?`<div class="pull-section"><div class="pull-section-title">🧂 From Your Kitchen</div>${fromKitchen.map(p=>`<div class="pull-row"><div class="pull-icon">${p.icon||'🧂'}</div><div style="flex:1"><div class="pull-name">${p.item}</div><div class="pull-note">${p.prepNote||''}</div></div><span class="pull-qty">${p.qty}</span></div>`).join('')}</div>`:''}
+      ${(r.groceryFlags||[]).length>0?`<div class="pull-section" style="border:2px solid #2980b9;border-radius:8px;padding:10px 12px;margin-top:4px;background:#f0f7ff">
+        <div class="pull-section-title" style="color:#1a5276;margin-bottom:10px">🛒 Pick Up or Have on Hand</div>
+        <div style="font-size:11px;color:#2980b9;margin-bottom:10px;line-height:1.5">These weren't found in your logged inventory. Check off what you already have — pick up the rest before you start cooking.</div>
+        ${(r.groceryFlags||[]).map((f,fi)=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #d0e8f8" onclick="this.querySelector('input').checked=!this.querySelector('input').checked;this.style.opacity=this.querySelector('input').checked?'0.45':'1'">
+          <input type="checkbox" style="width:18px;height:18px;margin-top:2px;flex-shrink:0;accent-color:#2980b9;cursor:pointer">
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:600;color:#1a5276">${f.name}</div>
+            <div style="font-size:12px;color:#2980b9;margin-top:1px">${f.reason||''}</div>
+          </div>
+          <span style="font-size:13px;font-weight:600;color:#1a5276;white-space:nowrap">${f.qty||''}</span>
+        </div>`).join('')}
+      </div>`:''}
     </div>
 
     <div class="card card-pad" style="margin-bottom:16px">
@@ -1983,6 +2008,15 @@ function rRecipe(){
       </div>
       <div class="conflict-msg" id="conflict-msg"></div>
       <button class="btn btn-primary btn-full btn-lg" style="margin-bottom:8px" onclick="placeOnCal()">📅 Add to Calendar & Deduct Inventory</button>
+      ${!A._emLogOpen?
+      `<button class="btn btn-outline btn-full" style="margin-bottom:8px;border-color:#c62828;color:#c62828;font-weight:700" onclick="A._emLogOpen=true;render()">🚨 Log as Emergency Meal Instead</button>`
+      :`<div style="background:#fff5f5;border:2px solid #c62828;border-radius:10px;padding:14px;margin-bottom:8px">
+        <div style="font-weight:700;color:#c62828;margin-bottom:6px">🚨 Log as Emergency Meal</div>
+        <div style="font-size:13px;color:#555;margin-bottom:10px;line-height:1.5">This meal goes straight to your emergency freezer supply — not on the dinner calendar. How many gallon bags are you freezing?</div>
+        <div class="fg"><label class="lbl">Gallon Bags</label><input class="inp" type="number" id="em-din-qty" value="${Math.max(1,Math.round((A.recipe?.servings||4)/(A.householdSize||4)))}" min="1" max="10" style="text-align:center;font-size:20px;font-weight:700"></div>
+        <button class="btn btn-primary btn-full" style="background:#c62828;margin-bottom:6px" onclick="logDinnerAsEmergency()">🚨 Log as Emergency & Deduct Inventory</button>
+        <button class="btn btn-ghost btn-full btn-sm" onclick="A._emLogOpen=false;render()">Cancel</button>
+      </div>`}
       ${!A._lunchBankOpen?
       `<button class="btn btn-outline btn-full" style="margin-bottom:8px;border-color:#2980b9;color:#2980b9;font-weight:700" onclick="A._lunchBankOpen=true;render()">🧊 Also Banking Lunch? Tap to Scale Up</button>`
       :`<div style="background:#ebf5fb;border:1px solid #2980b9;border-radius:10px;padding:14px;margin-bottom:8px">
@@ -2477,6 +2511,36 @@ function deductInventory(pull){
   deductPantryItems(pull);
 }
 
+function logDinnerAsEmergency(){
+  if(!A.recipe)return;
+  const qty=parseInt(document.getElementById('em-din-qty')?.value)||1;
+  const dateMade=new Date().toISOString().split('T')[0];
+  // Deduct inventory same as a regular emergency meal log
+  if(!A.emergency)A.emergency=[];
+  A.emergency.push({
+    id:'em_'+Date.now(),
+    name:A.recipe.title,
+    qty,
+    dateMade,
+    recipe:{...A.recipe}
+  });
+  // Deduct inventory
+  if(A.recipe.pull){
+    A.recipe.pull.forEach(p=>{
+      const ql=(p.qty||'').toLowerCase();
+      const bagMatch=ql.match(/(\d+)\s*bag/);
+      if(bagMatch){
+        const bags=parseInt(bagMatch[1]);
+        const base=A.bases.find(b=>b.name.toLowerCase().includes((p.item||'').toLowerCase().split(' ')[0]));
+        if(base&&base.frozen>=bags)base.frozen-=bags;
+      }
+    });
+  }
+  A._emLogOpen=false;
+  A.recipe=null;
+  save();render();
+  showToast('🚨 '+qty+' emergency meal'+(qty!==1?'s':'')+' logged — '+A.emergency[A.emergency.length-1]?.name||'');
+}
 function logEmergencyMeal(){
   const dateVal=document.getElementById('em-made-date')?.value||new Date().toISOString().slice(0,10);
   const qty=+document.getElementById('em-made-qty')?.value||2;
@@ -3805,7 +3869,11 @@ function rGuide(){
       <div style="font-size:22px;flex-shrink:0">🚨</div>
       <div>
         <div style="font-size:14px;font-weight:700;margin-bottom:4px">Emergency Layer</div>
-        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Your safety net — <strong>6 fully assembled meals</strong> in gallon bags or 9x13 pans. Pull one out on a hard day, heat, and eat. Zero thinking. Build 2 at a time using the Emergency toggle in the meal builder. Both portions freeze. Always.</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Your safety net — <strong>6 fully assembled meals</strong> in gallon bags or 9x13 pans. Pull one on a hard night, heat from frozen, done. Zero thinking required.<br><br>
+<strong>Two ways to build:</strong><br>
+<strong>1. Emergency Mode toggle</strong> — Flip it on in the builder. The entire batch goes to the freezer tonight — nothing gets served. The recipe scales to a double batch. Use this for dedicated freezer cook sessions.<br><br>
+<strong>2. Log a dinner as emergency</strong> — Build any dinner normally, then on the result screen tap <strong>🚨 Log as Emergency Meal Instead</strong>. Pick how many gallon bags you're freezing. The meal skips the calendar and goes straight to your emergency supply. Use this when you cook a big batch and want to freeze some for later.<br><br>
+<strong>Reheating:</strong> Always from frozen — never thaw first. 9x13 pans: covered at 375°F for 75-90 min, uncovered last 15-20 min. Gallon bag soups/stews: pot over medium heat 20-25 min. Label every bag with the meal name, date, and reheat instructions.</div>
       </div>
     </div>
   </div>
@@ -3815,7 +3883,13 @@ function rGuide(){
       <div style="font-size:22px;flex-shrink:0">🍽️</div>
       <div>
         <div style="font-size:14px;font-weight:700;margin-bottom:4px">Meal Builder</div>
-        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">The heart of the app. Pick a protein from your freezer, choose a flavor direction, and the AI builds a complete recipe using what you actually have. Every ingredient in the recipe comes from your logged inventory — if something's missing, it lands on the grocery list.</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">The heart of the app. Pick a protein from your freezer, choose a flavor direction, and the meal builder creates a complete recipe from what you actually have.<br><br>
+The pull list shows three sections:<br>
+<strong>❄️ From Your Stock</strong> — frozen bags to pull<br>
+<strong>🧂 From Your Kitchen</strong> — logged pantry and fridge items<br>
+<strong>🛒 Pick Up or Have on Hand</strong> — items not found in your logged inventory. Check off what you already have, pick up the rest.<br><br>
+<strong>Use What I Have</strong> — toggle this on when you're not going to the store. The meal builder builds entirely from your logged inventory with zero grocery flags.<br><br>
+<strong>Anchor field</strong> — type a specific dish or ingredient you want to build around. The builder will use it or flag what's needed to make it happen.</div>
       </div>
     </div>
   </div>
