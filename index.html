@@ -1963,18 +1963,7 @@ function rRecipe(){
     <div class="card card-pad" style="margin-bottom:16px">
       ${fromStock.length>0?`<div class="pull-section"><div class="pull-section-title">❄️ From Your Stock — Pull These First</div>${fromStock.map(p=>`<div class="pull-row"><div class="pull-icon">${p.icon||'🍱'}</div><div style="flex:1"><div class="pull-name">${p.item}</div><div class="pull-note">${p.prepNote||''}</div></div><span class="pull-qty">${p.qty}</span></div>`).join('')}</div>`:''}
       ${fromKitchen.length>0?`<div class="pull-section"><div class="pull-section-title">🧂 From Your Kitchen</div>${fromKitchen.map(p=>`<div class="pull-row"><div class="pull-icon">${p.icon||'🧂'}</div><div style="flex:1"><div class="pull-name">${p.item}</div><div class="pull-note">${p.prepNote||''}</div></div><span class="pull-qty">${p.qty}</span></div>`).join('')}</div>`:''}
-      ${(r.groceryFlags||[]).length>0?`<div class="pull-section" style="border:2px solid #2980b9;border-radius:8px;padding:10px 12px;margin-top:4px;background:#f0f7ff">
-        <div class="pull-section-title" style="color:#1a5276;margin-bottom:10px">🛒 Pick Up or Have on Hand</div>
-        <div style="font-size:11px;color:#2980b9;margin-bottom:10px;line-height:1.5">These weren't found in your logged inventory. Check off what you already have — pick up the rest before you start cooking.</div>
-        ${(r.groceryFlags||[]).map((f,fi)=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #d0e8f8" onclick="this.querySelector('input').checked=!this.querySelector('input').checked;this.style.opacity=this.querySelector('input').checked?'0.45':'1'">
-          <input type="checkbox" style="width:18px;height:18px;margin-top:2px;flex-shrink:0;accent-color:#2980b9;cursor:pointer">
-          <div style="flex:1">
-            <div style="font-size:14px;font-weight:600;color:#1a5276">${f.name}</div>
-            <div style="font-size:12px;color:#2980b9;margin-top:1px">${f.reason||''}</div>
-          </div>
-          <span style="font-size:13px;font-weight:600;color:#1a5276;white-space:nowrap">${f.qty||''}</span>
-        </div>`).join('')}
-      </div>`:''}
+
     </div>
 
     <div class="card card-pad" style="margin-bottom:16px">
@@ -3654,7 +3643,7 @@ function saveEmergency(){
   save();closeModal();render();
 }
 function viewEmergencyRecipe(id){
-  const meal=A.emergency.find(m=>m.id===id);
+  const meal=A.emergency.find(m=>String(m.id)===String(id));
   if(!meal||!meal.recipe){alert('No recipe saved for this meal.');return;}
   const r=meal.recipe;
   const stockKeywords=['quart bag','frozen bag','cans','1 can','2 cans','3 cans','lbs cooked','bag ='];
@@ -3677,7 +3666,7 @@ function viewEmergencyRecipe(id){
 }
 
 function printEmergencyRecipe(id){
-  const meal=A.emergency.find(m=>m.id===id);
+  const meal=A.emergency.find(m=>String(m.id)===String(id));
   if(!meal?.recipe){alert('No recipe saved for this meal.');return;}
   const r=meal.recipe;
   const html=`<html><head><title>${r.title}</title>
@@ -3697,7 +3686,7 @@ function printEmergencyRecipe(id){
 }
 
 function saveEmergencyToFavorites(id){
-  const meal=A.emergency.find(m=>m.id===id);
+  const meal=A.emergency.find(m=>String(m.id)===String(id));
   if(!meal?.recipe){alert('No recipe saved for this meal.');return;}
   if(A.favorites.find(f=>f.title===meal.recipe.title)){
     alert('This meal is already in your favorites.');return;
@@ -3707,7 +3696,7 @@ function saveEmergencyToFavorites(id){
   alert('⭐ '+meal.recipe.title+' saved to Favorites!');
 }
 function openEditEmergency(id){
-  const meal=A.emergency.find(m=>m.id===id);if(!meal)return;
+  const meal=A.emergency.find(m=>String(m.id)===String(id));if(!meal)return;
   openModal(`<div class="modal-header"><div class="modal-title">Edit: ${meal.name}</div><button class="modal-close" onclick="closeModal()">×</button></div>
     <div class="fg"><label class="lbl">Meal Name</label><input class="inp" id="ee-name" value="${meal.name}"></div>
     <div class="r2">
@@ -3715,27 +3704,27 @@ function openEditEmergency(id){
       <div class="fg"><label class="lbl">Gallon Bags</label><input class="inp" type="number" id="ee-qty" value="${meal.qty}" min="0"></div>
     </div>
     <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="btn btn-primary btn-full" onclick="saveEditEmergency(${id})">Save</button>
-      <button class="btn btn-danger" onclick="deleteEmergency(${id})">Remove</button>
+      <button class="btn btn-primary btn-full" onclick="saveEditEmergency('${id}')">Save</button>
+      <button class="btn btn-danger" onclick="deleteEmergency('${id}')">Remove</button>
     </div>`);
 }
 function saveEditEmergency(id){
-  const m=A.emergency.find(m=>m.id===id);
+  const m=A.emergency.find(m=>String(m.id)===String(id));
   if(m){m.name=document.getElementById('ee-name').value.trim()||m.name;m.dateMade=document.getElementById('ee-date').value;m.qty=+document.getElementById('ee-qty').value||0;}
   save();closeModal();render();
 }
 function deleteEmergency(id){
-  const meal=A.emergency.find(m=>m.id===id);
+  const meal=A.emergency.find(m=>String(m.id)===String(id));
   if(!meal)return;
   openModal(`<div class="modal-header"><div class="modal-title">Remove Emergency Meal</div><button class="modal-close" onclick="closeModal()">×</button></div>
     <div style="font-size:15px;font-weight:600;margin-bottom:8px">${meal.name}</div>
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Why are you removing this?</div>
-    <button class="btn btn-primary btn-full" style="margin-bottom:10px" onclick="confirmDeleteEmergency(${id},false)">🍽️ We ate it — remove from log</button>
-    <button class="btn btn-outline btn-full" onclick="confirmDeleteEmergency(${id},true)">❌ Logged by mistake — restore inventory</button>`);
+    <button class="btn btn-primary btn-full" style="margin-bottom:10px" onclick="confirmDeleteEmergency('${id}',false)">🍽️ We ate it — remove from log</button>
+    <button class="btn btn-outline btn-full" onclick="confirmDeleteEmergency('${id}',true)">❌ Logged by mistake — restore inventory</button>`);
 }
 
 function confirmDeleteEmergency(id,restoreInventory){
-  const meal=A.emergency.find(m=>m.id===id);
+  const meal=A.emergency.find(m=>String(m.id)===String(id));
   if(!meal)return;
   if(restoreInventory&&meal.recipe&&meal.recipe.pull){
     // Restore inventory for double batch
@@ -3896,10 +3885,10 @@ function rGuide(){
       <div>
         <div style="font-size:14px;font-weight:700;margin-bottom:4px">Meal Builder</div>
         <div style="font-size:13px;color:var(--text-muted);line-height:1.5">The heart of the app. Pick a protein from your freezer, choose a flavor direction, and the meal builder creates a complete recipe from what you actually have.<br><br>
-The pull list shows three sections:<br>
+The pull list shows two sections:<br>
 <strong>❄️ From Your Stock</strong> — frozen bags to pull<br>
 <strong>🧂 From Your Kitchen</strong> — logged pantry and fridge items<br>
-<strong>🛒 Pick Up or Have on Hand</strong> — items not found in your logged inventory. Check off what you already have, pick up the rest.<br><br>
+Print the recipe to see everything you need — check off what you have, pick up the rest.<br><br>
 <strong>Use What I Have</strong> — toggle this on when you're not going to the store. The meal builder builds entirely from your logged inventory with zero grocery flags.<br><br>
 <strong>Anchor field</strong> — type a specific dish or ingredient you want to build around. The builder will use it or flag what's needed to make it happen.</div>
       </div>
