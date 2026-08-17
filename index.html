@@ -1267,17 +1267,17 @@ function rEmergency(){
           ${i===0?`<span class="badge badge-red" style="font-size:10px">Pull First</span>`:''}
           <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
             ${hasRecipe?`
-            <button class="btn btn-sm btn-outline" onclick="viewEmergencyRecipe(${meal.id})">📋 Recipe</button>
-            <button class="btn btn-sm btn-outline" onclick="printEmergencyRecipe(${meal.id})">🖨️ Print</button>
-            <button class="btn btn-sm btn-outline" style="color:#b07800" onclick="saveEmergencyToFavorites(${meal.id})">⭐ Save</button>
+            <button class="btn btn-sm btn-outline" onclick="viewEmergencyRecipe('${meal.id}')">📋 Recipe</button>
+            <button class="btn btn-sm btn-outline" onclick="printEmergencyRecipe('${meal.id}')">🖨️ Print</button>
+            <button class="btn btn-sm btn-outline" style="color:#b07800" onclick="saveEmergencyToFavorites('${meal.id}')">⭐ Save</button>
             `:`<span style="font-size:11px;color:var(--text-hint)">Recipe not saved — rebuild in Meal Builder to attach</span>`}
           </div>
         </td>
         <td style="font-size:13px;color:var(--text-muted)">${meal.dateMade}</td>
         <td><span class="qty-badge">${meal.qty} gallon bag${meal.qty>1?'s':''}</span></td>
         <td style="text-align:right">
-          <button class="btn btn-sm btn-outline" onclick="openEditEmergency(${meal.id})">Edit</button>
-          <button class="btn btn-sm btn-ghost" onclick="deleteEmergency(${meal.id})" style="color:#c62828;margin-left:4px">×</button>
+          <button class="btn btn-sm btn-outline" onclick="openEditEmergency('${meal.id}')">Edit</button>
+          <button class="btn btn-sm btn-ghost" onclick="deleteEmergency('${meal.id}')" style="color:#c62828;margin-left:4px">×</button>
         </td>
       </tr>`;
     });
@@ -2515,14 +2515,26 @@ function logDinnerAsEmergency(){
   if(!A.recipe)return;
   const qty=parseInt(document.getElementById('em-din-qty')?.value)||1;
   const dateMade=new Date().toISOString().split('T')[0];
-  // Deduct inventory same as a regular emergency meal log
+  // Build from-frozen reheat tip based on dish type
+  const title=(A.recipe.title||'').toLowerCase();
+  const isBag=title.includes('soup')||title.includes('stew')||title.includes('chili')||title.includes('gumbo')||title.includes('curry')||title.includes('bean')||title.includes('rice bowl');
+  const isPan=title.includes('casserole')||title.includes('bake')||title.includes('pie')||title.includes('lasagna')||title.includes('enchilada')||title.includes('pasta')||title.includes('penne')||title.includes('ziti')||title.includes('shephard')||title.includes('shepherd');
+  let reheaTip='';
+  if(isBag){
+    reheaTip='REHEAT FROM FROZEN: Transfer bag to pot, heat over medium 20-25 min stirring occasionally. Or microwave from frozen 8-10 min, stirring halfway. Do not thaw first. Keeps 3-6 months.';
+  } else if(isPan){
+    reheaTip='REHEAT FROM FROZEN: Bake covered at 375°F for 75-90 min, uncover last 15-20 min until bubbly and golden. Do not thaw first. Keeps 3-6 months.';
+  } else {
+    reheaTip='REHEAT FROM FROZEN: If in gallon bags — transfer to pot, heat medium 20-25 min. If in 9x13 pan — bake covered 375°F 75-90 min, uncover last 15-20 min. Do not thaw first. Keeps 3-6 months.';
+  }
+  const emRecipe={...A.recipe,tip:reheaTip};
   if(!A.emergency)A.emergency=[];
   A.emergency.push({
     id:'em_'+Date.now(),
     name:A.recipe.title,
     qty,
     dateMade,
-    recipe:{...A.recipe}
+    recipe:emRecipe
   });
   // Deduct inventory
   if(A.recipe.pull){
