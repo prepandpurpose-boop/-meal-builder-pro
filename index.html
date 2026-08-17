@@ -1755,14 +1755,29 @@ FINAL STEPS — always the last 3 steps:
 2. "Portion into gallon freezer bags [OR 9x13 pan]. Remove air, seal tight, lay flat to freeze."
 3. "Label: [MEAL NAME] — [TODAY'S DATE] — Reheat: [specific instructions]. Keeps 3-6 months."
 
-TIP: Gallon bag meals: "FREEZE IN GALLON BAGS: [reheat] · Pull night before · Keeps 3-6 months"
-     9x13 pan meals: "FREEZE IN 9X13 PAN: Cover with plastic wrap then foil · Bake covered 375°F [X] min, uncover [Y] min · Keeps 3-6 months"
+REHEAT FROM FROZEN — THIS IS HOW EMERGENCY MEALS ARE USED:
+Emergency meals are NEVER thawed first. They go straight from freezer to oven or stovetop. Give FROM FROZEN times only.
+- 9x13 pan casseroles: Bake covered at 375°F for 60-75 min from frozen, uncover last 15-20 min until bubbly and golden. Total: 75-90 min.
+- Gallon bag soups/stews/chili: Thaw bag in warm water 10-15 min to loosen, transfer to pot, heat over medium 20-25 min stirring occasionally. Or microwave from frozen 8-10 min stirring halfway.
+- Never write "bake 25 minutes" or "heat until warm" — always write FROM FROZEN times.
+
+TIP FORMAT:
+- Gallon bag: "REHEAT FROM FROZEN: Transfer bag to pot, heat medium 20-25 min stirring occasionally. Or microwave 8-10 min stirring halfway. Keeps 3-6 months."
+- 9x13 pan: "REHEAT FROM FROZEN: Bake covered 375°F 60-75 min, uncover last 15-20 min until bubbly and golden. Do not thaw first. Keeps 3-6 months."
 servingSize = "X gallon bags" or "X 9x13 pans" — never a per-person portion.`:''}
 
 MISSING INGREDIENTS: Always build anyway. Flag on groceryFlags. Zero stock = omit and flag.
 COOK LIST: When proteins need cooking, include cookList with bags and raw lbs (cooked × 1.43).
 
 P&P BLEND TIP: In recipe steps that combine multiple spices (salt + pepper + garlic powder + paprika etc.), add a parenthetical at the end of that step: "(or substitute P&P House Blend for the salt, pepper, garlic powder, onion powder, and paprika)" — only mention the blend that matches. This is optional for the cook. Never list blends in the pull list.
+
+COOK TIME — ALWAYS REQUIRED: Every recipe must include a "cookTime" field formatted as:
+"Preheat [temp] · Active prep: [X] min · [Cook method]: [Y] min · Total: [Z] min"
+Examples: "Preheat 375°F · Active prep: 15 min · Bake: 35 min · Total: 50 min"
+          "Active prep: 20 min · Simmer: 25 min · Total: 45 min"
+          "Active prep: 10 min · Stovetop: 20 min · Total: 30 min"
+For emergency meals: "Active prep: 30 min · Cook: 45 min · Cool: 90 min · Total cook session: ~3 hrs"
+This appears at the top of the recipe so she knows the full time commitment before starting.
 
 RESPOND WITH VALID JSON ONLY:
 {
@@ -1775,6 +1790,7 @@ RESPOND WITH VALID JSON ONLY:
     {"icon": "🫙", "item": "Corn", "qty": "2 pint-and-a-half jars", "prepNote": "Drain well — home canned"},
     {"icon": "🧂", "item": "Salt", "qty": "1 tsp", "prepNote": "From pantry"}
   ],
+  "cookTime": "Preheat 425°F · Active prep: 15 min · Bake: 30 min · Total: 45 min",
   "steps": ["Step with real measurements and timing"],
   "tip": "One specific useful tip",
   "groceryFlags": [{"name": "Slider Buns", "qty": "18", "urgency": "out", "reason": "Buy — or make from scratch if you prefer"}],
@@ -1870,7 +1886,7 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
       alert('Could not parse recipe. Try again.');
       showPage('builder');return;
     }
-    A.recipe={...recipe,servings:servings,id:Date.now(),title:recipe.title||'Your Meal',description:recipe.description||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:(recipe.pull||[]).map(p=>({...p,qty:cleanQty(p.qty),item:cleanQty(p.item),prepNote:p.prepNote?cleanQty(p.prepNote):p.prepNote})),steps:recipe.steps||[],tip:recipe.tip||''};
+    A.recipe={...recipe,servings:servings,id:Date.now(),title:recipe.title||'Your Meal',description:recipe.description||'',cookTime:recipe.cookTime||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:(recipe.pull||[]).map(p=>({...p,qty:cleanQty(p.qty),item:cleanQty(p.item),prepNote:p.prepNote?cleanQty(p.prepNote):p.prepNote})),steps:recipe.steps||[],tip:recipe.tip||''};
     // Track last built for variety enforcement
     if(mealType==='Breakfast')A.lastBuiltBreakfast=recipe.title||'';
     else{
@@ -1937,6 +1953,7 @@ function rRecipe(){
     </div>
 
     <div class="card card-pad" style="margin-bottom:16px">
+      ${r.cookTime?`<div style="background:var(--green);color:#fff;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:700">⏱️ ${r.cookTime}</div>`:''}
       <div class="section-head">🥄 Assembly Steps</div>
       ${r.steps.map((s,i)=>`<div class="step-row"><div class="step-num">${i+1}</div><div style="font-size:14px;line-height:1.6">${s}</div></div>`).join('')}
       ${r.tip?`<div class="tip-box">${r.tip}</div>`:''}
@@ -4046,6 +4063,7 @@ function _printRecipeObj(r,dateStr,slot){
     +(r.macros?'<div class="macros"><span>'+r.macros.cal+' cal</span><span>'+r.macros.protein+'g protein</span><span>'+r.macros.carbs+'g carbs</span><span>'+r.macros.fat+'g fat</span></div>':'')
     +(fromStock.length>0?'<div class="sh">❄️ From Your Stock</div><ul class="pl">'+fromStock.map(p=>'<li><strong>'+p.item+'</strong> — '+p.qty+(p.prepNote?' ('+p.prepNote+')':'')+'</li>').join('')+'</ul>':'')
     +(fromKitchen.length>0?'<div class="sh">🧂 From Your Kitchen</div><ul class="pl">'+fromKitchen.map(p=>'<li><strong>'+p.item+'</strong> — '+p.qty+'</li>').join('')+'</ul>':'')
+    +(r.cookTime?'<div style="background:#1e4d35;color:#fff;border-radius:5px;padding:8px 12px;margin:10px 0;font-size:12px;font-weight:700">⏱️ '+r.cookTime+'</div>':'')
     +(steps.length>0?'<div class="sh">🥄 Steps</div><ol class="sl">'+steps.map(s=>'<li>'+s+'</li>').join('')+'</ol>':'')
     +(tip?'<div class="tip">💡 '+tip+'</div>':'')
     +'<div class="ftr">Reduce decisions. Install structure. And as always — steward what you have, serve where you are.</div>'
