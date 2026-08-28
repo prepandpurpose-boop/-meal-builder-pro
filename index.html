@@ -1715,11 +1715,7 @@ Pre-cooked frozen protein is ALREADY COOKED in shredded, ground, or diced form. 
 - If a dish concept requires raw shaped protein (meatballs, burgers, meatloaf, patties) → change the dish concept to something that works with what's in the freezer, OR flag raw ground meat as a grocery item.
 - Diced/cubed protein → works in: stir fry, soups, curries, pot pies, casseroles. Does NOT work for: pulled dishes, sushi.
 
-DISH TITLE ACCURACY — NON-NEGOTIABLE:
-The dish title MUST accurately reflect the protein form being used. If the recipe uses ground beef, it cannot be called "Beef Steak" or "Beef Chops." If it uses shredded chicken, it cannot be called "Chicken Breast" or "Chicken Thighs." If it uses ground pork, it cannot be called "Pork Chops" or "Pork Tenderloin."
-- Ground protein dishes: use words like Skillet, Pasta, Casserole, Bowl, Soup, Tacos, Stuffed, Bake
-- Shredded protein dishes: use words like Pulled, Shredded, Bowl, Tacos, Enchiladas, Wrap
-- Do NOT use cut names (Chops, Breast, Tenderloin, Steak, Roast, Fillet) unless the actual cut is in the pull list as a raw ingredient
+
 
 PROTEIN COMBINING: Prefer one protein per dish. Exception: if inventory requires combining two proteins to reach the needed weight, combine proteins of COMPATIBLE texture and flavor only — two ground proteins together (ground beef + ground turkey), two shredded proteins together (shredded chicken + shredded pork in a mixed taco batch). Never combine incompatible textures (shredded pork + diced chicken, ground beef + whole chicken pieces). The dish title and steps should reflect the combined proteins naturally.
 
@@ -1812,6 +1808,14 @@ Examples: "Preheat 375°F · Active prep: 15 min · Bake: 35 min · Total: 50 mi
           "Active prep: 10 min · Stovetop: 20 min · Total: 30 min"
 For emergency meals: "Active prep: 30 min · Cook: 45 min · Cool: 90 min · Total cook session: ~3 hrs"
 This appears at the top of the recipe so she knows the full time commitment before starting.
+
+DISH TITLE ACCURACY — FINAL CHECK BEFORE WRITING TITLE:
+The title you write MUST match the actual protein form in the pull list.
+- Pull list shows "Ground Pork" or "Ground Beef" → title CANNOT say Chops, Steak, Tenderloin, Breast, Roast, or any whole-cut name. Use: Skillet, Pasta, Casserole, Bowl, Soup, Bake, Tacos, Stuffed.
+- Pull list shows "Shredded Chicken/Pork" → title CANNOT say Breast, Thighs, Chops. Use: Pulled, Shredded, Tacos, Bowl, Enchiladas.
+- Pull list shows "Diced Chicken/Beef" → title CAN say Chicken or Beef but not a specific cut name unless that cut was the raw ingredient.
+- Cut names (Chops, Steak, Breast, Fillet, Tenderloin, Roast) are ONLY allowed when that raw cut is explicitly in the pull list as a fresh/raw purchase.
+Read your pull list. If you wrote "Ground Pork" — the word "Chops" cannot appear in the title. No exceptions.
 
 RESPOND WITH VALID JSON ONLY:
 {
@@ -1954,7 +1958,7 @@ function rRecipe(){
   const r=A.recipe;
   // Clean all pull quantities at render time — catches old saved recipes too
   const cleanedPull=(r.pull||[]).map(p=>({...p,qty:cleanQty(p.qty),item:cleanQty(p.item),prepNote:p.prepNote?cleanQty(p.prepNote):p.prepNote}));
-  const stockKeywords=['quart bag','frozen bag','cans','1 can','2 cans','3 cans','lbs cooked','bag ='];
+  const stockKeywords=['quart bag','frozen bag','cans','1 can','2 cans','3 cans','lbs cooked','bag =','bags =','bags cooked','bag cooked'];
   const fromStock=cleanedPull.filter(p=>stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
   const fromKitchen=cleanedPull.filter(p=>!stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
   const isEmergency=A.buildEmergency;
@@ -3667,7 +3671,7 @@ function viewEmergencyRecipe(id){
   const meal=A.emergency.find(m=>String(m.id)===String(id));
   if(!meal||!meal.recipe){alert('No recipe saved for this meal.');return;}
   const r=meal.recipe;
-  const stockKeywords=['quart bag','frozen bag','cans','1 can','2 cans','3 cans','lbs cooked','bag ='];
+  const stockKeywords=['quart bag','frozen bag','cans','1 can','2 cans','3 cans','lbs cooked','bag =','bags =','bags cooked','bag cooked'];
   const fromStock=(r.pull||[]).filter(p=>stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
   const fromKitchen=(r.pull||[]).filter(p=>!stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
 
