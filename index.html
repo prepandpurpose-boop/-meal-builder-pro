@@ -632,38 +632,38 @@ const DEF_PANTRY={
     {id:'fr13',name:'Jalapeños',qty:0,unit:'each',have:false,fresh:true},
   ],
   oils:[
-    {id:'o1',name:'Olive Oil',have:false},
-    {id:'o2',name:'Vegetable Oil',have:false},
-    {id:'o3',name:'Cooking Spray',have:false},
-    {id:'o4',name:'Apple Cider Vinegar',have:false},
-    {id:'o5',name:'Soy Sauce',have:false},
-    {id:'o6',name:'Worcestershire Sauce',have:false},
-    {id:'o7',name:'Hot Sauce',have:false},
+    {id:'o1',name:'Olive Oil',qty:0,unit:'oz',have:false},
+    {id:'o2',name:'Vegetable Oil',qty:0,unit:'oz',have:false},
+    {id:'o3',name:'Cooking Spray',qty:0,unit:'each',have:false},
+    {id:'o4',name:'Apple Cider Vinegar',qty:0,unit:'oz',have:false},
+    {id:'o5',name:'Soy Sauce',qty:0,unit:'oz',have:false},
+    {id:'o6',name:'Worcestershire Sauce',qty:0,unit:'oz',have:false},
+    {id:'o7',name:'Hot Sauce',qty:0,unit:'oz',have:false},
   ],
   condiments:[
-    {id:'c1',name:'Ketchup',have:false},
-    {id:'c2',name:'Mustard',have:false},
-    {id:'c3',name:'Mayonnaise',have:false},
-    {id:'c4',name:'BBQ Sauce',have:false},
-    {id:'c5',name:'Salsa',have:false},
-    {id:'c6',name:'Jarred Pasta Sauce',have:false},
-    {id:'c7',name:'Honey',have:false},
-    {id:'c8',name:'Tortillas',have:false},
-    {id:'c9',name:'Tortilla Chips',have:false},
+    {id:'c1',name:'Ketchup',qty:0,unit:'oz',have:false},
+    {id:'c2',name:'Mustard',qty:0,unit:'oz',have:false},
+    {id:'c3',name:'Mayonnaise',qty:0,unit:'oz',have:false},
+    {id:'c4',name:'BBQ Sauce',qty:0,unit:'oz',have:false},
+    {id:'c5',name:'Salsa',qty:0,unit:'each',have:false},
+    {id:'c6',name:'Jarred Pasta Sauce',qty:0,unit:'each',have:false},
+    {id:'c7',name:'Honey',qty:0,unit:'oz',have:false},
+    {id:'c8',name:'Tortillas',qty:0,unit:'each',have:false},
+    {id:'c9',name:'Tortilla Chips',qty:0,unit:'each',have:false},
   ],
   spices:[
-    {id:'sp1',name:'Salt & Pepper',have:false},
-    {id:'sp2',name:'Garlic Powder',have:false},
-    {id:'sp3',name:'Onion Powder',have:false},
-    {id:'sp4',name:'Cumin',have:false},
-    {id:'sp5',name:'Paprika',have:false},
-    {id:'sp6',name:'Chili Powder',have:false},
-    {id:'sp7',name:'Italian Seasoning',have:false},
-    {id:'sp8',name:'Cayenne Pepper',have:false},
-    {id:'sp9',name:'Cinnamon',have:false},
-    {id:'sp10',name:'Bay Leaves',have:false},
-    {id:'sp11',name:'Oregano',have:false},
-    {id:'sp12',name:'Thyme',have:false},
+    {id:'sp1',name:'Salt & Pepper',qty:0,unit:'oz',have:false},
+    {id:'sp2',name:'Garlic Powder',qty:0,unit:'oz',have:false},
+    {id:'sp3',name:'Onion Powder',qty:0,unit:'oz',have:false},
+    {id:'sp4',name:'Cumin',qty:0,unit:'oz',have:false},
+    {id:'sp5',name:'Paprika',qty:0,unit:'oz',have:false},
+    {id:'sp6',name:'Chili Powder',qty:0,unit:'oz',have:false},
+    {id:'sp7',name:'Italian Seasoning',qty:0,unit:'oz',have:false},
+    {id:'sp8',name:'Cayenne Pepper',qty:0,unit:'oz',have:false},
+    {id:'sp9',name:'Cinnamon',qty:0,unit:'oz',have:false},
+    {id:'sp10',name:'Bay Leaves',qty:0,unit:'oz',have:false},
+    {id:'sp11',name:'Oregano',qty:0,unit:'oz',have:false},
+    {id:'sp12',name:'Thyme',qty:0,unit:'oz',have:false},
   ]
 };
 
@@ -844,6 +844,19 @@ function mergePantryWithDefaults(saved,defaults){
   const merged={};
   Object.keys(defaults).forEach(cat=>{
     merged[cat]=saved[cat]?JSON.parse(JSON.stringify(saved[cat])):[];
+    // Migrate old toggle-only items (oils/condiments/spices) to qty-based
+    if(cat==='oils'||cat==='condiments'||cat==='spices'){
+      merged[cat].forEach(item=>{
+        if(item.qty==null){
+          // Was a toggle — convert have:true to qty:1, have:false to qty:0
+          item.qty=item.have?1:0;
+          const def=(defaults[cat]||[]).find(d=>d.id===item.id);
+          if(def&&def.unit)item.unit=def.unit;
+          else if(!item.unit)item.unit='oz';
+        }
+        item.have=(item.qty||0)>0;
+      });
+    }
     defaults[cat].forEach(def=>{
       if(!merged[cat].find(i=>i.id===def.id)){
         merged[cat].push(JSON.parse(JSON.stringify(def)));
@@ -1296,14 +1309,14 @@ function rPantry(){
     baking:{label:'🍞 Baking',type:'qty'},
     fridge:{label:'🧈 Fridge & Dairy',type:'qty',note:'Eggs are tracked in Inventory → Canned & Dry'},
     fresh:{label:'🌿 Fresh Produce (use first)',type:'qty'},
-    oils:{label:'🫙 Oils & Acids',type:'toggle'},
-    condiments:{label:'🥫 Condiments & Sauces',type:'toggle'},
-    spices:{label:'🧂 Spices',type:'toggle'},
+    oils:{label:'🫙 Oils & Acids',type:'qty'},
+    condiments:{label:'🥫 Condiments & Sauces',type:'qty'},
+    spices:{label:'🧂 Spices',type:'qty'},
   };
   let html=`<div class="page-sub">Track what is in your kitchen. Fresh items are prioritized — the AI uses them first so nothing goes to waste.</div>
     <div style="font-size:11px;color:var(--text-muted);background:white;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:16px;line-height:1.5">
       📦 <strong>What deducts automatically:</strong> Frozen bases, frozen/canned/dry supports, home canned jars, and measured kitchen items (butter, flour, sugar, fresh produce, milk, eggs) all deduct when you schedule a meal.<br>
-      🧂 <strong>What does not deduct:</strong> Spices, oils, and condiments are tracked as "have it" or "don't have it" — they don't decrease per recipe. Check these when you notice you're running low.
+      🧂 <strong>Oils, condiments, and spices</strong> are now tracked by quantity (oz or each). Enter how much you have — items at zero are treated as not stocked and won't be used in meal builds.
     </div>`;
   Object.keys(catConfig).forEach(cat=>{
     const {label,type}=catConfig[cat];
@@ -1574,13 +1587,6 @@ If frozen protein bags are logged in the user's inventory, USE THEM. Do not choo
 - If MULTIPLE proteins are in inventory → rotate through them across the week. Never use the same one every meal.
 - Only when NO protein is in inventory does the seasonal budget hierarchy apply.
 
-${pantryMode?`PANTRY MODE — ON: No store run. Build exclusively from logged inventory.
-- groceryFlags MUST BE COMPLETELY EMPTY. Zero flags. No exceptions.
-- Missing a component? Substitute something else from inventory. Always find a substitute.
-- If inventory is sparse, simplify the dish — do not add grocery flags.
-- End with 1-2 natural suggestions in the "suggestions" field only. Never requirements.`:`PANTRY MODE — OFF: Build from inventory first. Only flag items genuinely missing and required.
-- Seasonal produce belongs in suggestions only — never drives dish selection.`}
-
 DINNER PROTEIN RULE (non-negotiable):
 - Standard diet: dinner centerpiece MUST be real meat — beef, pork, chicken, turkey, fish. No exceptions.
 - Beans, chickpeas, lentils = supports that go ALONGSIDE meat. Never the dinner centerpiece for standard diet.
@@ -1729,7 +1735,7 @@ FROZEN SUPPORTS — cannot become fresh-texture dishes: Frozen corn cannot becom
 - This is standard recipe format. The pull list is the complete shopping/prep list. Steps only reference items already listed.
 - After building the pull list, cross-check every step and verify every ingredient mentioned is accounted for in the list.
 
-KITCHEN STAPLES FLAGGING RULE: The user prompt shows EXACTLY what is available. If an ingredient is not listed with a quantity greater than zero — it is NOT in the house. Flag it.
+KITCHEN STAPLES FLAGGING RULE (applies ONLY when Pantry Mode is OFF): The user prompt shows EXACTLY what is available. If an ingredient is not listed with a quantity greater than zero — it is NOT in the house. Flag it.
 
 DAIRY — NEVER ASSUME: Heavy cream, buttermilk, sour cream, cream cheese, milk, butter, shredded cheese, block cheese, yogurt — if not listed above with a quantity, she does not have it. FLAG IT on groceryFlags. Do not build a recipe around a dairy item that is not listed.
 
@@ -1781,6 +1787,15 @@ servingSize = "X gallon bags" or "X 9x13 pans" — never a per-person portion.`:
 
 MISSING INGREDIENTS: Always build anyway. Flag on groceryFlags. Zero stock = omit and flag.
 COOK LIST: When proteins need cooking, include cookList with bags and raw lbs (cooked × 1.43).
+
+${pantryMode?`
+PANTRY MODE IS ON — THIS OVERRIDES ALL PREVIOUS RULES ABOUT groceryFlags:
+- groceryFlags array MUST BE EMPTY: []
+- Do NOT flag Worcestershire sauce, ketchup, butter, bread, or ANY condiment/pantry item
+- Do NOT flag ANY item that is in the Oils & Condiments or Kitchen Staples lists above
+- The ONLY acceptable groceryFlag is a protein that is genuinely zero in all inventory forms
+- If you cannot build without flagging something, substitute a different ingredient from inventory
+- Leave groceryFlags as [] and build around what is listed above`:''}
 
 P&P BLEND TIP: In recipe steps that combine multiple spices (salt + pepper + garlic powder + paprika etc.), add a parenthetical at the end of that step: "(or substitute P&P House Blend for the salt, pepper, garlic powder, onion powder, and paprika)" — only mention the blend that matches. This is optional for the cook. Never list blends in the pull list.
 
@@ -1840,8 +1855,8 @@ FRESH ITEMS (USE FIRST): ${freshList.length>0?freshList.join(' | '):'None'}
 KITCHEN STAPLES (what user actually has in pantry/fridge — ONLY flag items NOT on these lists):
 Fridge: ${(()=>{const f=A.pantry?.fridge||[];return f.filter(i=>i.have&&(i.qty==null||(i.qty||0)>0)).map(i=>i.qty?`${i.name} (${i.qty} ${i.unit||''})`.trim():i.name).join(', ')||'None';})()}
 Baking/Dry: ${(()=>{const b=A.pantry?.baking||[];return b.filter(i=>i.have&&(i.qty==null||(i.qty||0)>0)).map(i=>i.qty?`${i.name} (${i.qty} ${i.unit||''})`.trim():i.name).join(', ')||'None';})()}
-Oils & Condiments: ${(()=>{const o=[...(A.pantry?.oils||[]),...(A.pantry?.condiments||[])];return o.filter(i=>i.have).map(i=>i.name).join(', ')||'None';})()}
-Spices: ${(()=>{const s=A.pantry?.spices||[];return s.filter(i=>i.have).map(i=>i.name).join(', ')||'None';})()}
+Oils & Condiments: ${(()=>{const o=[...(A.pantry?.oils||[]),...(A.pantry?.condiments||[])];return o.filter(i=>(i.qty||0)>0).map(i=>i.name+' ('+i.qty+' '+i.unit+')').join(', ')||'None';})()}
+Spices: ${(()=>{const s=A.pantry?.spices||[];return s.filter(i=>(i.qty||0)>0).map(i=>i.name+' ('+i.qty+' oz)').join(', ')||'None';})()}
 NOTE: Any ingredient NOT listed above AND NOT a basic assumed staple (water, standard salt, black pepper) MUST appear in groceryFlags.
 HOME CANNED: ${(A.homeCanned||[]).length>0?(A.homeCanned||[]).map(hc=>{const cups={halfPint:1,pint:2,pintHalf:3,quart:4,halfGallon:8}[hc.jarSize]||2;const jarLabel={halfPint:'half-pint jar (1 cup)',pint:'pint jar (2 cups)',pintHalf:'pint-and-a-half jar (3 cups)',quart:'quart jar (4 cups)',halfGallon:'half-gallon jar (8 cups)'}[hc.jarSize]||'pint jar (2 cups)';const isFD=/freeze.?dried|freeze dried|FD/i.test(hc.name);const totalCups=hc.qty*cups;if(isFD){return`${hc.name}: ${hc.qty} ${jarLabel}${hc.qty!==1?'s':''} = ${totalCups} cups total — FREEZE DRIED: measure out exact amount by cup/tbsp, no need to pull whole jar`;}return`${hc.name}: ${hc.qty} ${jarLabel}${hc.qty!==1?'s':''} = ${totalCups} cups — pull by jar count, use whole jars`;}).join(' | '):'None'}
 FRIDGE: ${fridgeQty.length>0?fridgeQty.join(' | '):'None'}
