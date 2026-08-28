@@ -3733,7 +3733,7 @@ function confirmDeleteEmergency(id,restoreInventory){
   }
   // Also remove from emergencyCookList
   A.emergencyCookList=(A.emergencyCookList||[]).filter(c=>c.mealName!==meal.name);
-  A.emergency=A.emergency.filter(m=>m.id!==id);
+  A.emergency=A.emergency.filter(m=>String(m.id)!==String(id));
   save();closeModal();render();
 }
 
