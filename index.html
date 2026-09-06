@@ -1711,8 +1711,12 @@ OPTIONAL INGREDIENTS: Optional garnishes (cilantro, parsley, green onion, sour c
 COOKED PROTEIN FORM RULES — what frozen bags can and cannot become:
 Pre-cooked frozen protein is ALREADY COOKED in shredded, ground, or diced form. It CANNOT be reformed into shaped products. Specifically:
 - Shredded protein (pork, chicken, turkey, beef) → works in: tacos, wraps, pasta sauce, rice bowls, soups, stir fry, enchiladas, casseroles, hash, sandwiches, burritos, quesadillas, salads. Does NOT work for: meatballs, burgers, patties, meatloaf, nuggets, cutlets, kabobs, sushi, or any dish requiring intact shaped pieces.
-- Ground protein (cooked) → works in: pasta sauce, tacos, rice bowls, burritos, stuffed pepper filling, casseroles, soups, fried rice. Does NOT work for: hamburger patties, meatballs, meatloaf, pork chops, chicken breasts, steaks, or any dish that implies a whole unprocessed cut of meat. These require RAW ground meat.
-- If a dish concept requires raw shaped protein (meatballs, burgers, meatloaf, patties) → change the dish concept to something that works with what's in the freezer, OR flag raw ground meat as a grocery item.
+- Ground protein (cooked) → works in: pasta sauce, tacos, rice bowls, burritos, stuffed pepper filling, casseroles, soups, fried rice. Does NOT work for: hamburger patties, meatballs, meatloaf, pork chops, chicken breasts, steaks, or any dish requiring raw shaped meat.
+- PRE-COOKED PROTEIN STEP RULES — if the pull list says "Already cooked" or "heat gently":
+  NEVER write these steps: "form into patties", "shape into balls", "press into patties", "roll into meatballs", "brown the meat", "cook until no longer pink", "cook through", "sear the raw", "cook the pork/beef/chicken"
+  ALWAYS write instead: "heat gently 3-4 min", "warm through", "add the cooked [protein]", "stir in the [protein]"
+  The protein is DONE. It only needs heating. Any step that treats it as raw is wrong.
+- If a dish concept REQUIRES raw shaped protein (meatballs, burgers, meatloaf, patties from scratch) → change the dish concept entirely to something that works with pre-cooked protein, OR flag RAW ground meat as a grocery item and write from-scratch steps.
 - Diced/cubed protein → works in: stir fry, soups, curries, pot pies, casseroles. Does NOT work for: pulled dishes, sushi.
 
 
@@ -1818,6 +1822,12 @@ Examples: "Preheat 375°F · Active prep: 15 min · Bake: 35 min · Total: 50 mi
           "Active prep: 10 min · Stovetop: 20 min · Total: 30 min"
 For emergency meals: "Active prep: 30 min · Cook: 45 min · Cool: 90 min · Total cook session: ~3 hrs"
 This appears at the top of the recipe so she knows the full time commitment before starting.
+
+PRE-COOKED PROTEIN FINAL CHECK — before writing any step:
+Scan your pull list. If ANY item says "Already cooked — heat gently" or "lbs cooked":
+- That protein is FINISHED COOKING. Do not form it. Do not sear it raw. Do not cook it.
+- Steps must say "add the cooked [protein]" or "heat gently 3-4 min" — nothing else.
+- If you wrote "form into patties" or "shape" or "brown" for a pre-cooked protein, DELETE that step and replace it.
 
 DISH TITLE ACCURACY — FINAL CHECK BEFORE WRITING TITLE:
 The title you write MUST match the actual protein form in the pull list.
@@ -1934,7 +1944,28 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
       alert('Could not parse recipe. Try again.');
       showPage('builder');return;
     }
-    A.recipe={...recipe,servings:servings,id:Date.now(),title:recipe.title||'Your Meal',description:recipe.description||'',cookTime:recipe.cookTime||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:(recipe.pull||[]).map(p=>({...p,qty:cleanQty(p.qty),item:cleanQty(p.item),prepNote:p.prepNote?cleanQty(p.prepNote):p.prepNote})),steps:recipe.steps||[],tip:recipe.tip||''};
+    // ── Title sanitizer — runs after every build ──────────────────────
+    // If pull list has ground/shredded protein, strip whole-cut words from title
+    const pullNames=(recipe.pull||[]).map(p=>(p.item||'').toLowerCase()).join(' ');
+    const pullQtys=(recipe.pull||[]).map(p=>(p.qty||'').toLowerCase()).join(' ');
+    const hasGroundProt=pullNames.includes('ground')||(pullQtys.includes('lbs cooked')&&!pullNames.includes('diced')&&!pullNames.includes('shredded'));
+    const hasShreddedProt=pullNames.includes('shredded')||pullNames.includes('pulled');
+    let cleanTitle=recipe.title||'Your Meal';
+    if(hasGroundProt||hasShreddedProt){
+      // Strip whole-cut names that don't match ground/shredded protein
+      const cutWords=[/pork chops?/gi,/chicken chops?/gi,/chicken breasts?/gi,/chicken thighs?/gi,/beef steak/gi,/pork tenderloin/gi,/pork loin/gi,/sirloin/gi,/ribeye/gi,/filet/gi,/fillet/gi,/t-bone/gi];
+      const replacements={ground:'Skillet',shredded:'Bowl'};
+      const replWord=hasShreddedProt?'Bowl':'Skillet';
+      cutWords.forEach(re=>{
+        if(re.test(cleanTitle)){
+          // Replace cut name with appropriate word
+          cleanTitle=cleanTitle.replace(re,replWord);
+        }
+      });
+      // Clean up double spaces
+      cleanTitle=cleanTitle.replace(/\s+/g,' ').trim();
+    }
+    A.recipe={...recipe,servings:servings,id:Date.now(),title:cleanTitle,title:recipe.title||'Your Meal',description:recipe.description||'',cookTime:recipe.cookTime||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:(recipe.pull||[]).map(p=>({...p,qty:cleanQty(p.qty),item:cleanQty(p.item),prepNote:p.prepNote?cleanQty(p.prepNote):p.prepNote})),steps:recipe.steps||[],tip:recipe.tip||''};
     // Track last built for variety enforcement
     if(mealType==='Breakfast')A.lastBuiltBreakfast=recipe.title||'';
     else{
