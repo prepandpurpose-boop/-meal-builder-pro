@@ -460,56 +460,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 <div id="modal"><div id="modal-content"></div></div>
 
 <script>
-const SUPA_URL='https://hoiuounrlakvekxesgzh.supabase.co';
-const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhvaXVvdW5ybGFrdmVreGVzZ3poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NDk1MTQsImV4cCI6MjA5NDAyNTUxNH0.M14Y7_YXvyq4R-p7lhDZl8aLfmlGxljJruLQgz6zbbA';
-
-// ─── SUPABASE ──────────────────────────────────────────────────────────────────
-async function sbGet(email){
-  try{
-    const e=email.toLowerCase().trim();
-    const r=await fetch(`${SUPA_URL}/rest/v1/user_data?email=ilike.${encodeURIComponent(e)}&select=*`,{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
-    });
-    const d=await r.json();
-    console.log('Supabase GET result:',d);
-    return d[0]||null;
-  }catch(e){
-    console.error('Supabase GET error:',e);
-    return null;
-  }
-}
-async function sbSave(email,data){
-  try{
-    const e=email.toLowerCase().trim();
-    const payload={...data,updated_at:new Date().toISOString()};
-    // Try PATCH first (update existing row)
-    const patchUrl=`${SUPA_URL}/rest/v1/user_data?email=eq.${encodeURIComponent(e)}`;
-    const r=await fetch(patchUrl,{
-      method:'PATCH',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify(payload)
-    });
-    if(r.status===404||r.status===0){
-      // No existing row — INSERT new one
-      const r2=await fetch(`${SUPA_URL}/rest/v1/user_data`,{
-        method:'POST',
-        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
-        body:JSON.stringify({email:e,...payload})
-      });
-      if(!r2.ok){const err=await r2.text();console.error('Supabase INSERT error:',r2.status,err);showSaveStatus('❌ Save failed — '+r2.status);return;}
-    } else if(!r.ok){
-      const err=await r.text();
-      console.error('Supabase PATCH error:',r.status,err);
-      showSaveStatus('❌ Save failed — '+r.status+' '+err.substring(0,60));
-      return;
-    }
-    console.log('Supabase SAVE success');
-    showSaveStatus('✅ Saved');
-  }catch(e){
-    console.error('Supabase SAVE exception:',e);
-    showSaveStatus('❌ Save error — '+e.message);
-  }
-}
+// ─── STORAGE: localStorage only — no Supabase ────────────────────────────────
 function showSaveStatus(msg){
   let el=document.getElementById('save-status');
   if(!el){
@@ -819,9 +770,9 @@ function save(){
       lunch_bank_meals:A.lunchBankMeals||[],
       // weekProteins session-only
     };
-    sbSave(A.email,data);
     const dataWithTs={...data,updated_at:new Date().toISOString()};
     localStorage.setItem('pp_data',JSON.stringify(dataWithTs));
+    showSaveStatus('✅ Saved');
     // Save variety tracking separately so it persists across sessions on same device
     if(A.lastBuiltBreakfast)localStorage.setItem('pp_last_breakfast',A.lastBuiltBreakfast);
     if(A.lastBuiltMeal)localStorage.setItem('pp_last_meal',A.lastBuiltMeal);
@@ -867,26 +818,12 @@ function mergePantryWithDefaults(saved,defaults){
 }
 
 async function loadUserData(email){
-  const remote=await sbGet(email);
-
-  // Compare timestamps — use whichever data is newer
-  let source=remote;
-  if(remote){
-    try{
-      const localRaw=localStorage.getItem('pp_data');
-      if(localRaw){
-        const localData=JSON.parse(localRaw);
-        const remoteTs=new Date(remote.updated_at||0).getTime();
-        const localTs=new Date(localData.updated_at||0).getTime();
-        if(localTs>remoteTs){
-          // Local data is newer — use it and push back to Supabase
-          source=localData;
-          sbSave(email,localData);// sync local back to Supabase
-          console.log('Using newer local data — syncing to Supabase');
-        }
-      }
-    }catch(e){console.warn('Timestamp compare failed',e);}
-  }
+  // localStorage only — no Supabase
+  let source=null;
+  try{
+    const localRaw=localStorage.getItem('pp_data');
+    if(localRaw)source=JSON.parse(localRaw);
+  }catch(e){console.warn('localStorage load failed',e);}
 
   if(source){
     A.bases=mergeWithDefaults(source.bases,DEF_BASES);
