@@ -1,23 +1,7 @@
 // Meal Builder Pro: saves and loads a subscriber's kitchen data in the cloud so it follows them to every device.
-// The browser sends {email, action:'load'} or {email, action:'save', data}. Only an email with an active
-// subscription in Stripe can load or save, and the database functions require a secret only this server knows.
-import Stripe from 'stripe';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const lc = s => String(s || '').trim().toLowerCase();
-const okCache = {}; // email -> time we last confirmed the subscription (saves Stripe calls for a few minutes)
-
-async function subscribed(email) {
-  if (okCache[email] && Date.now() - okCache[email] < 10 * 60 * 1000) return true;
-  const customers = await stripe.customers.list({ email, limit: 5 });
-  for (const c of customers.data) {
-    for (const st of ['active', 'trialing']) {
-      const subs = await stripe.subscriptions.list({ customer: c.id, status: st, limit: 3 });
-      if (subs.data.length) { okCache[email] = Date.now(); return true; }
-    }
-  }
-  return false;
-}
+// The browser sends {action:'load'} or {action:'save', data} with the signed-in user's token. Only a signed-in email
+// with an active subscription in Stripe can load or save, and the database functions require a secret only this server knows.
+import { userEmail, subscribed } from '../lib/auth.js';
 
 async function rpc(fn, body) {
   const r = await fetch(process.env.SUPABASE_URL + '/rest/v1/rpc/' + fn, {
@@ -33,9 +17,9 @@ async function rpc(fn, body) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
   try {
-    const { email: e, action, data } = req.body || {};
-    const email = lc(e);
-    if (!email.includes('@')) return res.status(400).json({ error: 'Please sign in.' });
+    const { action, data } = req.body || {};
+    const email = await userEmail(req);
+    if (!email) return res.status(401).json({ error: 'Please sign in.' });
     if (!process.env.MBP_SYNC_SECRET || !process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) return res.status(500).json({ error: 'Sync is not set up yet.' });
     if (!(await subscribed(email))) return res.status(403).json({ error: 'No active subscription.' });
     if (action === 'load') {
