@@ -3,48 +3,49 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Meal Builder Pro — Prep & Purpose</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>Meal Builder Pro — by Provision House</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
-  --green:#1e4d35;--green-mid:#2d6a4f;--green-light:#40916c;--green-pale:#d8f3dc;--green-xpale:#f0faf2;
-  --gold:#b5850a;--gold-light:#d4a017;--gold-pale:#fff8e1;
-  --cream:#faf8f3;--white:#ffffff;
+  /* Provision House look: navy and gold on white (same as Household COO) */
+  --green:#14213d;--green-mid:#1f3560;--green-light:#4a76b8;--green-pale:#DCE6F1;--green-xpale:#F3F6FB;
+  --gold:#C59B27;--gold-light:#F0D58C;--gold-pale:#FBF5E3;
+  --cream:#ffffff;--white:#ffffff;
   --text:#1a1a1a;--text-muted:#5a5a5a;--text-hint:#aaa;
   --border:rgba(0,0,0,0.07);--border-strong:rgba(0,0,0,0.13);
   --radius:12px;--radius-sm:8px;--radius-xs:6px;
   --sidebar:200px;--shadow:0 1px 4px rgba(0,0,0,0.06);--shadow-md:0 4px 16px rgba(0,0,0,0.08);
 }
-html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text)}
+html,body{height:100%;overflow:hidden;font-family:Jost,sans-serif;background:var(--cream);color:var(--text)}
 
 /* ── PAYWALL ── */
 #paywall{position:fixed;inset:0;z-index:1000;background:var(--green);display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto}
 #paywall.hidden{display:none}
 .pw-wrap{width:100%;max-width:400px;text-align:center}
 .pw-logo{font-size:36px;margin-bottom:8px}
-.pw-title{font-family:'Playfair Display',serif;font-size:30px;color:#fff;margin-bottom:6px}
+.pw-title{font-family:'Cormorant Garamond',serif;font-size:30px;color:#fff;margin-bottom:6px}
 .pw-sub{font-size:14px;color:rgba(255,255,255,.6);margin-bottom:24px;line-height:1.6}
 .pw-box{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:var(--radius);padding:20px;margin-bottom:20px}
-.pw-amount{font-size:42px;font-weight:700;color:#fff;font-family:'Playfair Display',serif}
+.pw-amount{font-size:42px;font-weight:700;color:#fff;font-family:'Cormorant Garamond',serif}
 .pw-per{font-size:13px;color:rgba(255,255,255,.5);margin-top:2px}
 .pw-trial{font-size:13px;color:var(--gold-light);margin-top:6px;font-weight:600}
 .pw-feats{text-align:left;margin-bottom:22px}
 .pw-feat{display:flex;align-items:center;gap:10px;font-size:14px;color:rgba(255,255,255,.85);margin-bottom:9px}
 .pw-dot{width:18px;height:18px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--green);font-weight:700;flex-shrink:0}
-.pw-btn{display:block;width:100%;padding:16px;background:var(--gold-light);color:var(--green);border:none;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;text-decoration:none;text-align:center;margin-bottom:14px}
+.pw-btn{display:block;width:100%;padding:16px;background:var(--gold-light);color:var(--green);border:none;border-radius:var(--radius);font-family:Jost,sans-serif;font-size:16px;font-weight:700;cursor:pointer;text-decoration:none;text-align:center;margin-bottom:14px}
 .pw-si{font-size:13px;color:rgba(255,255,255,.5)}
-.pw-si button{background:none;border:none;color:rgba(255,255,255,.8);text-decoration:underline;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;padding:0}
+.pw-si button{background:none;border:none;color:rgba(255,255,255,.8);text-decoration:underline;cursor:pointer;font-family:Jost,sans-serif;font-size:13px;padding:0}
 
 /* ── VERIFY ── */
 #verify-screen{position:fixed;inset:0;z-index:999;background:var(--green);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center}
 #verify-screen.hidden{display:none}
-.vt{font-family:'Playfair Display',serif;font-size:24px;color:#fff;margin-bottom:10px}
+.vt{font-family:'Cormorant Garamond',serif;font-size:24px;color:#fff;margin-bottom:10px}
 .vs{font-size:14px;color:rgba(255,255,255,.6);margin-bottom:24px;line-height:1.6}
-.vi{width:100%;max-width:320px;padding:14px 18px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);border-radius:var(--radius-sm);color:#fff;font-size:16px;font-family:'DM Sans',sans-serif;outline:none;text-align:center;margin-bottom:12px}
+.vi{width:100%;max-width:320px;padding:14px 18px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);border-radius:var(--radius-sm);color:#fff;font-size:16px;font-family:Jost,sans-serif;outline:none;text-align:center;margin-bottom:12px}
 .vi::placeholder{color:rgba(255,255,255,.3)}
 .vi:focus{border-color:var(--gold-light)}
-.vb{width:100%;max-width:320px;padding:14px;background:var(--gold-light);color:var(--green);border:none;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
+.vb{width:100%;max-width:320px;padding:14px;background:var(--gold-light);color:var(--green);border:none;border-radius:var(--radius-sm);font-family:Jost,sans-serif;font-size:15px;font-weight:700;cursor:pointer}
 .vback{margin-top:14px;font-size:13px;color:rgba(255,255,255,.5);cursor:pointer;text-decoration:underline}
 
 /* ── APP SHELL ── */
@@ -55,11 +56,11 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .sidebar{width:var(--sidebar);background:var(--green);display:flex;flex-direction:column;flex-shrink:0;height:100%;overflow-y:auto}
 .sidebar-brand{padding:22px 20px 18px;border-bottom:1px solid rgba(255,255,255,.1)}
 .sidebar-logo{font-size:22px;margin-bottom:2px}
-.sidebar-title{font-family:'Playfair Display',serif;font-size:14px;color:#fff;font-weight:600}
+.sidebar-title{font-family:'Cormorant Garamond',serif;font-size:14px;color:#fff;font-weight:600}
 .sidebar-sub{font-size:10px;color:rgba(255,255,255,.45);margin-top:1px;letter-spacing:.04em;text-transform:uppercase}
 .sidebar-nav{padding:14px 10px;flex:1}
 .nav-section{font-size:10px;font-weight:700;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em;padding:0 10px;margin:14px 0 6px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;color:rgba(255,255,255,.65);font-size:13px;font-weight:500;transition:all .18s;border:none;background:none;width:100%;text-align:left;font-family:'DM Sans',sans-serif}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;color:rgba(255,255,255,.65);font-size:13px;font-weight:500;transition:all .18s;border:none;background:none;width:100%;text-align:left;font-family:Jost,sans-serif}
 .nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
 .nav-item.active{background:rgba(255,255,255,.15);color:#fff;font-weight:600}
 .nav-item .nav-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
@@ -73,7 +74,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 /* ── MAIN CONTENT ── */
 .main-content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 .topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.topbar-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:var(--green)}
+.topbar-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--green)}
 .topbar-actions{display:flex;align-items:center;gap:10px}
 .content-area{flex:1;overflow-y:auto;padding:24px}
 
@@ -101,7 +102,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .card-title{font-size:14px;font-weight:600;color:var(--text)}
 .stat-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow)}
 .stat-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
-.stat-value{font-family:'Playfair Display',serif;font-size:28px;font-weight:600;color:var(--green)}
+.stat-value{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--green)}
 .stat-sub{font-size:12px;color:var(--text-muted);margin-top:3px}
 
 /* ── ALERTS ── */
@@ -114,13 +115,13 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 /* ── FORM ELEMENTS ── */
 .fg{margin-bottom:14px}
 .lbl{display:block;font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
-.inp,.sel{width:100%;padding:10px 13px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:14px;background:var(--white);color:var(--text);outline:none;transition:border-color .2s}
+.inp,.sel{width:100%;padding:10px 13px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);font-family:Jost,sans-serif;font-size:14px;background:var(--white);color:var(--text);outline:none;transition:border-color .2s}
 .inp:focus,.sel:focus{border-color:var(--green)}
 .inp-sm{padding:7px 10px;font-size:13px}
 .helper{font-size:11px;color:var(--text-hint);margin-top:4px;line-height:1.5}
 
 /* ── BUTTONS ── */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-weight:600;font-size:14px;cursor:pointer;border:none;transition:all .18s;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:var(--radius-sm);font-family:Jost,sans-serif;font-weight:600;font-size:14px;cursor:pointer;border:none;transition:all .18s;white-space:nowrap}
 .btn-primary{background:var(--green);color:#fff}.btn-primary:hover{background:var(--green-mid)}
 .btn-gold{background:var(--gold-light);color:var(--green)}.btn-gold:hover{background:var(--gold)}
 .btn-outline{background:transparent;border:1px solid var(--border-strong);color:var(--text)}.btn-outline:hover{border-color:var(--green);color:var(--green)}
@@ -148,15 +149,15 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .protein-chip.selected .chip-badge{background:rgba(255,255,255,.25);color:#fff}
 
 /* ── COOK LIST ── */
-.cook-list-card{background:linear-gradient(135deg,#1e4d35 0%,#2d6a4f 100%);border-radius:var(--radius);padding:20px 22px;color:#fff;margin-bottom:16px}
-.cook-list-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:600;margin-bottom:4px}
+.cook-list-card{background:linear-gradient(135deg,#14213d 0%,#2d6a4f 100%);border-radius:var(--radius);padding:20px 22px;color:#fff;margin-bottom:16px}
+.cook-list-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;margin-bottom:4px}
 .cook-list-sub{font-size:13px;color:rgba(255,255,255,.6);margin-bottom:16px}
 .cook-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.1)}
 .cook-item:last-child{border-bottom:none}
 .cook-item-name{font-size:14px;font-weight:600}
 .cook-item-detail{font-size:12px;color:rgba(255,255,255,.6);margin-top:2px}
 .cook-item-qty{text-align:right}
-.cook-item-bags{font-family:'Playfair Display',serif;font-size:20px;font-weight:600;color:var(--gold-light)}
+.cook-item-bags{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--gold-light)}
 .cook-item-raw{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px}
 
 /* ── INVENTORY ── */
@@ -196,11 +197,11 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 
 /* ── RECIPE CARD ── */
 .recipe-header{background:var(--green);border-radius:var(--radius) var(--radius) 0 0;padding:22px 24px;color:#fff}
-.recipe-title-text{font-family:'Playfair Display',serif;font-size:24px;font-weight:600;margin-bottom:6px}
+.recipe-title-text{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;margin-bottom:6px}
 .recipe-desc{font-size:14px;color:rgba(255,255,255,.7);line-height:1.6}
 .macro-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
 .macro-box{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center}
-.macro-val{font-family:'Playfair Display',serif;font-size:22px;font-weight:600;color:var(--green)}
+.macro-val{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--green)}
 .macro-lbl{font-size:11px;color:var(--text-muted);margin-top:2px;font-weight:500}
 .pull-section{margin-bottom:20px}
 .pull-section-title{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
@@ -245,7 +246,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 #drawer{position:fixed;bottom:0;left:50%;transform:translate(-50%,100%);width:100%;max-width:520px;background:var(--white);border-radius:20px 20px 0 0;z-index:501;transition:transform .28s cubic-bezier(.32,0,.67,0);padding:0 20px 40px;max-height:88vh;overflow-y:auto}
 #drawer.open{transform:translate(-50%,0)}
 .dh{width:36px;height:4px;background:var(--border-strong);border-radius:2px;margin:14px auto 18px;cursor:pointer}
-.dt{font-family:'Playfair Display',serif;font-size:20px;font-weight:600;margin-bottom:16px}
+.dt{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;margin-bottom:16px}
 
 /* ── MODAL (desktop) ── */
 #modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -253,7 +254,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 #modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-48%);width:calc(100% - 40px);max-width:540px;background:var(--white);border-radius:var(--radius);z-index:601;padding:24px;max-height:88vh;overflow-y:auto;opacity:0;pointer-events:none;transition:all .2s;box-shadow:var(--shadow-md)}
 #modal.show{opacity:1;pointer-events:all;transform:translate(-50%,-50%)}
 .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-.modal-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:600}
+.modal-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600}
 .modal-close{width:30px;height:30px;border-radius:50%;border:none;background:var(--cream);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--text-muted)}
 .modal-close:hover{background:var(--border);color:var(--text)}
 
@@ -273,7 +274,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .qty-controls{display:flex;align-items:center;gap:10px}
 .qty-btn{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border-strong);background:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text);transition:all .15s}
 .qty-btn:hover{border-color:var(--green);color:var(--green)}
-.qty-val{font-size:17px;font-weight:700;color:var(--green);min-width:26px;text-align:center;font-family:'Playfair Display',serif}
+.qty-val{font-size:17px;font-weight:700;color:var(--green);min-width:26px;text-align:center;font-family:'Cormorant Garamond',serif}
 .qty-unit{font-size:11px;color:var(--text-muted);min-width:30px}
 
 /* ── STRETCH IT ── */
@@ -290,7 +291,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 .badge-green{background:var(--green-pale);color:var(--green)}
 .badge-red{background:#fdecea;color:#c62828}
 .badge-gold{background:var(--gold-pale);color:var(--gold)}
-.page-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:600;color:var(--green);margin-bottom:4px}
+.page-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--green);margin-bottom:4px}
 .page-sub{font-size:13px;color:var(--text-muted);margin-bottom:20px}
 .conflict-msg{background:#fdecea;border:1px solid #f5c6c6;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#c62828;margin-bottom:10px;display:none}
 </style>
@@ -300,27 +301,33 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 <!-- PAYWALL -->
 <div id="paywall">
   <div class="pw-wrap">
-    <div class="pw-logo">🌿</div>
     <div class="pw-title">Meal Builder Pro</div>
-    <div class="pw-sub">Track what you have, build meals from your stock, and plan your entire week — from any device.</div>
-    <div class="pw-box">
-      <div class="pw-trial">✦ 7-day free trial — cancel anytime</div>
-    </div>
+    <div class="pw-sub" style="color:var(--gold-light);letter-spacing:.14em;text-transform:uppercase;font-size:11px;margin-bottom:14px">by Provision House</div>
+    <div class="pw-sub">Track what you have, build meals from your stock, and plan your whole week. From any device.</div>
     <div class="pw-feats">
-      <div class="pw-feat"><div class="pw-dot">✓</div>Full kitchen inventory — frozen, pantry, fresh</div>
-      <div class="pw-feat"><div class="pw-dot">✓</div>Smart meal builder from what you actually have</div>
-      <div class="pw-feat"><div class="pw-dot">✓</div>Weekly calendar with conflict detection</div>
-      <div class="pw-feat"><div class="pw-dot">✓</div>Smart grocery list — auto-populates from your week</div>
-      <div class="pw-feat"><div class="pw-dot">✓</div>Cross-device sync — your data everywhere</div>
+      <div class="pw-feat"><div class="pw-dot">✓</div>Full kitchen inventory: frozen, pantry, fridge</div>
+      <div class="pw-feat"><div class="pw-dot">✓</div>Meal builder that cooks from what you actually have</div>
+      <div class="pw-feat"><div class="pw-dot">✓</div>Weekly calendar and emergency meals</div>
+      <div class="pw-feat"><div class="pw-dot">✓</div>Grocery list that fills itself from your week</div>
+      <div class="pw-feat"><div class="pw-dot">✓</div>Your data on every device you sign in on</div>
     </div>
-    <a href="https://buy.stripe.com/cNi14mewfb3083J2xIffy01" class="pw-btn" target="_blank">Start Free Trial →</a>
-    <div class="pw-si">Already subscribed? <button onclick="showVerify()">Sign in here</button></div>
+    <div class="pw-box" style="margin-bottom:12px">
+      <div class="pw-amount">$19</div>
+      <div class="pw-per">a month. Cancel any time.</div>
+      <a href="https://buy.stripe.com/4gM3cufAj3Ay3Ntc8iffy06" class="pw-btn" style="margin-top:12px">Choose monthly →</a>
+    </div>
+    <div class="pw-box" style="border-color:var(--gold-light)">
+      <div class="pw-amount">$149</div>
+      <div class="pw-per">a year. Two months free.</div>
+      <a href="https://buy.stripe.com/8x2dR85ZJb303Ntb4effy07" class="pw-btn" style="margin-top:12px">Choose yearly →</a>
+    </div>
+    <div class="pw-si" style="margin-top:14px">Already subscribed? <button onclick="showVerify()">Sign in here</button></div>
+    <div class="pw-si" style="margin-top:18px;line-height:1.6">Want the whole house run this way, not just the kitchen? <a href="https://app.provisionhouse.org" style="color:var(--gold-light)">Household COO</a> has the Kitchen plus chores, money, the family calendar and a TV board. 14 days free.</div>
   </div>
 </div>
 
 <!-- VERIFY -->
 <div id="verify-screen" class="hidden">
-  <div style="font-size:40px;margin-bottom:16px">🌿</div>
   <div class="vt">Welcome back</div>
   <div class="vs">Enter the email you subscribed with.</div>
   <input class="vi" id="ver-email" type="email" placeholder="your@email.com" onkeydown="if(event.key==='Enter')verifyAccess()">
@@ -333,7 +340,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
   <div class="ob-wrap">
     <div style="text-align:center;margin-bottom:28px">
       <div style="font-size:44px;margin-bottom:10px">🥩❄️📦</div>
-      <div style="font-family:'Playfair Display',serif;font-size:26px;font-weight:700;color:var(--green);margin-bottom:8px">Welcome to Meal Builder Pro</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--green);margin-bottom:8px">Welcome to Meal Builder Pro</div>
       <div style="font-size:14px;color:#666;line-height:1.6">You don't have a food problem. You have a system problem. Let's fix that in 3 minutes.</div>
     </div>
     <div style="display:flex;gap:6px;justify-content:center;margin-bottom:28px" id="ob-dots">
@@ -345,7 +352,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     </div>
     <!-- Step 0 -->
     <div id="ob-0">
-      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:16px">How the system works</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:16px">How the system works</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
         <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f9f7f4;border-radius:10px"><div style="font-size:22px;width:34px;flex-shrink:0">🥩</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Layer 2 — Bases</div><div style="font-size:13px;color:#666">Cooked proteins stored in quart bags. 1 bag = 1.5 lbs cooked. Log what's in your freezer and the app tracks what you use.</div></div></div>
         <div style="display:flex;gap:12px;align-items:flex-start;padding:14px;background:#f9f7f4;border-radius:10px"><div style="font-size:22px;width:34px;flex-shrink:0">📦</div><div><div style="font-weight:700;font-size:14px;margin-bottom:3px">Layer 3 — Supports</div><div style="font-size:13px;color:#666">Cooked grains, vegetables, and beans in quart bags (1 bag = 3 cups), plus canned, dry, and fresh pantry items.</div></div></div>
@@ -355,7 +362,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     </div>
     <!-- Step 1: Household -->
     <div id="ob-1" style="display:none">
-      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px">Your household</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px">Your household</div>
       <div style="font-size:13px;color:#666;margin-bottom:20px">Helps the app calculate quantities and portion sizes.</div>
       <div class="fg" style="margin-bottom:20px">
         <label class="lbl">How many people are you feeding?</label>
@@ -374,7 +381,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     </div>
     <!-- Step 2: Dietary -->
     <div id="ob-2" style="display:none">
-      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px">Dietary preferences</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px">Dietary preferences</div>
       <div style="font-size:13px;color:#666;margin-bottom:20px">These preferences are always respected when building meals.</div>
       <div id="ob-dietary" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px"></div>
       <div class="fg" style="margin-bottom:20px">
@@ -386,7 +393,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     </div>
     <!-- Step 3: Kitchen staples -->
     <div id="ob-3" style="display:none">
-      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px">What is in your kitchen?</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px">What is in your kitchen?</div>
       <div style="font-size:13px;color:#666;margin-bottom:20px">Tell us what you have on hand so meals can be built from your kitchen.</div>
       <div id="ob-pantry-setup" style="max-height:380px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius);padding:4px 0;margin-bottom:16px"></div>
       <button class="btn btn-primary btn-full btn-lg" onclick="obNext(4)">Next →</button>
@@ -396,7 +403,7 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
     <div id="ob-4" style="display:none">
       <div style="text-align:center;margin-bottom:24px">
         <div style="font-size:52px;margin-bottom:12px">✅</div>
-        <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--green);margin-bottom:8px">You are set up</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--green);margin-bottom:8px">You are set up</div>
         <div style="font-size:14px;color:#666;line-height:1.6">Go to Meal Builder, pick your proteins for the week, and hit Build. The app will tell you exactly what to cook and buy.</div>
       </div>
       <div style="background:var(--green-xpale);border-radius:var(--radius);padding:16px;margin-bottom:24px">
@@ -412,9 +419,8 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 <div id="app">
   <div class="sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="sidebar-logo">🌿</div>
-      <div class="sidebar-title">Meal Builder Pro</div>
-      <div class="sidebar-sub">Prep & Purpose</div>
+      <div class="sidebar-title" style="font-size:20px">Meal Builder Pro</div>
+      <div class="sidebar-sub" style="color:var(--gold-light)">by Provision House</div>
     </div>
     <div class="sidebar-nav">
       <div class="nav-section">Kitchen</div>
@@ -460,13 +466,34 @@ html,body{height:100%;overflow:hidden;font-family:'DM Sans',sans-serif;backgroun
 <div id="modal"><div id="modal-content"></div></div>
 
 <script>
-// ─── STORAGE: localStorage only — no Supabase ────────────────────────────────
+// ─── STORAGE: saved on this device and, for subscribers, in the cloud so it follows them to every device ───
+function showToast(t){const d=document.createElement('div');d.textContent=t;d.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#14213d;color:#fff;padding:12px 18px;border-radius:12px;z-index:99999;font-size:14px;max-width:90%;text-align:center';document.body.appendChild(d);setTimeout(()=>d.remove(),4500);}
+let _cloudTimer=null;
+function cloudSave(data){
+  if(!A.email)return;
+  clearTimeout(_cloudTimer);
+  _cloudTimer=setTimeout(async()=>{
+    try{
+      const r=await fetch('/api/data',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:A.email,action:'save',data})});
+      if(!r.ok)throw new Error('x');
+      showSaveStatus('✅ Saved everywhere');
+    }catch(e){showSaveStatus('✅ Saved on this device');}
+  },1500);
+}
+async function cloudLoad(email){
+  try{
+    const r=await fetch('/api/data',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,action:'load'})});
+    if(!r.ok)return null;
+    const j=await r.json();
+    return j&&j.data&&typeof j.data==='object'?j.data:null;
+  }catch(e){return null;}
+}
 function showSaveStatus(msg){
   let el=document.getElementById('save-status');
   if(!el){
     el=document.createElement('div');
     el.id='save-status';
-    el.style.cssText='position:fixed;bottom:16px;right:16px;background:#1e4d35;color:#fff;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;z-index:9999;transition:opacity .3s;font-family:DM Sans,sans-serif';
+    el.style.cssText='position:fixed;bottom:16px;right:16px;background:#14213d;color:#fff;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;z-index:9999;transition:opacity .3s;font-family:DM Sans,sans-serif';
     document.body.appendChild(el);
   }
   el.textContent=msg;
@@ -768,11 +795,15 @@ function save(){
       onboarded:A.onboarded,
       lunch_bank:A.lunchBank||0,
       lunch_bank_meals:A.lunchBankMeals||[],
-      // weekProteins session-only
+      recent_meals:A.recentMeals||[],
+      last_built_protein:A.lastBuiltProtein||'',
+      last_built_meal:A.lastBuiltMeal||'',
+      last_built_breakfast:A.lastBuiltBreakfast||'',
     };
     const dataWithTs={...data,updated_at:new Date().toISOString()};
     localStorage.setItem('pp_data',JSON.stringify(dataWithTs));
     showSaveStatus('✅ Saved');
+    cloudSave(dataWithTs);
     // Save variety tracking separately so it persists across sessions on same device
     if(A.lastBuiltBreakfast)localStorage.setItem('pp_last_breakfast',A.lastBuiltBreakfast);
     if(A.lastBuiltMeal)localStorage.setItem('pp_last_meal',A.lastBuiltMeal);
@@ -818,12 +849,19 @@ function mergePantryWithDefaults(saved,defaults){
 }
 
 async function loadUserData(email){
-  // localStorage only — no Supabase
+  // Newest copy wins: the one saved in the cloud or the one on this device.
   let source=null;
   try{
     const localRaw=localStorage.getItem('pp_data');
     if(localRaw)source=JSON.parse(localRaw);
-  }catch(e){console.warn('localStorage load failed',e);}
+  }catch(e){console.warn('local load failed',e);}
+  const remote=email?await cloudLoad(email):null;
+  if(remote&&(!source||String(remote.updated_at||'')>String(source.updated_at||''))){
+    source=remote;
+    try{localStorage.setItem('pp_data',JSON.stringify(remote));}catch(e){}
+  }else if(source&&email&&(!remote||String(source.updated_at||'')>String(remote.updated_at||''))){
+    cloudSave(source);
+  }
 
   if(source){
     A.bases=mergeWithDefaults(source.bases,DEF_BASES);
@@ -836,6 +874,10 @@ async function loadUserData(email){
     if(!A.lastBuiltBreakfast)A.lastBuiltBreakfast=localStorage.getItem('pp_last_breakfast')||'';
     if(!A.lastBuiltMeal)A.lastBuiltMeal=localStorage.getItem('pp_last_meal')||'';
     A.lunchBankMeals=source.lunch_bank_meals||[];
+    A.recentMeals=source.recent_meals||[];
+    if(source.last_built_protein)A.lastBuiltProtein=source.last_built_protein;
+    if(source.last_built_meal)A.lastBuiltMeal=source.last_built_meal;
+    if(source.last_built_breakfast)A.lastBuiltBreakfast=source.last_built_breakfast;
     A.calendarByDate=source.calendar_by_date||{};
     A.grocery=source.grocery||[];
     A.dietary=source.dietary||[];
@@ -909,7 +951,7 @@ function verifyAccess(){
       alert('Your subscription is no longer active. Please resubscribe to continue.');
     } else {
       btn.textContent='Check Access';btn.disabled=false;
-      alert('No active subscription found for that email. Please check your email or subscribe at mealbuilderpro.prepandpurpose.com');
+      alert('No active subscription found for that email. Please check your email or subscribe at mealbuilder.provisionhouse.org');
     }
   })
   .catch(()=>{btn.textContent='Check Access';btn.disabled=false;alert('Could not verify. Check your connection and try again.');});
@@ -1021,7 +1063,7 @@ function rDashboard(){
   // Cook list nudge — just a button, details live on Maintenance Day page
   if(A.cookList&&A.cookList.length>0){
     const _ckSummary=A.cookList.map(c=>c.protein+(c.bags?' ('+c.bags+' bags)':'')).join(', ');
-    html+=`<div class="alert alert-green" style="margin-bottom:16px"><span>🍳</span><div><strong>Cook list:</strong> ${_ckSummary}. <button onclick="showPage('grocery')" style="background:none;border:none;color:var(--green);font-weight:700;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;font-size:13px;padding:0">View Grocery List →</button></div></div>`;
+    html+=`<div class="alert alert-green" style="margin-bottom:16px"><span>🍳</span><div><strong>Cook list:</strong> ${_ckSummary}. <button onclick="showPage('grocery')" style="background:none;border:none;color:var(--green);font-weight:700;cursor:pointer;text-decoration:underline;font-family:Jost,sans-serif;font-size:13px;padding:0">View Grocery List →</button></div></div>`;
   }
 
   html+=`<div class="grid-2">
@@ -1124,7 +1166,7 @@ function rFrozenSupports(){
     </tr>`;
   });
   html+=`</tbody></table></div>
-  <div class="alert alert-blue" style="margin-top:16px"><span>🌿</span><div>Have fresh vegetables on hand? Add them in <button onclick="showPage('pantry')" style="background:none;border:none;color:#1565c0;font-weight:700;cursor:pointer;text-decoration:underline;font-family:'DM Sans',sans-serif;font-size:13px;padding:0">Kitchen Staples → Fresh Produce</button> so they get used first.</div></div>`;
+  <div class="alert alert-blue" style="margin-top:16px"><span>🌿</span><div>Have fresh vegetables on hand? Add them in <button onclick="showPage('pantry')" style="background:none;border:none;color:#1565c0;font-weight:700;cursor:pointer;text-decoration:underline;font-family:Jost,sans-serif;font-size:13px;padding:0">Kitchen Staples → Fresh Produce</button> so they get used first.</div></div>`;
   return html;
 }
 
@@ -1192,7 +1234,7 @@ function rEmergency(){
   const sorted=[...A.emergency].sort((a,b)=>new Date(a.dateMade)-new Date(b.dateMade));
   let html=`<div class="stat-card" style="margin-bottom:16px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div><div class="stat-label">Emergency Meals</div><div style="font-family:'Playfair Display',serif;font-size:32px;font-weight:600;color:${color}">${total} / ${MAGIC}</div></div>
+      <div><div class="stat-label">Emergency Meals</div><div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;color:${color}">${total} / ${MAGIC}</div></div>
       <div style="font-size:36px">${total>=6?'✅':total>=4?'⚠️':'🚨'}</div>
     </div>
     <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:4px;transition:width .3s"></div></div>
@@ -1338,10 +1380,10 @@ function rBuilder(){
   return rBuilderForm();
 }
 function rGenerating(){
-  return`<div class="generating-box"><div class="spinner" style="margin-bottom:20px"></div><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;margin-bottom:8px">Building your meal…</div><div style="font-size:14px;color:var(--text-muted)" id="gen-msg">Reading your inventory</div></div><script>const msgs=["Reading your inventory","Picking the best dish for what you have","Checking your kitchen staples","Writing your recipe","Almost ready…"];let mi=0;const iv=setInterval(()=>{mi=(mi+1)%msgs.length;const el=document.getElementById("gen-msg");if(el)el.textContent=msgs[mi];else clearInterval(iv);},2000);<\/script>`;
+  return`<div class="generating-box"><div class="spinner" style="margin-bottom:20px"></div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;margin-bottom:8px">Building your meal…</div><div style="font-size:14px;color:var(--text-muted)" id="gen-msg">Reading your inventory</div></div><script>const msgs=["Reading your inventory","Picking the best dish for what you have","Checking your kitchen staples","Writing your recipe","Almost ready…"];let mi=0;const iv=setInterval(()=>{mi=(mi+1)%msgs.length;const el=document.getElementById("gen-msg");if(el)el.textContent=msgs[mi];else clearInterval(iv);},2000);<\/script>`;
 }
 function rStretchingIt(){
-  return`<div class="generating-box"><div class="spinner" style="margin-bottom:20px"></div><div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;margin-bottom:8px">Stretching your meal…</div><div style="font-size:14px;color:var(--text-muted)">Looking at your inventory for ways to extend it</div></div>`;
+  return`<div class="generating-box"><div class="spinner" style="margin-bottom:20px"></div><div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;margin-bottom:8px">Stretching your meal…</div><div style="font-size:14px;color:var(--text-muted)">Looking at your inventory for ways to extend it</div></div>`;
 }
 
 // ─── PROTEIN SELECTOR ─────────────────────────────────────────────────────────
@@ -1371,7 +1413,7 @@ function rBuilderForm(){
   return`<div class="builder-panel">
     <div>
       <div class="card card-pad" style="margin-bottom:16px">
-        <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:600;margin-bottom:14px">Build Your Meal</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;margin-bottom:14px">Build Your Meal</div>
         ${emergencyCount<6?`<div class="alert alert-red" style="margin-bottom:12px"><span>🚨</span><div>${emergencyCount} emergency meal${emergencyCount!==1?'s':''} — build ${6-emergencyCount} more to reach 6</div></div>`:''}
         ${A.buildEmergency?`<div class="alert alert-red" style="margin-bottom:12px"><span>🚨</span><div><strong>Emergency Meal Mode ON</strong> — The meal builder will create a complete double-batch meal for 2 gallon bags. Inventory deducts for both batches. You will be prompted to log it when scheduled.</div></div>`:''}
 
@@ -1390,7 +1432,7 @@ function rBuilderForm(){
         </div>
         <div class="r2">
           <div class="fg"><label class="lbl">Servings</label>
-            <input type="number" class="sel" id="sv" min="1" max="40" value="${A.householdSize||4}" style="text-align:center;font-size:16px;font-weight:600;color:var(--green)" placeholder="How many?">
+            <input type="number" class="sel" id="sv" min="1" value="${A.householdSize||4}" style="text-align:center;font-size:16px;font-weight:600;color:var(--green)" placeholder="How many?">
           </div>
           <div class="fg"><label class="lbl">Flavor</label>
             <select class="sel" id="fl">
@@ -1502,7 +1544,7 @@ async function generateRecipe(){
 
   const hasNoProteins=allProteins.length===0;
 
-  const systemPrompt=`You are the Meal Builder for Prep & Purpose. ALWAYS build a meal — never refuse.
+  const systemPrompt=`You are the Meal Builder for Meal Builder Pro by Provision House. ALWAYS build a meal — never refuse.
 
 ${weekSelections.length>0?`SELECTED PROTEIN — NON-NEGOTIABLE: Build this meal using ONLY: ${weekSelections.join(', ')}. Do not substitute. Do not switch proteins.`:''}
 
@@ -1537,6 +1579,7 @@ BEEF: 80/20 ground beef first (most versatile, cheapest ground) → chuck roast 
 TURKEY: whole turkey first (best value per pound) → bone-in thighs second → ground turkey third.
 FISH: canned tuna/salmon first (cheapest) → frozen tilapia or catfish second → frozen salmon third → fresh fish last.
 LAMB/OTHER: only if specifically anchored — never as a default suggestion.
+LOWEST TOTAL COST — applies to EVERYTHING that goes on the grocery list, not just the protein: the goal is great food at the lowest price. When the user must buy something, pick the in-season, cheapest option that still makes the dish great: in-season produce over out-of-season (no fresh asparagus in November, no fresh peaches in February), frozen or canned vegetables when they are cheaper and work as well, dried beans and rice over specialty grains, store-brand basics, and the cheapest cut in the hierarchy above. Keep the grocery list short: build the dish around what is on hand and only send them to the store for what the dish truly needs. The user can always override this by choosing their own protein or anchor.
 - Vegetarian selected: beans, chickpeas, lentils, tofu, tempeh, eggs ARE valid dinner centerpieces. Seasonal suggestion = most affordable plant protein.
 - Vegan selected: beans, chickpeas, lentils, tofu, tempeh ARE valid dinner centerpieces. No eggs.
 - Every dinner and lunch MUST have a protein centerpiece appropriate to the dietary setting.
@@ -1740,17 +1783,6 @@ PANTRY MODE IS ON — THIS OVERRIDES ALL PREVIOUS RULES ABOUT groceryFlags:
 - If you cannot build without flagging something, substitute a different ingredient from inventory
 - Leave groceryFlags as [] and build around what is listed above`:''}
 
-P&P BLEND TIP: In recipe steps that combine multiple spices, add a parenthetical at the end of that step with the blend name AND the amount to use. Always include the measurement — she needs to know how much.
-Blend usage rates:
-- P&P House Blend (replaces salt+pepper+garlic powder+onion powder+paprika): use 1-2 tsp per lb of meat, or 1 tsp per cup of sauce/veg
-- P&P Italian Herb & Garlic (replaces basil+oregano+parsley+thyme+rosemary+garlic powder): use 1 tbsp per 2 cups tomato sauce or per lb of pasta
-- P&P Lemon Pepper Garlic Salt (replaces salt+black pepper+lemon+garlic powder): use 1 tsp per lb chicken or fish
-- P&P Smoky BBQ Rub (replaces brown sugar+smoked paprika+garlic+onion+chili+pepper): use 1-2 tbsp per lb of meat
-- P&P Taco Seasoning (replaces chili powder+cumin+paprika+garlic+onion+oregano+salt+pepper+cayenne): use 2-3 tbsp per lb ground meat + 1/2 cup water
-- P&P Cinnamon Sugar Spice (replaces cinnamon+nutmeg+sugar): use 1-2 tsp per serving
-Format: "(or use [X amount] P&P [Blend Name] instead of the [spices it replaces])"
-Example: "(or use 1.5 tsp P&P House Blend instead of the salt, pepper, garlic powder, and onion powder)"
-Only mention the blend that matches the spices in that step. Never list blends in the pull list.
 
 COOK TIME — ALWAYS REQUIRED: Every recipe must include a "cookTime" field formatted as:
 "Preheat [temp] · Active prep: [X] min · [Cook method]: [Y] min · Total: [Z] min"
@@ -1758,7 +1790,7 @@ Examples: "Preheat 375°F · Active prep: 15 min · Bake: 35 min · Total: 50 mi
           "Active prep: 20 min · Simmer: 25 min · Total: 45 min"
           "Active prep: 10 min · Stovetop: 20 min · Total: 30 min"
 For emergency meals: "Active prep: 30 min · Cook: 45 min · Cool: 90 min · Total cook session: ~3 hrs"
-This appears at the top of the recipe so she knows the full time commitment before starting.
+This appears at the top of the recipe so the user knows the full time commitment before starting.
 
 PRE-COOKED PROTEIN FINAL CHECK — before writing any step:
 Scan your pull list. If ANY item says "Already cooked — heat gently" or "lbs cooked":
@@ -1773,6 +1805,7 @@ The title you write MUST match the actual protein form in the pull list.
 - Pull list shows "Diced Chicken/Beef" → title CAN say Chicken or Beef but not a specific cut name unless that cut was the raw ingredient.
 - Cut names (Chops, Steak, Breast, Fillet, Tenderloin, Roast) are ONLY allowed when that raw cut is explicitly in the pull list as a fresh/raw purchase.
 Read your pull list. If you wrote "Ground Pork" — the word "Chops" cannot appear in the title. No exceptions.
+The title must name the ingredient in the form it is actually in: ground pork is "Ground Pork" or "Pork Skillet", never "Pork Chops"; ground beef is never "Steak"; shredded chicken is never "Chicken Breast". The same rule applies to the description and the steps.
 
 RESPOND WITH VALID JSON ONLY:
 {
@@ -1797,7 +1830,9 @@ QUANTITY RULES: Meat=weight only. No piece counts. Eggs=whole numbers round up. 
 ${grabAndGo?'GRAB AND GO MODE: ON — build a batchable item with yield, storage instructions, and grab size.':''}
 ${!includeSoups?'SOUPS OFF: No soups, stews, chilis, or broth-based dishes under any circumstances.':''}
 ${mealType==='Breakfast'?`BREAKFAST VARIETY RULE: Last breakfast built was "${A.lastBuiltBreakfast||'none'}". Build something COMPLETELY DIFFERENT.`:''}
-${mealType!=='Breakfast'?`LAST MEAL BUILT: "${A.lastBuiltMeal||'none'}" — build something completely different.`:''}
+${mealType!=='Breakfast'?`LAST MEAL BUILT: "${A.lastBuiltMeal||'none'}" — build something completely different.
+RECENT MEALS (do not build any of these again, or a close variation of them, and do not reuse the same format + sauce base): ${(A.recentMeals||[]).length?(A.recentMeals||[]).map(m=>'"'+m.t+'" ('+(m.f||'any')+')').join(', '):'none yet'}.
+VARIETY WITHIN A CUISINE: every cuisine has many different dishes. Within "${flavor||'Surprise Me'}" rotate across at least 8 genuinely different dishes over time (different format, different sauce or seasoning base, different cooking method, different starch). Italian is not only pasta with red sauce; Mexican is not only tacos; Southern is not only smothered chicken; Asian-Style is not only stir fry. Pick the dish in that cuisine that is furthest from the recent meals above.`:''}
 ${A.lastBuiltProtein&&mealType!=='Breakfast'?`LAST PROTEIN USED: "${A.lastBuiltProtein}" — use a DIFFERENT protein this time. Rotate.`:''}
 ${buildEmergency?'EMERGENCY MEAL MODE: ON — dinner only, double batch, gallon bags or freezer containers, complete meal, reheats perfectly':''}
 ${kidFriendly?'KID FRIENDLY MODE: ON — mild flavors, nut-free, kid-friendly formats for all meal types, kid portions':''}
@@ -1832,7 +1867,7 @@ PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}
 ${(mealType==='Dinner'||mealType==='Lunch')&&!A.dietary.includes('Vegetarian')?`FINAL INSTRUCTION — READ THIS LAST:
 This is ${mealType}. It MUST contain animal protein. No exceptions.
 ${allProteins.length===0?`No protein is stocked. Do ALL of the following:
-1. Pick the most seasonal protein for ${new Date().toLocaleString('en-US',{month:'long'})} — ${A.lastBuiltProtein?`DO NOT pick ${A.lastBuiltProtein} again, rotate to something different`:'chicken breasts are a safe default in grilling season'}
+1. Pick the protein that is in season AND cheapest per pound for ${new Date().toLocaleString('en-US',{month:'long'})}, following the PROTEIN BUDGET HIERARCHY above (cheapest cut first, never an expensive cut unless the user asked for it)${A.lastBuiltProtein?` — DO NOT pick ${A.lastBuiltProtein} again, rotate to something different`:''}
 2. Add it to the pull list with qty showing lbs needed and prepNote "Will need to purchase — see grocery list"
 3. Write the cooking steps as if the user HAS the protein — include full cooking instructions
 4. Flag it in groceryFlags with urgency "out" and reason "Typically on sale this time of year — buy extra and freeze"
@@ -1854,7 +1889,7 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
       showPage('builder');
       setTimeout(()=>openModal(`<div class="modal-header"><div class="modal-title">Unable to Build Meal</div><button class="modal-close" onclick="closeModal()">×</button></div>
         <div style="font-size:15px;line-height:1.7;margin-bottom:16px">${msg}</div>
-        <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">If this keeps happening, contact us at <a href="mailto:support@prepandpurpose.com" style="color:var(--green)">support@prepandpurpose.com</a></div>
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">If this keeps happening, contact us at <a href="mailto:support@provisionhouse.org" style="color:var(--green)">support@provisionhouse.org</a></div>
         <button class="btn btn-primary btn-full" onclick="closeModal()">Got It</button>`),100);
       return;
     }
@@ -1878,7 +1913,7 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
     try{recipe=JSON.parse(raw);}
     catch(e){
       console.error('JSON parse failed:',raw);
-      alert('Could not parse recipe. Try again.');
+      showToast('The meal did not come back right. Please try again.');
       showPage('builder');return;
     }
     // ── Title sanitizer — runs after every build ──────────────────────
@@ -1893,20 +1928,19 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
       const cutWords=[/pork chops?/gi,/chicken chops?/gi,/chicken breasts?/gi,/chicken thighs?/gi,/beef steak/gi,/pork tenderloin/gi,/pork loin/gi,/sirloin/gi,/ribeye/gi,/filet/gi,/fillet/gi,/t-bone/gi];
       const replacements={ground:'Skillet',shredded:'Bowl'};
       const replWord=hasShreddedProt?'Bowl':'Skillet';
-      cutWords.forEach(re=>{
-        if(re.test(cleanTitle)){
-          // Replace cut name with appropriate word
-          cleanTitle=cleanTitle.replace(re,replWord);
-        }
-      });
+      const formWord=hasShreddedProt?'Shredded':'Ground';
+      const prot=/pork/i.test(pullNames)?'Pork':(/beef/i.test(pullNames)?'Beef':(/turkey/i.test(pullNames)?'Turkey':(/chicken/i.test(pullNames)?'Chicken':'')));
+      cutWords.forEach(re=>{ cleanTitle=cleanTitle.replace(re,(prot?formWord+' '+prot+' ':'')+replWord); });
+      cleanTitle=cleanTitle.replace(/(Ground|Shredded) (Pork|Beef|Turkey|Chicken) (Skillet|Bowl)( \1 \2 \3)+/g,'$1 $2 $3');
       // Clean up double spaces
       cleanTitle=cleanTitle.replace(/\s+/g,' ').trim();
     }
-    A.recipe={...recipe,servings:servings,id:Date.now(),title:cleanTitle,title:recipe.title||'Your Meal',description:recipe.description||'',cookTime:recipe.cookTime||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:(recipe.pull||[]).map(p=>({...p,qty:cleanQty(p.qty),item:cleanQty(p.item),prepNote:p.prepNote?cleanQty(p.prepNote):p.prepNote})),steps:recipe.steps||[],tip:recipe.tip||''};
+    A.recipe={...recipe,servings:servings,id:Date.now(),title:cleanTitle,description:recipe.description||'',cookTime:recipe.cookTime||'',macros:recipe.macros||{cal:400,protein:35,carbs:30,fat:14},pull:(recipe.pull||[]).map(p=>({...p,qty:cleanQty(p.qty),item:cleanQty(p.item),prepNote:p.prepNote?cleanQty(p.prepNote):p.prepNote})),steps:recipe.steps||[],tip:recipe.tip||''};
     // Track last built for variety enforcement
     if(mealType==='Breakfast')A.lastBuiltBreakfast=recipe.title||'';
     else{
       A.lastBuiltMeal=recipe.title||'';
+      A.recentMeals=((A.recentMeals||[]).concat([{t:cleanTitle,f:flavor||'',d:dateKey(new Date())}])).slice(-12);
       // Track protein used — check cookList first, then groceryFlags
       const proteinFromCook=recipe.cookList?.[0]?.protein||'';
       const proteinFromGroc=(recipe.groceryFlags||[]).find(g=>
@@ -1927,7 +1961,7 @@ DO NOT build a dinner or lunch that is only beans, grains, vegetables, or cheese
     showPage('builder');
   }catch(e){
     A.generating=false;
-    alert('Generation failed: '+e.message);
+    showToast('The meal builder could not finish. Please try again.');
     showPage('builder');
   }
 }
@@ -1980,7 +2014,7 @@ function rRecipe(){
       ${isEmergency?`
       <div class="section-head">🚨 Log This Emergency Meal</div>
       <div class="alert alert-green" style="margin-bottom:14px"><span>✅</span><div>This goes straight to your Emergency supply — not on the dinner calendar. Deducts inventory for 2 full batches.</div></div>
-      <div class="fg"><label class="lbl">Date Made</label><input class="inp" type="date" id="em-made-date" value="${new Date().toISOString().slice(0,10)}" style="cursor:pointer"></div>
+      <div class="fg"><label class="lbl">Date Made</label><input class="inp" type="date" id="em-made-date" value="${dateKey(new Date())}" style="cursor:pointer"></div>
       <div class="fg"><label class="lbl">Gallon Bags</label><input class="inp" type="number" id="em-made-qty" value="2" min="1" max="10"></div>
       <button class="btn btn-primary btn-full btn-lg" style="margin-bottom:8px" onclick="logEmergencyMeal()">🚨 Log Emergency Meals & Deduct Inventory</button>
       <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="printRecipe()">🖨️ Print This Recipe</button>
@@ -2087,7 +2121,7 @@ function rCalendar(){
       </div>
     </div>
     <div>
-      <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:600;margin-bottom:16px">${selDay.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;margin-bottom:16px">${selDay.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
       ${slots.map(slot=>{
         const meal=dayCal[slot];
         const title=meal?(typeof meal==='object'?meal.title:meal):null;
@@ -2546,7 +2580,7 @@ function logDinnerAsEmergency(){
   showToast('🚨 '+qty+' emergency meal'+(qty!==1?'s':'')+' logged — '+A.emergency[A.emergency.length-1]?.name||'');
 }
 function logEmergencyMeal(){
-  const dateVal=document.getElementById('em-made-date')?.value||new Date().toISOString().slice(0,10);
+  const dateVal=document.getElementById('em-made-date')?.value||dateKey(new Date());
   const qty=+document.getElementById('em-made-qty')?.value||2;
   // Deduct inventory for double batch
   deductInventory(A.recipe.pull);
@@ -2971,7 +3005,7 @@ function rFavorites(){
   A.favorites.forEach((fav,i)=>{
     html+=`<div class="card">
       <div style="background:var(--green);padding:16px 18px;border-radius:var(--radius) var(--radius) 0 0">
-        <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:#fff;margin-bottom:4px">${fav.title}</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600;color:#fff;margin-bottom:4px">${fav.title}</div>
         <div style="font-size:12px;color:rgba(255,255,255,.6);line-height:1.4">${fav.description||''}</div>
       </div>
       <div class="card-pad">
@@ -2982,7 +3016,7 @@ function rFavorites(){
         </div>
         <div class="fg">
           <label class="lbl">Rebuild for how many servings?</label>
-          <input type="number" class="sel" id="fav-sv-${i}" min="1" max="40" value="${fav.servings||4}" style="text-align:center;font-size:16px;font-weight:600;color:var(--green)" placeholder="How many?">
+          <input type="number" class="sel" id="fav-sv-${i}" min="1" value="${fav.servings||4}" style="text-align:center;font-size:16px;font-weight:600;color:var(--green)" placeholder="How many?">
         </div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-primary btn-full" data-idx="${i}" onclick="rebuildFavorite(+this.dataset.idx)">🔄 Rebuild</button>
@@ -3017,10 +3051,10 @@ function printWeekCalendar(){
     </tr>`).join('');
 
   const html=`<html><head><title>Meal Plan: ${label}</title>
-  <style>body{font-family:Arial,sans-serif;padding:20px;color:#1a1a1a}h2{color:#1e4d35;margin-bottom:4px}p{color:#666;font-size:13px;margin-bottom:16px}table{width:100%;border-collapse:collapse}th{background:#1e4d35;color:#fff;padding:10px 8px;border:1px solid #ddd;font-size:13px;text-align:center}td{vertical-align:top}@media print{body{padding:10px}}</style>
+  <style>body{font-family:Arial,sans-serif;padding:20px;color:#1a1a1a}h2{color:#14213d;margin-bottom:4px}p{color:#666;font-size:13px;margin-bottom:16px}table{width:100%;border-collapse:collapse}th{background:#14213d;color:#fff;padding:10px 8px;border:1px solid #ddd;font-size:13px;text-align:center}td{vertical-align:top}@media print{body{padding:10px}}</style>
   </head><body>
   <h2>🥗 Meal Plan — ${label}</h2>
-  <p>Prep & Purpose · mealbuilderpro.prepandpurpose.com</p>
+  <p>Provision House · mealbuilder.provisionhouse.org</p>
   <table>
     <thead><tr>
       <th style="width:80px">Slot</th>
@@ -3028,7 +3062,7 @@ function printWeekCalendar(){
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>
-  <p style="margin-top:16px;font-size:11px;color:#999">Printed from Meal Builder Pro · Prep & Purpose · Reduce decisions. Install structure. And as always — steward what you have, serve where you are.</p>
+  <p style="margin-top:16px;font-size:11px;color:#999">Printed from Meal Builder Pro · by Provision House · Reduce decisions. Install structure. And as always — steward what you have, serve where you are.</p>
   </body></html>`;
 
   const w=window.open('','_blank');w.document.write(html);w.document.close();w.print();
@@ -3119,10 +3153,10 @@ function printMonthCalendar(){
   }
 
   const html=`<html><head><title>Meal Plan: ${monthLabel}</title>
-  <style>body{font-family:Arial,sans-serif;padding:16px;color:#1a1a1a}h2{color:#1e4d35;margin-bottom:4px}p{color:#666;font-size:12px}table{width:100%;border-collapse:collapse}th{background:#1e4d35;color:#fff;padding:8px;border:1px solid #ddd;font-size:12px}@media print{body{padding:8px}}</style>
+  <style>body{font-family:Arial,sans-serif;padding:16px;color:#1a1a1a}h2{color:#14213d;margin-bottom:4px}p{color:#666;font-size:12px}table{width:100%;border-collapse:collapse}th{background:#14213d;color:#fff;padding:8px;border:1px solid #ddd;font-size:12px}@media print{body{padding:8px}}</style>
   </head><body>
   <h2>📅 ${monthLabel} — Meal Plan</h2>
-  <p>Prep & Purpose · mealbuilderpro.prepandpurpose.com</p>
+  <p>Provision House · mealbuilder.provisionhouse.org</p>
   <table><thead><tr>${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(d=>`<th>${d}</th>`).join('')}</tr></thead>
   <tbody>${tableRows}</tbody></table>
   <p style="margin-top:12px;font-size:10px;color:#999">Printed from Meal Builder Pro · Reduce decisions. Install structure.</p>
@@ -3212,7 +3246,7 @@ function rMaintenance(){
   // Week selector
   html+=`<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
     <button class="btn btn-outline btn-sm" onclick="A.weekOffset=Math.max(0,(A.weekOffset||0)-1);render()" ${(A.weekOffset||0)===0?'disabled':''}>‹ Prev</button>
-    <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:var(--green)">${weekLabel}</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:600;color:var(--green)">${weekLabel}</div>
     <button class="btn btn-outline btn-sm" onclick="A.weekOffset=Math.min(4,(A.weekOffset||0)+1);render()" ${(A.weekOffset||0)===4?'disabled':''}>Next ›</button>
   </div>`;
 
@@ -3220,7 +3254,7 @@ function rMaintenance(){
   const pullItems=Object.entries(pullToFridge);
   if(pullItems.length>0){
     html+=`<div class="card card-pad" style="margin-bottom:20px;border-left:4px solid var(--green)">
-      <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:var(--green);margin-bottom:4px">🧊 Pull to Fridge</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--green);margin-bottom:4px">🧊 Pull to Fridge</div>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Move these from freezer to fridge today so they're thawed and ready when you need them</div>
       ${pullItems.map(([item,data])=>`
         <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
@@ -3538,7 +3572,7 @@ function openEditItem(id,list){
       <div class="qty-controls">
         <input type="number" min="0" value="${_editItem[st]||0}" id="qv-${st}"
           oninput="setItem('${st}',+this.value,'${isBase}','${unit}')"
-          style="width:100px;text-align:center;font-size:22px;font-weight:700;color:var(--green);border:2px solid var(--border-strong);border-radius:var(--radius-sm);padding:8px 12px;font-family:'Playfair Display',serif;outline:none"
+          style="width:100px;text-align:center;font-size:22px;font-weight:700;color:var(--green);border:2px solid var(--border-strong);border-radius:var(--radius-sm);padding:8px 12px;font-family:'Cormorant Garamond',serif;outline:none"
           onfocus="this.style.borderColor='var(--green)'"
           onblur="this.style.borderColor='var(--border-strong)'">
         <span style="font-size:12px;color:var(--text-muted);min-width:40px">${unit}</span>
@@ -3630,7 +3664,7 @@ function setSupportState(id,state){
 
 // ─── EMERGENCY ─────────────────────────────────────────────────────────────────
 function openAddEmergency(){
-  const today=new Date().toISOString().slice(0,10);
+  const today=dateKey(new Date());
   openModal(`<div class="modal-header"><div class="modal-title">Log Emergency Meal</div><button class="modal-close" onclick="closeModal()">×</button></div>
     <div class="fg"><label class="lbl">Meal Name</label><input class="inp" id="em-name" placeholder="e.g. Beef & Rice Bowl, Turkey Chili"></div>
     <div class="r2">
@@ -3673,7 +3707,7 @@ function printEmergencyRecipe(id){
   if(!meal?.recipe){alert('No recipe saved for this meal.');return;}
   const r=meal.recipe;
   const html=`<html><head><title>${r.title}</title>
-  <style>body{font-family:Arial,sans-serif;padding:20px;max-width:600px;color:#1a1a1a}h2{color:#1e4d35}h3{color:#1e4d35;font-size:14px;margin:16px 0 8px}.row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee;font-size:13px}.macros{display:flex;gap:16px;background:#f5f5f5;padding:10px;border-radius:6px;margin:12px 0}.step{display:flex;gap:10px;margin-bottom:8px;font-size:13px}.num{background:#1e4d35;color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}.tip{background:#fffbee;border-left:3px solid #c8864a;padding:8px;font-size:12px;margin-top:12px}@media print{body{padding:10px}}</style>
+  <style>body{font-family:Arial,sans-serif;padding:20px;max-width:600px;color:#1a1a1a}h2{color:#14213d}h3{color:#14213d;font-size:14px;margin:16px 0 8px}.row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee;font-size:13px}.macros{display:flex;gap:16px;background:#f5f5f5;padding:10px;border-radius:6px;margin:12px 0}.step{display:flex;gap:10px;margin-bottom:8px;font-size:13px}.num{background:#14213d;color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}.tip{background:#fffbee;border-left:3px solid #c8864a;padding:8px;font-size:12px;margin-top:12px}@media print{body{padding:10px}}</style>
   </head><body>
   <h2>🚨 ${r.title}</h2>
   <p style="color:#666;font-size:13px">${r.description||''} · Logged ${meal.dateMade} · ${meal.qty} gallon bags</p>
@@ -3683,7 +3717,7 @@ function printEmergencyRecipe(id){
   <h3>STEPS</h3>
   ${(r.steps||[]).map((s,i)=>`<div class="step"><div class="num">${i+1}</div><div>${s}</div></div>`).join('')}
   ${r.tip?`<div class="tip">${r.tip}</div>`:''}
-  <p style="margin-top:20px;font-size:11px;color:#999">Prep & Purpose · mealbuilderpro.prepandpurpose.com · Reduce decisions. Install structure.</p>
+  <p style="margin-top:20px;font-size:11px;color:#999">Provision House · mealbuilder.provisionhouse.org · Reduce decisions. Install structure.</p>
   </body></html>`;
   const w=window.open('','_blank');w.document.write(html);w.document.close();w.print();
 }
@@ -3997,7 +4031,7 @@ Print the recipe to see everything you need — check off what you have, pick up
   </div>
   <div style="text-align:center;padding:24px 0;font-size:13px;color:var(--text-muted);line-height:1.6">
     Reduce decisions. Install structure.<br>
-    <strong style="color:var(--green)">Prep with Purpose.</strong>
+    <strong style="color:var(--green)">Meal Builder Pro by Provision House.</strong>
   </div>`;
 }
 
@@ -4030,9 +4064,9 @@ function openSettings(){
     <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="signOut()">Sign Out</button>
     <div style="border-top:1px solid var(--border);margin:16px 0"></div>
     <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Subscription</div>
-    <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6">Manage or cancel your subscription through the Stripe customer portal. Your data stays saved and you can resubscribe any time.</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.6">Manage or cancel your subscription here. Your data stays saved and you can come back any time.</div>
     <a href="https://billing.stripe.com/p/login/4gM00i2Nx1sqdo34FQffy00" target="_blank" class="btn btn-outline btn-full" style="margin-bottom:8px;text-decoration:none">Manage Subscription →</a>
-    <div style="font-size:11px;color:var(--text-hint);text-align:center">Need help? <a href="mailto:support@prepandpurpose.com" style="color:var(--green)">support@prepandpurpose.com</a></div>`);
+    <div style="font-size:11px;color:var(--text-hint);text-align:center">Need help? <a href="mailto:support@provisionhouse.org" style="color:var(--green)">support@provisionhouse.org</a></div>`);
 }
 function toggleDietChip(el){
   el.classList.toggle('selected');
@@ -4134,14 +4168,14 @@ function _printRecipeObj(r,dateStr,slot){
   const stockKw=['quart bag','frozen bag','cans','1 can','bag ='];
   const fromStock=pull.filter(p=>stockKw.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
   const fromKitchen=pull.filter(p=>!stockKw.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
-  const html='<html><head><title>'+title+'</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Georgia,serif;background:#fff;color:#1a1a1a;padding:32px 28px;max-width:680px;margin:0 auto}.hdr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid #1e4d35;padding-bottom:10px;margin-bottom:24px}.hdr-b{font-size:20px;font-weight:700;color:#1e4d35}.rtitle{font-size:26px;font-weight:700;color:#1e4d35;margin-bottom:8px}.rdesc{font-size:14px;color:#666;line-height:1.6;margin-bottom:14px;font-style:italic}.macros{display:flex;gap:16px;margin-bottom:16px;padding:10px;background:#f9f9f9;border-radius:8px}.macros span{font-size:12px;font-weight:600;color:#1e4d35}.sh{font-size:10px;font-weight:700;text-transform:uppercase;color:#888;margin:14px 0 6px;border-top:1px solid #eee;padding-top:8px}.pl{list-style:none;padding:0}.pl li{font-size:13px;padding:5px 0;border-bottom:1px solid #f5f5f5}.sl{padding-left:18px}.sl li{font-size:13px;line-height:1.7;padding:3px 0}.tip{margin-top:12px;background:#fff8e1;border-left:3px solid #b5850a;padding:10px 14px;font-size:12px;color:#6b5100;border-radius:0 5px 5px 0}.ftr{margin-top:28px;border-top:1px solid #eee;padding-top:10px;font-size:11px;color:#bbb;text-align:center}@media print{body{padding:16px}}</style></head><body>'
+  const html='<html><head><title>'+title+'</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Georgia,serif;background:#fff;color:#1a1a1a;padding:32px 28px;max-width:680px;margin:0 auto}.hdr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid #14213d;padding-bottom:10px;margin-bottom:24px}.hdr-b{font-size:20px;font-weight:700;color:#14213d}.rtitle{font-size:26px;font-weight:700;color:#14213d;margin-bottom:8px}.rdesc{font-size:14px;color:#666;line-height:1.6;margin-bottom:14px;font-style:italic}.macros{display:flex;gap:16px;margin-bottom:16px;padding:10px;background:#f9f9f9;border-radius:8px}.macros span{font-size:12px;font-weight:600;color:#14213d}.sh{font-size:10px;font-weight:700;text-transform:uppercase;color:#888;margin:14px 0 6px;border-top:1px solid #eee;padding-top:8px}.pl{list-style:none;padding:0}.pl li{font-size:13px;padding:5px 0;border-bottom:1px solid #f5f5f5}.sl{padding-left:18px}.sl li{font-size:13px;line-height:1.7;padding:3px 0}.tip{margin-top:12px;background:#fff8e1;border-left:3px solid #b5850a;padding:10px 14px;font-size:12px;color:#6b5100;border-radius:0 5px 5px 0}.ftr{margin-top:28px;border-top:1px solid #eee;padding-top:10px;font-size:11px;color:#bbb;text-align:center}@media print{body{padding:16px}}</style></head><body>'
     +'<div class="hdr"><div class="hdr-b">Prep &amp; Purpose</div><div style="font-size:12px;color:#888">'+(dateStr||new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}))+(slot?' · '+slot:'')+'</div></div>'
     +'<div class="rtitle">'+title+'</div>'
     +(r.description?'<div class="rdesc">'+r.description+'</div>':'')
     +(r.macros?'<div class="macros"><span>'+r.macros.cal+' cal</span><span>'+r.macros.protein+'g protein</span><span>'+r.macros.carbs+'g carbs</span><span>'+r.macros.fat+'g fat</span></div>':'')
     +(fromStock.length>0?'<div class="sh">❄️ From Your Stock</div><ul class="pl">'+fromStock.map(p=>'<li><strong>'+p.item+'</strong> — '+p.qty+(p.prepNote?' ('+p.prepNote+')':'')+'</li>').join('')+'</ul>':'')
     +(fromKitchen.length>0?'<div class="sh">🧂 From Your Kitchen</div><ul class="pl">'+fromKitchen.map(p=>'<li><strong>'+p.item+'</strong> — '+p.qty+'</li>').join('')+'</ul>':'')
-    +(r.cookTime?'<div style="background:#1e4d35;color:#fff;border-radius:5px;padding:8px 12px;margin:10px 0;font-size:12px;font-weight:700">⏱️ '+r.cookTime+'</div>':'')
+    +(r.cookTime?'<div style="background:#14213d;color:#fff;border-radius:5px;padding:8px 12px;margin:10px 0;font-size:12px;font-weight:700">⏱️ '+r.cookTime+'</div>':'')
     +(steps.length>0?'<div class="sh">🥄 Steps</div><ol class="sl">'+steps.map(s=>'<li>'+s+'</li>').join('')+'</ol>':'')
     +(tip?'<div class="tip">💡 '+tip+'</div>':'')
     +'<div class="ftr">Reduce decisions. Install structure. And as always — steward what you have, serve where you are.</div>'
@@ -4154,14 +4188,14 @@ function printGroc(){
   const allItems=[...out,...low];
   if(allItems.length===0&&(!A.cookList||A.cookList.length===0)){alert('Your grocery list is empty.');return;}
   const section=(t,color,items)=>items.length===0?'':'<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:'+color+';margin:16px 0 8px">'+t+'</div><table style="width:100%;border-collapse:collapse">'+items.map(g=>'<tr style="border-bottom:1px solid #f0f0f0"><td style="width:24px;font-size:16px;padding:8px 0;color:#ccc">☐</td><td style="font-size:14px;padding:8px 6px;font-weight:500">'+g.name+'</td><td style="font-size:12px;color:#888;text-align:right;padding:8px 0">'+(g.qty||'')+'</td></tr>').join('')+'</table>';
-  const cookSection=A.cookList&&A.cookList.length>0?'<div style="margin-bottom:16px;padding:12px;background:#1e4d35;border-radius:8px;color:#fff"><div style="font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:8px">🍳 Maintenance Day Cook List</div>'+A.cookList.map(c=>'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.1);font-size:13px"><span>'+c.protein+'</span><span>'+c.bags+' bags · buy '+c.rawLbs+' raw</span></div>').join('')+'</div>':'';
-  const html='<html><head><title>Prep & Purpose — Grocery List</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Georgia,serif;background:#fff;color:#1a1a1a;padding:32px 28px;max-width:680px;margin:0 auto}.hdr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid #1e4d35;padding-bottom:10px;margin-bottom:24px}.hdr-b{font-size:20px;font-weight:700;color:#1e4d35}.tip{margin-top:24px;background:#fff8e1;border-left:3px solid #b5850a;padding:12px 14px;font-size:13px;color:#6b5100;border-radius:0 6px 6px 0}.ftr{margin-top:28px;border-top:1px solid #eee;padding-top:10px;font-size:11px;color:#bbb;text-align:center}@media print{body{padding:16px}}</style></head><body>'
+  const cookSection=A.cookList&&A.cookList.length>0?'<div style="margin-bottom:16px;padding:12px;background:#14213d;border-radius:8px;color:#fff"><div style="font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:8px">🍳 Maintenance Day Cook List</div>'+A.cookList.map(c=>'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.1);font-size:13px"><span>'+c.protein+'</span><span>'+c.bags+' bags · buy '+c.rawLbs+' raw</span></div>').join('')+'</div>':'';
+  const html='<html><head><title>Meal Builder Pro — Grocery List</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Georgia,serif;background:#fff;color:#1a1a1a;padding:32px 28px;max-width:680px;margin:0 auto}.hdr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid #14213d;padding-bottom:10px;margin-bottom:24px}.hdr-b{font-size:20px;font-weight:700;color:#14213d}.tip{margin-top:24px;background:#fff8e1;border-left:3px solid #b5850a;padding:12px 14px;font-size:13px;color:#6b5100;border-radius:0 6px 6px 0}.ftr{margin-top:28px;border-top:1px solid #eee;padding-top:10px;font-size:11px;color:#bbb;text-align:center}@media print{body{padding:16px}}</style></head><body>'
     +'<div class="hdr"><div class="hdr-b">Prep &amp; Purpose — Grocery List</div><div style="font-size:12px;color:#888">'+new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})+'</div></div>'
     +cookSection
     +section('🚨 Out — Need Now','#c62828',out)
     +section('⚠️ Needed','#f57f17',low)
     +'<div class="tip">📏 Protein Shrinkage Rule: Always buy 30% more raw than you think you need. 1 quart bag = 1.5 lbs cooked. For '+A.householdSize+' people: 5 lbs raw ≈ 2–3 full quart bags.</div>'
-    +'<div class="ftr">Prep & Purpose — steward what you have, serve where you are.</div>'
+    +'<div class="ftr">Meal Builder Pro by Provision House — steward what you have, serve where you are.</div>'
     +'</body></html>';
   const win=window.open('','_blank');win.document.write(html);win.document.close();setTimeout(()=>win.print(),400);
 }
@@ -4213,7 +4247,7 @@ function printBlankInventory(){
 
   let pantryQtyRows='';
   ['baking','fridge','fresh'].forEach(cat=>{
-    pantryQtyRows+=`<tr><td colspan="2" style="padding:8px 8px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1e4d35;background:#f0faf2">${catLabels[cat]}</td></tr>`;
+    pantryQtyRows+=`<tr><td colspan="2" style="padding:8px 8px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#14213d;background:#f0faf2">${catLabels[cat]}</td></tr>`;
     (A.pantry[cat]||[]).forEach(item=>{
       pantryQtyRows+=`<tr><td style="padding:7px 8px;font-size:12px;border-bottom:1px solid #eee">${item.name}${item.fresh?' <span style="font-size:9px;color:#2e7d32;font-weight:700">FRESH</span>':''}</td><td style="padding:7px 8px;border-bottom:1px solid #eee;width:80px"><div style="border-bottom:2px solid #333;height:18px"></div><div style="font-size:9px;color:#999;margin-top:1px">${item.unit||''}</div></td></tr>`;
     });
@@ -4221,14 +4255,14 @@ function printBlankInventory(){
 
   let pantryToggleRows='';
   ['oils','condiments','spices'].forEach(cat=>{
-    pantryToggleRows+=`<tr><td style="padding:8px 8px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1e4d35;background:#f0faf2">${catLabels[cat]}</td></tr>`;
+    pantryToggleRows+=`<tr><td style="padding:8px 8px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#14213d;background:#f0faf2">${catLabels[cat]}</td></tr>`;
     (A.pantry[cat]||[]).forEach(item=>{
       pantryToggleRows+=`<tr><td style="padding:6px 8px;font-size:12px;border-bottom:1px solid #eee"><span style="display:inline-block;width:12px;height:12px;border:1.5px solid #333;border-radius:2px;margin-right:7px;vertical-align:middle"></span>${item.name}</td></tr>`;
     });
   });
 
-  const html=`<html><head><title>Prep & Purpose — Inventory Sheet</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Georgia,serif;background:#fff;color:#1a1a1a;padding:22px 26px;max-width:800px;margin:0 auto;font-size:13px}.hdr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid #1e4d35;padding-bottom:8px;margin-bottom:6px}.hdr-b{font-size:18px;font-weight:700;color:#1e4d35}.sub{font-size:10px;color:#888;margin-bottom:12px}.rule-box{background:#f0faf2;border:1px solid #d8f3dc;border-radius:6px;padding:8px 12px;font-size:11px;color:#1e4d35;margin-bottom:14px;line-height:1.7}.sec{font-size:13px;font-weight:700;color:#1e4d35;margin:14px 0 5px;border-left:4px solid #1e4d35;padding-left:8px}table{width:100%;border-collapse:collapse}th{font-size:10px;font-weight:700;text-transform:uppercase;color:#888;padding:5px 8px;text-align:left;border-bottom:2px solid #1e4d35}.col2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}.ftr{margin-top:20px;border-top:1px solid #eee;padding-top:8px;font-size:10px;color:#bbb;text-align:center}@media print{body{padding:14px}}</style></head><body>
-  <div class="hdr"><div class="hdr-b">🌿 Prep & Purpose — Inventory Sheet</div><div style="font-size:11px;color:#888">Week of: ___________________________</div></div>
+  const html=`<html><head><title>Meal Builder Pro — Inventory Sheet</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Georgia,serif;background:#fff;color:#1a1a1a;padding:22px 26px;max-width:800px;margin:0 auto;font-size:13px}.hdr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid #14213d;padding-bottom:8px;margin-bottom:6px}.hdr-b{font-size:18px;font-weight:700;color:#14213d}.sub{font-size:10px;color:#888;margin-bottom:12px}.rule-box{background:#f0faf2;border:1px solid #d8f3dc;border-radius:6px;padding:8px 12px;font-size:11px;color:#14213d;margin-bottom:14px;line-height:1.7}.sec{font-size:13px;font-weight:700;color:#14213d;margin:14px 0 5px;border-left:4px solid #14213d;padding-left:8px}table{width:100%;border-collapse:collapse}th{font-size:10px;font-weight:700;text-transform:uppercase;color:#888;padding:5px 8px;text-align:left;border-bottom:2px solid #14213d}.col2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}.ftr{margin-top:20px;border-top:1px solid #eee;padding-top:8px;font-size:10px;color:#bbb;text-align:center}@media print{body{padding:14px}}</style></head><body>
+  <div class="hdr"><div class="hdr-b">🌿 Meal Builder Pro — Inventory Sheet</div><div style="font-size:11px;color:#888">Week of: ___________________________</div></div>
   <div class="sub">Count every bag — in the freezer AND thawed in the fridge. Both count. Fill out before entering into Meal Builder Pro.</div>
   <div class="rule-box">📏 1 quart bag = 1.5 lbs cooked protein &nbsp;·&nbsp; 1 quart bag = 3 cups cooked veg or grains &nbsp;·&nbsp; Emergency meals = GALLON bags only &nbsp;·&nbsp; Magic number = 6</div>
 
@@ -4260,7 +4294,7 @@ function printBlankInventory(){
     <div><div class="sec">🧂 Kitchen Staples — On Hand</div><table><tbody>${pantryToggleRows}</tbody></table></div>
   </div>
 
-  <div class="ftr">Prep & Purpose · mealbuilderpro.prepandpurpose.com · Steward what you have, serve where you are.</div>
+  <div class="ftr">Provision House · mealbuilder.provisionhouse.org · Steward what you have, serve where you are.</div>
   </body></html>`;
 
   const win=window.open('','_blank');
