@@ -311,16 +311,35 @@ html,body{height:100%;overflow:hidden;font-family:Jost,sans-serif;background:var
       <div class="pw-feat"><div class="pw-dot">✓</div>Grocery list that fills itself from your week</div>
       <div class="pw-feat"><div class="pw-dot">✓</div>Your data on every device you sign in on</div>
     </div>
-    <div class="pw-box" style="margin-bottom:12px">
-      <div class="pw-amount">$19</div>
-      <div class="pw-per">a month. Cancel any time.</div>
-      <a href="https://buy.stripe.com/4gM3cufAj3Ay3Ntc8iffy06" class="pw-btn" style="margin-top:12px">Choose monthly →</a>
+    <style>
+    .pw-tabs{display:flex;gap:4px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:999px;padding:4px;margin-bottom:12px}
+    .pw-tab{flex:1;min-height:44px;padding:10px 8px;border:none;border-radius:999px;background:transparent;color:rgba(255,255,255,.75);font-family:Jost,sans-serif;font-size:15px;font-weight:600;cursor:pointer}
+    .pw-tab.on{background:var(--gold-light);color:var(--green)}
+    .pw-save{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;border:1px solid currentColor;font-size:11px;font-weight:700;white-space:nowrap}
+    </style>
+    <div class="pw-tabs" role="tablist" aria-label="Choose a plan">
+      <button type="button" class="pw-tab" id="pw-tab-m" role="tab" aria-selected="false" onclick="pwPlan('m')">Monthly</button>
+      <button type="button" class="pw-tab on" id="pw-tab-y" role="tab" aria-selected="true" onclick="pwPlan('y')">Yearly <span class="pw-save">Save $79</span></button>
     </div>
     <div class="pw-box" style="border-color:var(--gold-light)">
-      <div class="pw-amount">$149</div>
-      <div class="pw-per">a year. Save $79 a year.</div>
-      <a href="https://buy.stripe.com/8x2dR85ZJb303Ntb4effy07" class="pw-btn" style="margin-top:12px">Choose yearly →</a>
+      <div class="pw-amount" id="pw-amt">$149</div>
+      <div class="pw-per" id="pw-per">a year. Save $79 a year.</div>
+      <a href="https://buy.stripe.com/8x2dR85ZJb303Ntb4effy07" id="pw-go" class="pw-btn" style="margin-top:12px">Start yearly →</a>
     </div>
+    <script>
+    function pwPlan(p){
+      var y=p==='y';
+      document.getElementById('pw-tab-m').classList.toggle('on',!y);
+      document.getElementById('pw-tab-y').classList.toggle('on',y);
+      document.getElementById('pw-tab-m').setAttribute('aria-selected',String(!y));
+      document.getElementById('pw-tab-y').setAttribute('aria-selected',String(y));
+      document.getElementById('pw-amt').textContent=y?'$149':'$19';
+      document.getElementById('pw-per').textContent=y?'a year. Save $79 a year.':'a month. Cancel any time.';
+      var go=document.getElementById('pw-go');
+      go.href=y?'https://buy.stripe.com/8x2dR85ZJb303Ntb4effy07':'https://buy.stripe.com/4gM3cufAj3Ay3Ntc8iffy06';
+      go.textContent=y?'Start yearly \u2192':'Start monthly \u2192';
+    }
+    </script>
     <div class="pw-si" style="margin-top:14px">Already subscribed? <button onclick="showVerify()">Sign in here</button></div>
     <div class="pw-si" style="margin-top:18px;line-height:1.6">Want the whole house run this way, not just the kitchen? <a href="https://app.provisionhouse.org" style="color:var(--gold-light)">Household COO</a> has the Kitchen plus chores, money, the family calendar and a TV board. 14-day trial period.</div>
   </div>
