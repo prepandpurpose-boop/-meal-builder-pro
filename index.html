@@ -323,7 +323,7 @@ html,body{height:100%;overflow:hidden;font-family:Jost,sans-serif;background:var
     </div>
     <div class="pw-box" style="border-color:var(--gold-light)">
       <div class="pw-amount" id="pw-amt">$149</div>
-      <div class="pw-per" id="pw-per">a year. Save $79 a year.</div>
+      <div class="pw-per" id="pw-per">a year. 7-day trial period. Save $79 a year.</div>
       <a href="https://buy.stripe.com/8x2dR85ZJb303Ntb4effy07" id="pw-go" class="pw-btn" style="margin-top:12px">Start yearly →</a>
     </div>
     <script>
@@ -334,7 +334,7 @@ html,body{height:100%;overflow:hidden;font-family:Jost,sans-serif;background:var
       document.getElementById('pw-tab-m').setAttribute('aria-selected',String(!y));
       document.getElementById('pw-tab-y').setAttribute('aria-selected',String(y));
       document.getElementById('pw-amt').textContent=y?'$149':'$19';
-      document.getElementById('pw-per').textContent=y?'a year. Save $79 a year.':'a month. Cancel any time.';
+      document.getElementById('pw-per').textContent=y?'a year. 7-day trial period. Save $79 a year.':'a month. 7-day trial period. Cancel any time.';
       var go=document.getElementById('pw-go');
       go.href=y?'https://buy.stripe.com/8x2dR85ZJb303Ntb4effy07':'https://buy.stripe.com/4gM3cufAj3Ay3Ntc8iffy06';
       go.textContent=y?'Start yearly \u2192':'Start monthly \u2192';
