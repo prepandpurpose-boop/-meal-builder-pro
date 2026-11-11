@@ -263,6 +263,7 @@ html,body{height:100%;overflow:hidden;font-family:Jost,sans-serif;background:var
 .ob-wrap{max-width:520px;margin:0 auto;padding:40px 24px 60px}
 .ob-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:background .2s}
 .ob-dot.active{background:var(--green)}
+#modal.blue{background:#E7ECF5!important}#modal.blue .modal-header{background:#14213d;color:#fff;border-radius:10px;padding:12px 14px}#modal.blue .modal-title,#modal.blue .modal-close{color:#fff!important}#modal.blue .modal-close{background:rgba(255,255,255,.18)}#modal.blue .section-head{color:#14213d;border-bottom:2px solid #C59B27}#modal.blue .diet-chip{background:#fff;border-color:#14213d}#modal.blue .diet-chip.selected{background:#14213d!important;color:#fff!important;border-color:#14213d!important}
 .diet-chip{padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;text-align:center;transition:all .2s}
 .diet-chip.selected{background:var(--green);color:#fff;border-color:var(--green)}
 
@@ -1093,7 +1094,7 @@ function rDashboard(){
   <div class="page-sub">Here is where your kitchen stands today.</div>`;
 
   if(emergencyCount<6){
-    html+=`<div class="alert alert-red"><span>🚨</span><div>You have <strong>${emergencyCount} emergency meal${emergencyCount!==1?"s":""}</strong> — ${emergencyCount<6?`build ${6-emergencyCount} more to reach your safety net of 6`:"you\'re at your target of 6"}.</div></div>`;
+    html+=`<div class="alert alert-red"><span>🚨</span><div>You have <strong>${emergencyCount} emergency meal${emergencyCount!==1?"s":""}</strong> — ${emergencyCount<6?`build ${6-emergencyCount} more to reach 6 emergency meals per week`:"you\'re at 6 emergency meals per week"}.</div></div>`;
   }
   if(freshItems.length>0){
     html+=`<div class="alert alert-gold"><span>⚡</span><div><strong>Use these first</strong> — fresh items on hand: ${freshItems.slice(0,4).map(f=>f.name).join(', ')}${freshItems.length>4?' and more':''}.</div></div>`;
@@ -1105,7 +1106,7 @@ function rDashboard(){
   html+=`<div class="grid-4" style="margin-bottom:20px">
     <div class="stat-card"><div class="stat-label">Frozen Bags</div><div class="stat-value">${totalFrozenBags}</div><div class="stat-sub">cooked protein bags</div></div>
     <div class="stat-card"><div class="stat-label">Supports Stocked</div><div class="stat-value">${supportsStocked}</div><div class="stat-sub">frozen, canned & dry</div></div>
-    <div class="stat-card"><div class="stat-label">Emergency Meals</div><div class="stat-value" style="color:${emergencyCount>=6?'var(--green)':'#c62828'}">${emergencyCount}</div><div class="stat-sub">magic number is 6</div></div>
+    <div class="stat-card"><div class="stat-label">Emergency Meals</div><div class="stat-value" style="color:${emergencyCount>=6?'var(--green)':'#c62828'}">${emergencyCount}</div><div class="stat-sub">Magic number = 6 emergency meals per week</div></div>
     <div class="stat-card" style="border-color:#2980b9;background:${(()=>{const lb=A.lunchBank||0,tgt=(A.householdSize||4)*20;const pct=lb/tgt;return pct===0?'#fef3f2':pct<0.25?'#fef3f2':pct<0.5?'#fdf8ed':pct<0.75?'#eafaf1':'#ebf5fb';})()}">
       <div class="stat-label" style="color:#2980b9">🧊 Lunch Bank</div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
@@ -1304,12 +1305,12 @@ function rEmergency(){
       <div style="font-size:36px">${total>=6?'✅':total>=4?'⚠️':'🚨'}</div>
     </div>
     <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${color};border-radius:4px;transition:width .3s"></div></div>
-    <div style="font-size:12px;color:var(--text-muted);margin-top:8px">${total>=MAGIC?'You are stocked. Eat oldest first.':total>0?`Build ${needed} more to reach your safety net of 6.`:'Emergency supply is empty. Build 6 meals to start your safety net.'}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:8px">${total>=MAGIC?'You are stocked. Eat oldest first.':total>0?`Build ${needed} more to reach 6 emergency meals per week.`:'Emergency supply is empty. Build 6 emergency meals per week to start.'}</div>
   </div>
   ${A.grocery.filter(g=>!g.scheduledDate&&!g.done).length>0?`<div style="font-size:11px;color:#888;background:#fafafa;border:1px solid #eee;border-radius:6px;padding:8px 10px;margin-bottom:10px">
     💡 Items without a scheduled date show only in This Month. Tap <strong>Clear All</strong> and re-place your calendar meals so all items filter correctly by week.
   </div>`:''}
-  <div class="alert alert-gold" style="margin-bottom:16px"><span>📏</span><div>Emergency Meals = <strong>GALLON bags</strong> only. Fully cooked, portioned, ready to heat. Always build 2 of the same meal per batch. Magic number is 6.</div></div>
+  <div class="alert alert-gold" style="margin-bottom:16px"><span>📏</span><div>Emergency Meals = <strong>GALLON bags</strong> only. Fully cooked, portioned, ready to heat. Always build 2 of the same meal per batch. Magic number = 6 emergency meals per week.</div></div>
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
     <div class="page-title" style="font-size:18px">Emergency Meal Log</div>
     <button class="btn btn-primary btn-sm" onclick="openAddEmergency()">+ Log Meal</button>
@@ -1358,7 +1359,7 @@ function rPantry(){
     condiments:{label:'🥫 Condiments & Sauces',type:'qty'},
     spices:{label:'🧂 Spices',type:'qty'},
   };
-  let html=`<div class="page-sub">Track what is in your kitchen. Fresh items are prioritized — the AI uses them first so nothing goes to waste.</div>
+  let html=`<div class="page-sub">Track what is in your kitchen. Fresh items are prioritized — the meal builder uses them first so nothing goes to waste.</div>
     <div style="font-size:11px;color:var(--text-muted);background:white;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:16px;line-height:1.5">
       📦 <strong>What deducts automatically:</strong> Frozen bases, frozen/canned/dry supports, home canned jars, and measured kitchen items (butter, flour, sugar, fresh produce, milk, eggs) all deduct when you schedule a meal.<br>
       🧂 <strong>Oils, condiments, and spices</strong> are now tracked by quantity (oz or each). Enter how much you have — items at zero are treated as not stocked and won't be used in meal builds.
@@ -1480,7 +1481,7 @@ function rBuilderForm(){
     <div>
       <div class="card card-pad" style="margin-bottom:16px">
         <div style="font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:600;margin-bottom:14px">Build Your Meal</div>
-        ${emergencyCount<6?`<div class="alert alert-red" style="margin-bottom:12px"><span>🚨</span><div>${emergencyCount} emergency meal${emergencyCount!==1?'s':''} — build ${6-emergencyCount} more to reach 6</div></div>`:''}
+        ${emergencyCount<6?`<div class="alert alert-red" style="margin-bottom:12px"><span>🚨</span><div>${emergencyCount} emergency meal${emergencyCount!==1?'s':''} — build ${6-emergencyCount} more to reach 6 per week</div></div>`:''}
         ${A.buildEmergency?`<div class="alert alert-red" style="margin-bottom:12px"><span>🚨</span><div><strong>Emergency Meal Mode ON</strong> — The meal builder will create a complete double-batch meal for 2 gallon bags. Inventory deducts for both batches. You will be prompted to log it when scheduled.</div></div>`:''}
 
         ${proteinSection}
@@ -1691,6 +1692,8 @@ Yield in pieces, storage, how long keeps, grab size. BAKING SCALE TIP in tip: "~
 
 ${A.kidFriendly?`KID FRIENDLY: Mild, nut-free, simple, kid portions.`:''}
 ${A.dietary.length>0?`DIETARY RESTRICTIONS — NEVER VIOLATE: ${A.dietary.join(', ')}`:''}
+HEALTH CLAIMS — NEVER MAKE ANY: Do not say or imply that a meal controls, steadies, lowers or improves blood sugar, or cures, treats or prevents any condition, or is good for a medical condition. This applies to the title, description, steps and tip. Describe only what is in the meal, for example "high protein, moderate carbs, 8g fiber".
+${A.dietary.includes('Diabetic Friendly')?'DIABETIC FRIENDLY is selected: keep carbs lower per serving, favor fiber and protein, and keep the carb count plain and accurate. Still make no claim about blood sugar results.':''}
 ${(A.dietaryGoals||[]).length>0?`DIETARY GOALS ACTIVE: ${(A.dietaryGoals||[]).join(', ')}
 DIETARY GOAL RULES — apply precisely, never over-interpret:
 HIGH PROTEIN: Maximize protein per serving. Choose protein-rich ingredients. Include substantial protein at every meal. NEVER replace bread, pizza crust, tortillas, pasta, or rice with meat. A pizza with regular crust and high-protein toppings IS high protein. A meat crust wastes protein and is not appropriate for a family kitchen.
@@ -1876,7 +1879,7 @@ The title must name the ingredient in the form it is actually in: ground pork is
 RESPOND WITH VALID JSON ONLY:
 {
   "title": "Specific dish name",
-  "description": "One line that makes them want to make it",
+  "description": "One line that makes them want to make it. Describe the food only. No health claims and nothing about blood sugar.",
   "macros": {"cal": 450, "protein": 38, "carbs": 35, "fat": 16},
   "pull": [
     {"icon": "🥩", "item": "Shredded Pork", "qty": "2 bags = 3 lbs cooked", "prepNote": "Already cooked — heat gently 3-4 min"},
@@ -1926,6 +1929,7 @@ Baking/Dry: ${(()=>{const b=A.pantry?.baking||[];return b.filter(i=>i.have&&(i.q
 Oils & Condiments: ${(()=>{const o=[...(A.pantry?.oils||[]),...(A.pantry?.condiments||[])];return o.filter(i=>(i.qty||0)>0).map(i=>i.name+' ('+i.qty+' '+i.unit+')').join(', ')||'None';})()}
 Spices: ${(()=>{const s=A.pantry?.spices||[];return s.filter(i=>(i.qty||0)>0).map(i=>i.name+' ('+i.qty+' oz)').join(', ')||'None';})()}
 NOTE: Any ingredient NOT listed above AND NOT a basic assumed staple (water, standard salt, black pepper) MUST appear in groceryFlags.
+HONESTY RULE: prepNote may say "From the fridge", "From pantry" or "From your stock" ONLY for an item that appears by name in the inventory lists above. Any other ingredient must have prepNote "Not in your inventory. Buy this." and must also appear in groceryFlags. If every list above says None, nothing is in stock, so every ingredient except water, salt and black pepper is something to buy.
 HOME CANNED: ${(A.homeCanned||[]).length>0?(A.homeCanned||[]).map(hc=>{const cups={halfPint:1,pint:2,pintHalf:3,quart:4,halfGallon:8}[hc.jarSize]||2;const jarLabel={halfPint:'half-pint jar (1 cup)',pint:'pint jar (2 cups)',pintHalf:'pint-and-a-half jar (3 cups)',quart:'quart jar (4 cups)',halfGallon:'half-gallon jar (8 cups)'}[hc.jarSize]||'pint jar (2 cups)';const isFD=/freeze.?dried|freeze dried|FD/i.test(hc.name);const totalCups=hc.qty*cups;if(isFD){return`${hc.name}: ${hc.qty} ${jarLabel}${hc.qty!==1?'s':''} = ${totalCups} cups total — FREEZE DRIED: measure out exact amount by cup/tbsp, no need to pull whole jar`;}return`${hc.name}: ${hc.qty} ${jarLabel}${hc.qty!==1?'s':''} = ${totalCups} cups — pull by jar count, use whole jars`;}).join(' | '):'None'}
 FRIDGE: ${fridgeQty.length>0?fridgeQty.join(' | '):'None'}
 PANTRY STAPLES ON HAND: ${toggles.length>0?toggles.join(', '):'None'}
@@ -2037,8 +2041,15 @@ function rRecipe(){
   // Clean all pull quantities at render time — catches old saved recipes too
   const cleanedPull=(r.pull||[]).map(p=>({...p,qty:cleanQty(p.qty),item:cleanQty(p.item),prepNote:p.prepNote?cleanQty(p.prepNote):p.prepNote}));
   const stockKeywords=['quart bag','frozen bag','cans','1 can','2 cans','3 cans','lbs cooked','bag =','bags =','bags cooked','bag cooked'];
-  const fromStock=cleanedPull.filter(p=>stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
-  const fromKitchen=cleanedPull.filter(p=>!stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
+  const _fl=(r.groceryFlags||[]).map(f=>String(f.name||'').toLowerCase()).filter(Boolean);
+  const _buyRx=/purchase|buy at|to buy|buy this|grocery list|not in stock|need to buy/i;
+  const _basic=/^(salt|black pepper|pepper|water|kosher salt|sea salt)\b/i;
+  const _nothing=!(A.supports||[]).some(s=>(s.frozen||0)>0||(s.canned||0)>0||(s.dry||0)>0||(s.each||0)>0)&&!(A.bases||[]).some(b=>(b.frozen||0)>0)&&!Object.values(A.pantry||{}).some(c=>Array.isArray(c)&&c.some(i=>i.have||(i.qty||0)>0));
+  const _isBuy=p=>{const n=String(p.item||'').toLowerCase();if(_basic.test(n))return false;return _nothing||_buyRx.test(p.prepNote||'')||_fl.some(f=>n.includes(f)||f.includes(n));};
+  const toBuy=cleanedPull.filter(_isBuy).map(p=>({...p,prepNote:'Not in your inventory yet. Buy this.'}));
+  const _rest=cleanedPull.filter(p=>!_isBuy(p));
+  const fromStock=_rest.filter(p=>stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
+  const fromKitchen=_rest.filter(p=>!stockKeywords.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
   const isEmergency=A.buildEmergency;
 
   return`<div style="max-width:720px">
@@ -2064,6 +2075,7 @@ function rRecipe(){
     </div>
 
     <div class="card card-pad" style="margin-bottom:16px">
+      ${toBuy.length>0?`<div class="pull-section"><div class="pull-section-title">🛒 You Need to Buy</div>${toBuy.map(p=>`<div class="pull-row"><div class="pull-icon">${p.icon||'🛒'}</div><div style="flex:1"><div class="pull-name">${p.item}</div><div class="pull-note">${p.prepNote||''}</div></div><span class="pull-qty">${p.qty}</span></div>`).join('')}</div>`:''}
       ${fromStock.length>0?`<div class="pull-section"><div class="pull-section-title">❄️ From Your Stock — Pull These First</div>${fromStock.map(p=>`<div class="pull-row"><div class="pull-icon">${p.icon||'🍱'}</div><div style="flex:1"><div class="pull-name">${p.item}</div><div class="pull-note">${p.prepNote||''}</div></div><span class="pull-qty">${p.qty}</span></div>`).join('')}</div>`:''}
       ${fromKitchen.length>0?`<div class="pull-section"><div class="pull-section-title">🧂 From Your Kitchen</div>${fromKitchen.map(p=>`<div class="pull-row"><div class="pull-icon">${p.icon||'🧂'}</div><div style="flex:1"><div class="pull-name">${p.item}</div><div class="pull-note">${p.prepNote||''}</div></div><span class="pull-qty">${p.qty}</span></div>`).join('')}</div>`:''}
 
@@ -3943,7 +3955,7 @@ function rGuide(){
       <div style="font-size:22px;flex-shrink:0">🥩</div>
       <div>
         <div style="font-size:14px;font-weight:700;margin-bottom:4px">Inventory — Bases</div>
-        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Frozen cooked proteins in quart bags. <strong>1 bag = 1.5 lbs cooked.</strong> This is the foundation — cook once, pull all week. Log what's in your freezer so the AI knows what to build with.</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Frozen cooked proteins in quart bags. <strong>1 bag = 1.5 lbs cooked.</strong> This is the foundation — cook once, pull all week. Log what's in your freezer so the meal builder knows what to build with.</div>
       </div>
     </div>
   </div>
@@ -3953,7 +3965,7 @@ function rGuide(){
       <div style="font-size:22px;flex-shrink:0">🥬</div>
       <div>
         <div style="font-size:14px;font-weight:700;margin-bottom:4px">Inventory — Supports</div>
-        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Frozen vegetables, canned goods, dry goods (rice, pasta, beans). These round out the meal. The AI picks from whatever form you actually have — frozen bags, cans, dry. If you're out, it flags it on the grocery list.</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Frozen vegetables, canned goods, dry goods (rice, pasta, beans). These round out the meal. The meal builder picks from whatever form you actually have — frozen bags, cans, dry. If you're out, it flags it on the grocery list.</div>
       </div>
     </div>
   </div>
@@ -3973,7 +3985,7 @@ function rGuide(){
       <div style="font-size:22px;flex-shrink:0">🚨</div>
       <div>
         <div style="font-size:14px;font-weight:700;margin-bottom:4px">Emergency Layer</div>
-        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Your safety net — <strong>6 fully assembled meals</strong> in gallon bags or 9x13 pans. Pull one on a hard night, heat from frozen, done. Zero thinking required.<br><br>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Your safety net — <strong>6 fully assembled meals per week</strong> in gallon bags or 9x13 pans. Pull one on a hard night, heat from frozen, done. Zero thinking required.<br><br>
 <strong>Two ways to build:</strong><br>
 <strong>1. Emergency Mode toggle</strong> — Flip it on in the builder. The entire batch goes to the freezer tonight — nothing gets served. The recipe scales to a double batch. Use this for dedicated freezer cook sessions.<br><br>
 <strong>2. Log a dinner as emergency</strong> — Build any dinner normally, then on the result screen tap <strong>🚨 Log as Emergency Meal Instead</strong>. Pick how many gallon bags you're freezing. The meal skips the calendar and goes straight to your emergency supply. Use this when you cook a big batch and want to freeze some for later.<br><br>
@@ -4033,7 +4045,7 @@ Print the recipe to see everything you need — check off what you have, pick up
 
   <div class="card" style="margin-bottom:8px;padding:14px 16px">
     <div style="font-size:14px;font-weight:700;margin-bottom:8px">✅ Update inventory before building meals</div>
-    <div style="font-size:13px;color:var(--text-muted);line-height:1.5">The AI builds from what you've logged. If your freezer says 0 bags of chicken but you have 4, the AI doesn't know. Take 2 minutes to update counts before your weekly build session.</div>
+    <div style="font-size:13px;color:var(--text-muted);line-height:1.5">The meal builder builds from what you've logged. If your freezer says 0 bags of chicken but you have 4, the meal builder doesn't know. Take 2 minutes to update counts before your weekly build session.</div>
   </div>
 
   <div class="card" style="margin-bottom:8px;padding:14px 16px">
@@ -4042,8 +4054,8 @@ Print the recipe to see everything you need — check off what you have, pick up
   </div>
 
   <div class="card" style="margin-bottom:8px;padding:14px 16px">
-    <div style="font-size:14px;font-weight:700;margin-bottom:8px">✅ Log fresh produce so the AI uses it first</div>
-    <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Got zucchini from the garden or onions from the store? Log them in Kitchen Staples → Fresh Produce. The AI prioritizes fresh items before frozen so nothing goes to waste.</div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:8px">✅ Log fresh produce so the meal builder uses it first</div>
+    <div style="font-size:13px;color:var(--text-muted);line-height:1.5">Got zucchini from the garden or onions from the store? Log them in Kitchen Staples → Fresh Produce. The meal builder prioritizes fresh items before frozen so nothing goes to waste.</div>
   </div>
 
   <div class="card" style="margin-bottom:8px;padding:14px 16px">
@@ -4071,7 +4083,7 @@ Print the recipe to see everything you need — check off what you have, pick up
       <strong>1 quart bag protein</strong> = 1.5 lbs cooked<br>
       <strong>1 quart bag vegetables</strong> = 3 cups<br>
       <strong>Emergency meals</strong> = gallon bags or 9x13 pans<br>
-      <strong>Magic number</strong> = 6 emergency meals<br>
+      <strong>Magic number</strong> = 6 emergency meals per week<br>
       <strong>Frozen protein</strong> = already cooked, just heat through<br>
       <strong>Home canned jars</strong> = pull by jar count, not cups<br>
       <strong>Freeze dried</strong> = measure out what you need from the jar<br>
@@ -4102,16 +4114,17 @@ Print the recipe to see everything you need — check off what you have, pick up
 }
 
 function openSettings(){
+  document.getElementById('modal').classList.add('blue');
   const dietary=A.dietary||[];
   const allPrefs=['No Pork','No Beef','No Seafood','No Shellfish','Gluten Free','Dairy Free','No Nuts','Vegetarian','Halal','Kosher','Low Sodium','Diabetic Friendly'];
   openModal(`<div class="modal-header"><div class="modal-title">⚙️ Settings</div><button class="modal-close" onclick="closeModal()">×</button></div>
     <div class="section-head">Household</div>
     <div class="fg" style="margin-bottom:16px">
       <label class="lbl">People you are feeding</label>
-      <select class="sel" id="st-size">${[1,2,3,4,5,6,7,8].map(n=>`<option value="${n}" ${A.householdSize==n?'selected':''}>${n===8?'8+ people':n===1?'Just me (1)':n+' people'}</option>`).join('')}</select>
+      <input class="inp" id="st-size" type="number" min="1" step="1" value="${A.householdSize||4}">
     </div>
     <div class="section-head">Dietary Restrictions</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Things the AI will never include — hard rules.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Things the meal builder will never include — hard rules.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px" id="st-dietary">
       ${allPrefs.map(p=>`<div class="diet-chip ${dietary.includes(p)?'selected':''}" data-pref="${p}" onclick="toggleDietChip(this)">${p}</div>`).join('')}
     </div>
@@ -4120,11 +4133,10 @@ function openSettings(){
       <input class="inp" id="st-other" placeholder="e.g. No cilantro, extra spicy" value="${dietary.filter(d=>!allPrefs.includes(d)).join(', ')}">
     </div>
     <div class="section-head">Dietary Goals</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Things the AI optimizes toward — soft targets.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Things the meal builder optimizes toward — soft targets.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px" id="st-goals">
       ${['High Protein','Low Carb','Low Fat','Mediterranean Diet'].map(g=>`<div class="diet-chip ${(A.dietaryGoals||[]).includes(g)?'selected':''}" data-pref="${g}" onclick="toggleDietChip(this)">${g}</div>`).join('')}
     </div>
-    <div class="section-head">P&P Spice Blends</div>
 
     <button class="btn btn-primary btn-full" style="margin-bottom:8px" onclick="saveSettings()">Save Settings</button>
     <button class="btn btn-outline btn-full" style="margin-bottom:8px" onclick="signOut()">Sign Out</button>
@@ -4235,7 +4247,7 @@ function _printRecipeObj(r,dateStr,slot){
   const fromStock=pull.filter(p=>stockKw.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
   const fromKitchen=pull.filter(p=>!stockKw.some(k=>p.qty&&p.qty.toLowerCase().includes(k)));
   const html='<html><head><title>'+title+'</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Georgia,serif;background:#fff;color:#1a1a1a;padding:32px 28px;max-width:680px;margin:0 auto}.hdr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid #14213d;padding-bottom:10px;margin-bottom:24px}.hdr-b{font-size:20px;font-weight:700;color:#14213d}.rtitle{font-size:26px;font-weight:700;color:#14213d;margin-bottom:8px}.rdesc{font-size:14px;color:#666;line-height:1.6;margin-bottom:14px;font-style:italic}.macros{display:flex;gap:16px;margin-bottom:16px;padding:10px;background:#f9f9f9;border-radius:8px}.macros span{font-size:12px;font-weight:600;color:#14213d}.sh{font-size:10px;font-weight:700;text-transform:uppercase;color:#888;margin:14px 0 6px;border-top:1px solid #eee;padding-top:8px}.pl{list-style:none;padding:0}.pl li{font-size:13px;padding:5px 0;border-bottom:1px solid #f5f5f5}.sl{padding-left:18px}.sl li{font-size:13px;line-height:1.7;padding:3px 0}.tip{margin-top:12px;background:#fff8e1;border-left:3px solid #b5850a;padding:10px 14px;font-size:12px;color:#6b5100;border-radius:0 5px 5px 0}.ftr{margin-top:28px;border-top:1px solid #eee;padding-top:10px;font-size:11px;color:#bbb;text-align:center}@media print{body{padding:16px}}</style></head><body>'
-    +'<div class="hdr"><div class="hdr-b">Prep &amp; Purpose</div><div style="font-size:12px;color:#888">'+(dateStr||new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}))+(slot?' · '+slot:'')+'</div></div>'
+    +'<div class="hdr"><div class="hdr-b">Provision House</div><div style="font-size:12px;color:#888">'+(dateStr||new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}))+(slot?' · '+slot:'')+'</div></div>'
     +'<div class="rtitle">'+title+'</div>'
     +(r.description?'<div class="rdesc">'+r.description+'</div>':'')
     +(r.macros?'<div class="macros"><span>'+r.macros.cal+' cal</span><span>'+r.macros.protein+'g protein</span><span>'+r.macros.carbs+'g carbs</span><span>'+r.macros.fat+'g fat</span></div>':'')
@@ -4256,7 +4268,7 @@ function printGroc(){
   const section=(t,color,items)=>items.length===0?'':'<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:'+color+';margin:16px 0 8px">'+t+'</div><table style="width:100%;border-collapse:collapse">'+items.map(g=>'<tr style="border-bottom:1px solid #f0f0f0"><td style="width:24px;font-size:16px;padding:8px 0;color:#ccc">☐</td><td style="font-size:14px;padding:8px 6px;font-weight:500">'+g.name+'</td><td style="font-size:12px;color:#888;text-align:right;padding:8px 0">'+(g.qty||'')+'</td></tr>').join('')+'</table>';
   const cookSection=A.cookList&&A.cookList.length>0?'<div style="margin-bottom:16px;padding:12px;background:#14213d;border-radius:8px;color:#fff"><div style="font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:8px">🍳 Maintenance Day Cook List</div>'+A.cookList.map(c=>'<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.1);font-size:13px"><span>'+c.protein+'</span><span>'+c.bags+' bags · buy '+c.rawLbs+' raw</span></div>').join('')+'</div>':'';
   const html='<html><head><title>Meal Builder Pro — Grocery List</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Georgia,serif;background:#fff;color:#1a1a1a;padding:32px 28px;max-width:680px;margin:0 auto}.hdr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid #14213d;padding-bottom:10px;margin-bottom:24px}.hdr-b{font-size:20px;font-weight:700;color:#14213d}.tip{margin-top:24px;background:#fff8e1;border-left:3px solid #b5850a;padding:12px 14px;font-size:13px;color:#6b5100;border-radius:0 6px 6px 0}.ftr{margin-top:28px;border-top:1px solid #eee;padding-top:10px;font-size:11px;color:#bbb;text-align:center}@media print{body{padding:16px}}</style></head><body>'
-    +'<div class="hdr"><div class="hdr-b">Prep &amp; Purpose — Grocery List</div><div style="font-size:12px;color:#888">'+new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})+'</div></div>'
+    +'<div class="hdr"><div class="hdr-b">Provision House — Grocery List</div><div style="font-size:12px;color:#888">'+new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})+'</div></div>'
     +cookSection
     +section('🚨 Out — Need Now','#c62828',out)
     +section('⚠️ Needed','#f57f17',low)
@@ -4270,7 +4282,7 @@ function printGroc(){
 function openDrawer(html){document.getElementById('db').innerHTML=html;document.getElementById('drawer').classList.add('open');document.getElementById('overlay').classList.add('show');}
 function closeDrawer(){document.getElementById('drawer').classList.remove('open');document.getElementById('overlay').classList.remove('show');}
 function openModal(html){document.getElementById('modal-content').innerHTML=html;document.getElementById('modal').classList.add('show');document.getElementById('modal-overlay').classList.add('show');}
-function closeModal(){document.getElementById('modal').classList.remove('show');document.getElementById('modal-overlay').classList.remove('show');}
+function closeModal(){document.getElementById('modal').classList.remove('show','blue');document.getElementById('modal-overlay').classList.remove('show');}
 function removeCookItem(protein,type){
   if(type==='emergency'){
     A.emergencyCookList=(A.emergencyCookList||[]).filter(c=>c.protein!==protein);
@@ -4313,7 +4325,7 @@ function printBlankInventory(){
 
   let pantryQtyRows='';
   ['baking','fridge','fresh'].forEach(cat=>{
-    pantryQtyRows+=`<tr><td colspan="2" style="padding:8px 8px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#14213d;background:#f0faf2">${catLabels[cat]}</td></tr>`;
+    pantryQtyRows+=`<tr><td colspan="2" style="padding:8px 8px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#14213d;background:#F6EBC4;-webkit-print-color-adjust:exact;print-color-adjust:exact">${catLabels[cat]}</td></tr>`;
     (A.pantry[cat]||[]).forEach(item=>{
       pantryQtyRows+=`<tr><td style="padding:7px 8px;font-size:12px;border-bottom:1px solid #eee">${item.name}${item.fresh?' <span style="font-size:9px;color:#2e7d32;font-weight:700">FRESH</span>':''}</td><td style="padding:7px 8px;border-bottom:1px solid #eee;width:80px"><div style="border-bottom:2px solid #333;height:18px"></div><div style="font-size:9px;color:#999;margin-top:1px">${item.unit||''}</div></td></tr>`;
     });
@@ -4321,16 +4333,16 @@ function printBlankInventory(){
 
   let pantryToggleRows='';
   ['oils','condiments','spices'].forEach(cat=>{
-    pantryToggleRows+=`<tr><td style="padding:8px 8px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#14213d;background:#f0faf2">${catLabels[cat]}</td></tr>`;
+    pantryToggleRows+=`<tr><td style="padding:8px 8px 3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#14213d;background:#F6EBC4;-webkit-print-color-adjust:exact;print-color-adjust:exact">${catLabels[cat]}</td></tr>`;
     (A.pantry[cat]||[]).forEach(item=>{
       pantryToggleRows+=`<tr><td style="padding:6px 8px;font-size:12px;border-bottom:1px solid #eee"><span style="display:inline-block;width:12px;height:12px;border:1.5px solid #333;border-radius:2px;margin-right:7px;vertical-align:middle"></span>${item.name}</td></tr>`;
     });
   });
 
-  const html=`<html><head><title>Meal Builder Pro — Inventory Sheet</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Georgia,serif;background:#fff;color:#1a1a1a;padding:22px 26px;max-width:800px;margin:0 auto;font-size:13px}.hdr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid #14213d;padding-bottom:8px;margin-bottom:6px}.hdr-b{font-size:18px;font-weight:700;color:#14213d}.sub{font-size:10px;color:#888;margin-bottom:12px}.rule-box{background:#f0faf2;border:1px solid #d8f3dc;border-radius:6px;padding:8px 12px;font-size:11px;color:#14213d;margin-bottom:14px;line-height:1.7}.sec{font-size:13px;font-weight:700;color:#14213d;margin:14px 0 5px;border-left:4px solid #14213d;padding-left:8px}table{width:100%;border-collapse:collapse}th{font-size:10px;font-weight:700;text-transform:uppercase;color:#888;padding:5px 8px;text-align:left;border-bottom:2px solid #14213d}.col2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}.ftr{margin-top:20px;border-top:1px solid #eee;padding-top:8px;font-size:10px;color:#bbb;text-align:center}@media print{body{padding:14px}}</style></head><body>
+  const html=`<html><head><title>Meal Builder Pro — Inventory Sheet</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Georgia,serif;background:#fff;color:#1a1a1a;padding:22px 26px;max-width:800px;margin:0 auto;font-size:13px}.hdr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px solid #C59B27;padding-bottom:8px;margin-bottom:6px}.hdr-b{font-size:18px;font-weight:700;color:#14213d}.sub{font-size:10px;color:#888;margin-bottom:12px}.rule-box{background:#14213d;border:2px solid #C59B27;border-radius:6px;padding:8px 12px;font-size:11px;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;margin-bottom:14px;line-height:1.7}.sec{font-size:13px;font-weight:700;color:#fff;background:#14213d;margin:14px 0 5px;border-left:6px solid #C59B27;padding:5px 10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}table{width:100%;border-collapse:collapse}th{font-size:10px;font-weight:700;text-transform:uppercase;color:#888;padding:5px 8px;text-align:left;border-bottom:2px solid #C59B27}.col2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px}.ftr{margin-top:20px;border-top:1px solid #eee;padding-top:8px;font-size:10px;color:#bbb;text-align:center}@media print{body{padding:14px}}</style></head><body>
   <div class="hdr"><div class="hdr-b">🌿 Meal Builder Pro — Inventory Sheet</div><div style="font-size:11px;color:#888">Week of: ___________________________</div></div>
   <div class="sub">Count every bag — in the freezer AND thawed in the fridge. Both count. Fill out before entering into Meal Builder Pro.</div>
-  <div class="rule-box">📏 1 quart bag = 1.5 lbs cooked protein &nbsp;·&nbsp; 1 quart bag = 3 cups cooked veg or grains &nbsp;·&nbsp; Emergency meals = GALLON bags only &nbsp;·&nbsp; Magic number = 6</div>
+  <div class="rule-box">📏 1 quart bag = 1.5 lbs cooked protein &nbsp;·&nbsp; 1 quart bag = 3 cups cooked veg or grains &nbsp;·&nbsp; Emergency meals = GALLON bags only &nbsp;·&nbsp; Magic number = 6 emergency meals per week</div>
 
   <div class="sec">🥩 Layer 2 — Protein Bases (cooked, lightly seasoned)</div>
   <table><thead><tr><th>Protein</th><th>Quart Bags</th><th>Canned / Jars</th></tr></thead><tbody>
